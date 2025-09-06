@@ -6,134 +6,135 @@ import difflib
 
 
 
-def SYSTEM_PARAMETERIZE(target):
+################################################################################
+#
+# Helper class for keeping track of values calculated in the clock-tree.
+#
+
+class ClockTreeMap:
+
+    def __init__(self, target):
+
+        self.dictionary = {
+            None : 0, # No clock source, zero frequency.
+        }
 
 
 
-    ################################################################################################################################
+    # Prevent overwriting keys in the clock-tree map.
 
+    def __setitem__(self, key, value):
 
-
-    # The database is how we will figure out what needs to be parameterized.
-
-    database = SYSTEM_DATABASE[target.mcu]
-
-
-
-    class ClockTreeMap:
-
-        def __init__(self):
-
-            self.items = {
-                None : 0, # No clock source, zero frequency.
-            }
-
-
-
-        # Prevent overwriting keys in the clock-tree map.
-
-        def __setitem__(self, key, value):
-
-            if key in self.items:
-                raise RuntimeError(
-                    f'Key {repr(key)} is already defined in the '
-                    f'clock-tree map for target {repr(target.name)}.'
-                )
-
-            self.items[key] = value
-
-            return value
-
-
-
-        # Ensure the key into the clock-tree map exists.
-
-        def __getitem__(self, key):
-
-            if key not in self.items:
-                raise RuntimeError(
-                    f'No key {repr(key)} '
-                    f'found in the clock-tree map '
-                    f'for target {repr(target.name)}; '
-                    f'closest matches are: '
-                    f'{difflib.get_close_matches(repr(key), self.items, cutoff = 0)}.'
-                )
-
-            return self.items[key]
-
-
-
-        # Output a nice looking table for debugging purposes.
-
-        def __str__(self):
-
-            return '\n'.join(
-                '| {} | {} |'.format(*just)
-                for just in justify(
-                    (
-                        ('<', key       ),
-                        ('<', f'{value}'),
-                    )
-                    for key, value in self.items.items()
-                )
+        if key in self.dictionary:
+            raise RuntimeError(
+                f'Key {repr(key)} is already defined in the '
+                f'clock-tree map for target {repr(self.target.name)}.'
             )
 
+        self.dictionary[key] = value
 
-
-    map = ClockTreeMap()
-
-
-
-    class ClockTreeSchemaWrapper:
-
-        def __init__(self):
-            self.used_keys = []
+        return value
 
 
 
-        # We keep track of the clock-tree
-        # options that have been used so far.
+    # Ensure the key into the clock-tree map exists.
 
-        def __getitem__(self, key):
+    def __getitem__(self, key):
 
-            if key not in target.clock_tree:
-                raise RuntimeError(
-                    f'No key {repr(key)} '
-                    f'found in the clock-tree schema '
-                    f'for target {repr(target.name)}; '
-                    f'closest matches are: '
-                    f'{difflib.get_close_matches(repr(key), target.clock_tree, cutoff = 0)}.'
+        if key not in self.dictionary:
+            raise RuntimeError(
+                f'No key {repr(key)} '
+                f'found in the clock-tree map '
+                f'for target {repr(self.target.name)}; '
+                f'closest matches are: '
+                f'{difflib.get_close_matches(repr(key), self.dictionary, cutoff = 0)}.'
+            )
+
+        return self.dictionary[key]
+
+
+
+    # Output a nice looking table for debugging purposes.
+
+    def __str__(self):
+
+        return '\n'.join(
+            '| {} | {} |'.format(*just)
+            for just in justify(
+                (
+                    ('<', key       ),
+                    ('<', f'{value}'),
                 )
-
-            if key not in self.used_keys:
-                self.used_keys += [key]
-
-            return target.clock_tree[key]
+                for key, value in self.dictionary.items()
+            )
+        )
 
 
 
-        # Verify that we didn't miss anything.
+################################################################################
+#
+# Helper class for keeping track of constraints imposed on the clock-tree.
+#
 
-        def done(self):
+class ClockTreeSchemaWrapper:
 
-            if unused_keys := [
-                key
-                for key in target.clock_tree
-                if key not in self.used_keys
-            ]:
-                log(ANSI(
-                    f'[WARNING] There are leftover {target.mcu} options: {unused_keys}.',
-                    'fg_yellow'
-                ))
+    def __init__(self, target):
+        self.target    = target
+        self.used_keys = []
 
 
 
-        # TODO Have an easy print.
-        # def __str__(self):
+    # We keep track of the clock-tree
+    # options that have been used so far.
+
+    def __getitem__(self, key):
+
+        if key not in self.target.clock_tree:
+            raise RuntimeError(
+                f'No key {repr(key)} '
+                f'found in the clock-tree schema '
+                f'for target {repr(self.target.name)}; '
+                f'closest matches are: '
+                f'{difflib.get_close_matches(repr(key), self.target.clock_tree, cutoff = 0)}.'
+            )
+
+        if key not in self.used_keys:
+            self.used_keys += [key]
+
+        return self.target.clock_tree[key]
 
 
 
-    schema = ClockTreeSchemaWrapper()
+    # Verify that we didn't miss anything.
+
+    def done(self):
+
+        if unused_keys := [
+            key
+            for key in self.target.clock_tree
+            if key not in self.used_keys
+        ]:
+            log(ANSI(
+                f'[WARNING] There are leftover {self.target.mcu} options: {unused_keys}.',
+                'fg_yellow'
+            ))
+
+
+
+    # TODO Have an easy print.
+    # def __str__(self):
+
+
+
+################################################################################
+
+
+
+def SYSTEM_PARAMETERIZE(target):
+
+    database = SYSTEM_DATABASE[target.mcu]
+    map      = ClockTreeMap(target)
+    schema   = ClockTreeSchemaWrapper(target)
 
 
 
@@ -1168,7 +1169,7 @@ def SYSTEM_PARAMETERIZE(target):
 
     schema.done()
 
-    return dict(configurations), AllocatingNamespace(map.items)
+    return dict(configurations), AllocatingNamespace(map.dictionary)
 
 
 
