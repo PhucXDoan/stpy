@@ -127,6 +127,68 @@ class ClockTreeSchemaWrapper:
 
 
 ################################################################################
+#
+# Helper class for keeping track of register values to be written.
+#
+
+class ClockTreePlan:
+
+    def __init__(self, target):
+        self.dictionary = {}
+
+
+
+    # Prevent overwriting keys in the clock-tree plan.
+
+    def __setitem__(self, key, value):
+
+        if key in self.dictionary:
+            raise RuntimeError(
+                f'Key {repr(key)} is already defined in the '
+                f'clock-tree plan for target {repr(self.target.name)}.'
+            )
+
+        self.dictionary[key] = value
+
+        return value
+
+
+
+    # Ensure the key into the clock-tree plan exists.
+
+    def __getitem__(self, key):
+
+        if key not in self.dictionary:
+            raise RuntimeError(
+                f'No key {repr(key)} '
+                f'found in the clock-tree plan '
+                f'for target {repr(self.target.name)}; '
+                f'closest matches are: '
+                f'{difflib.get_close_matches(repr(key), self.dictionary, cutoff = 0)}.'
+            )
+
+        return self.dictionary[key]
+
+
+
+    # Output a nice looking table for debugging purposes.
+
+    def __str__(self):
+
+        return '\n'.join(
+            '| {} | {} |'.format(*just)
+            for just in justify(
+                (
+                    ('<', key       ),
+                    ('<', f'{value}'),
+                )
+                for key, value in self.dictionary.items()
+            )
+        )
+
+
+
+################################################################################
 
 
 
@@ -135,34 +197,11 @@ def SYSTEM_PARAMETERIZE(target):
     database = SYSTEM_DATABASE[target.mcu]
     map      = ClockTreeMap(target)
     schema   = ClockTreeSchemaWrapper(target)
+    plan     = ClockTreePlan(target)
 
 
 
-    # The point of parameterization is to determine what
-    # the register values should be in order to initialize
-    # the MCU to the specifications of `target.clock_tree`,
-    # so we'll be recording that too.
-    # e.g:
-    # >
-    # >    configurations['PLL1_Q_DIVIDER']   ->   256
-    # >
-
-    configurations = AllocatingNamespace()
-
-    def log_configurations(): # For debugging the configuration if needed.
-        log()
-        for row in justify(
-            (
-                ('<', key  ),
-                ('<', value),
-            )
-            for key, value in configurations
-        ):
-            log(ANSI('| {} | {} |', 'fg_yellow'), *row)
-        log()
-
-
-
+    # TODO Stale.
     # To brute-force the clock tree, we have to try a lot of possible
     # register values to see what sticks. To do this in a convenient
     # way, `draft` will accumulate configuration values to be eventually
@@ -174,7 +213,7 @@ def SYSTEM_PARAMETERIZE(target):
 
     def brute(function, configuration_names):
 
-        nonlocal draft, configurations
+        nonlocal draft, plan
 
         draft = ContainedNamespace(configuration_names) # TODO `ContainedNamespace` even needed?
 
@@ -186,8 +225,10 @@ def SYSTEM_PARAMETERIZE(target):
                 f'that satisfies the system parameterization.'
             )
 
-        configurations |= draft
-        draft           = None # Prevent values being accidentally referenced.
+        for key, value in draft:
+            plan[key] = value
+
+        draft = None # Prevent values being accidentally referenced.
 
 
 
@@ -256,9 +297,9 @@ def SYSTEM_PARAMETERIZE(target):
 
         case 'STM32H7S3L8H6':
 
-            configurations.FLASH_LATENCY            = '0x7'  # @/pg 211/tbl 29/`H7S3rm`.
-            configurations.FLASH_PROGRAMMING_DELAY  = '0b11' # "
-            configurations.INTERNAL_VOLTAGE_SCALING = {      # @/pg 327/sec 6.8.6/`H7S3rm`.
+            plan['FLASH_LATENCY']            = '0x7'  # @/pg 211/tbl 29/`H7S3rm`.
+            plan['FLASH_PROGRAMMING_DELAY']  = '0b11' # "
+            plan['INTERNAL_VOLTAGE_SCALING'] = {      # @/pg 327/sec 6.8.6/`H7S3rm`.
                 'low'  : 0,
                 'high' : 1,
             }['high']
@@ -267,9 +308,9 @@ def SYSTEM_PARAMETERIZE(target):
 
         case 'STM32H533RET6':
 
-            configurations.FLASH_LATENCY            = 5      # @/pg 252/tbl 45/`H533rm`.
-            configurations.FLASH_PROGRAMMING_DELAY  = '0b10' # "
-            configurations.INTERNAL_VOLTAGE_SCALING = {      # @/pg 438/sec 10.11.4/`H533rm`.
+            plan['FLASH_LATENCY']            = 5      # @/pg 252/tbl 45/`H533rm`.
+            plan['FLASH_PROGRAMMING_DELAY']  = '0b10' # "
+            plan['INTERNAL_VOLTAGE_SCALING'] = {      # @/pg 438/sec 10.11.4/`H533rm`.
                 'VOS3' : '0b00',
                 'VOS2' : '0b01',
                 'VOS1' : '0b10',
@@ -298,19 +339,19 @@ def SYSTEM_PARAMETERIZE(target):
 
         case 'STM32H7S3L8H6': # @/pg 285/fig 21/`H7S3rm`. @/pg 286/tbl 44/`H7S3rm`.
 
-            configurations.SMPS_OUTPUT_LEVEL       = None
-            configurations.SMPS_FORCED_ON          = None
-            configurations.SMPS_ENABLE             = False
-            configurations.LDO_ENABLE              = True
-            configurations.POWER_MANAGEMENT_BYPASS = False
+            plan['SMPS_OUTPUT_LEVEL']       = None
+            plan['SMPS_FORCED_ON']          = None
+            plan['SMPS_ENABLE']             = False
+            plan['LDO_ENABLE']              = True
+            plan['POWER_MANAGEMENT_BYPASS'] = False
 
 
 
         case 'STM32H533RET6': # @/pg 407/fig 42/`H533rm`.
 
             # Note that the SMPS is not available. @/pg 402/sec 10.2/`H533rm`.
-            configurations.LDO_ENABLE              = True
-            configurations.POWER_MANAGEMENT_BYPASS = False
+            plan['LDO_ENABLE']              = True
+            plan['POWER_MANAGEMENT_BYPASS'] = False
 
 
 
@@ -335,24 +376,24 @@ def SYSTEM_PARAMETERIZE(target):
             # @/pg 361/sec 7.5.2/`H7S3rm`.
             # TODO Handle other frequencies.
 
-            configurations.HSI_ENABLE = schema['HSI_ENABLE']
-            map['HSI_CK']             = 64_000_000 if configurations.HSI_ENABLE else 0
+            plan['HSI_ENABLE'] = schema['HSI_ENABLE']
+            map['HSI_CK']      = 64_000_000 if plan['HSI_ENABLE'] else 0
 
 
 
             # High-speed-internal oscillator (48MHz).
             # @/pg 363/sec 7.5.2/`H7S3rm`.
 
-            configurations.HSI48_ENABLE = schema['HSI48_ENABLE']
-            map['HSI48_CK']             = 48_000_000 if configurations.HSI48_ENABLE else 0
+            plan['HSI48_ENABLE'] = schema['HSI48_ENABLE']
+            map['HSI48_CK']      = 48_000_000 if plan['HSI48_ENABLE'] else 0
 
 
 
             # "Clock Security System" oscillator (fixed at ~4MHz).
             # @/pg 362/sec 7.5.2/`H7S3rm`.
 
-            configurations.CSI_ENABLE = schema['CSI_ENABLE']
-            map['CSI_CK']             = 4_000_000 if configurations.CSI_ENABLE else 0
+            plan['CSI_ENABLE'] = schema['CSI_ENABLE']
+            map['CSI_CK']             = 4_000_000 if plan['CSI_ENABLE'] else 0
 
 
 
@@ -368,24 +409,24 @@ def SYSTEM_PARAMETERIZE(target):
             # @/pg 458/sec 11.4.2/`H533rm`.
             # TODO Handle other frequencies.
 
-            configurations.HSI_ENABLE = schema['HSI_ENABLE']
-            map['HSI_CK']             = 32_000_000 if configurations.HSI_ENABLE else 0
+            plan['HSI_ENABLE'] = schema['HSI_ENABLE']
+            map['HSI_CK']      = 32_000_000 if plan['HSI_ENABLE'] else 0
 
 
 
             # High-speed-internal oscillator (48MHz).
             # @/pg 460/sec 11.4.4/`H533rm`.
 
-            configurations.HSI48_ENABLE = schema['HSI48_ENABLE']
-            map['HSI48_CK']             = 48_000_000 if configurations.HSI48_ENABLE else 0
+            plan['HSI48_ENABLE'] = schema['HSI48_ENABLE']
+            map['HSI48_CK']      = 48_000_000 if plan['HSI48_ENABLE'] else 0
 
 
 
             # "Clock Security System" oscillator (fixed at ~4MHz).
             # @/pg 459/sec 11.4.3/`H533rm`.
 
-            configurations.CSI_ENABLE = schema['CSI_ENABLE']
-            map['CSI_CK']             = 4_000_000 if configurations.CSI_ENABLE else 0
+            plan['CSI_ENABLE'] = schema['CSI_ENABLE']
+            map['CSI_CK']      = 4_000_000 if plan['CSI_ENABLE'] else 0
 
 
 
@@ -407,9 +448,9 @@ def SYSTEM_PARAMETERIZE(target):
 
 
 
-    per_ck_source                = schema['PER_CK_SOURCE']
-    configurations.PER_CK_SOURCE = mk_dict(database['PER_CK_SOURCE'])[per_ck_source]
-    map['PER_CK']                = map[per_ck_source]
+    per_ck_source         = schema['PER_CK_SOURCE']
+    plan['PER_CK_SOURCE'] = mk_dict(database['PER_CK_SOURCE'])[per_ck_source]
+    map['PER_CK']         = map[per_ck_source]
 
 
 
@@ -1076,7 +1117,7 @@ def SYSTEM_PARAMETERIZE(target):
                     (True , '0b111') : 1 / 4,
                 }[(
                     draft.GLOBAL_TIMER_PRESCALER,
-                    configurations[f'APB{apb}_DIVIDER'])
+                    plan[f'APB{apb}_DIVIDER'])
                 ]
 
                 kernel_frequency = map[f'AXI_AHB_CK'] * multiplier
@@ -1169,7 +1210,7 @@ def SYSTEM_PARAMETERIZE(target):
 
     schema.done()
 
-    return dict(configurations), AllocatingNamespace(map.dictionary)
+    return plan.dictionary, AllocatingNamespace(map.dictionary)
 
 
 
