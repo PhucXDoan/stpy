@@ -15,6 +15,7 @@ class ClockTreeMap:
 
     def __init__(self, target):
 
+        self.target     = target
         self.dictionary = {
             None : 0, # No clock source, zero frequency.
         }
@@ -134,40 +135,56 @@ class ClockTreeSchemaWrapper:
 class ClockTreePlan:
 
     def __init__(self, target):
+        self.target     = target
         self.dictionary = {}
+        self.draft      = None
 
 
-
-    # Prevent overwriting keys in the clock-tree plan.
 
     def __setitem__(self, key, value):
 
-        if key in self.dictionary:
-            raise RuntimeError(
-                f'Key {repr(key)} is already defined in the '
-                f'clock-tree plan for target {repr(self.target.name)}.'
-            )
+        if self.draft is None:
 
-        self.dictionary[key] = value
+            # Prevent overwriting keys in the clock-tree plan.
 
-        return value
+            if key in self.dictionary:
+                raise RuntimeError(
+                    f'Key {repr(key)} is already defined in the '
+                    f'clock-tree plan for target {repr(self.target.name)}.'
+                )
+
+            self.dictionary[key] = value
+
+            return value
+
+        else:
+
+            self.draft[key] = value
+
+            return value
 
 
-
-    # Ensure the key into the clock-tree plan exists.
 
     def __getitem__(self, key):
 
-        if key not in self.dictionary:
-            raise RuntimeError(
-                f'No key {repr(key)} '
-                f'found in the clock-tree plan '
-                f'for target {repr(self.target.name)}; '
-                f'closest matches are: '
-                f'{difflib.get_close_matches(repr(key), self.dictionary, cutoff = 0)}.'
-            )
+        if self.draft is None:
 
-        return self.dictionary[key]
+            # Ensure the key into the clock-tree plan exists.
+
+            if key not in self.dictionary:
+                raise RuntimeError(
+                    f'No key {repr(key)} '
+                    f'found in the clock-tree plan '
+                    f'for target {repr(self.target.name)}; '
+                    f'closest matches are: '
+                    f'{difflib.get_close_matches(repr(key), self.dictionary, cutoff = 0)}.'
+                )
+
+            return self.dictionary[key]
+
+        else:
+
+            return self.draft[key] if key in self.draft else self.dictionary[key] # TODO Hack.
 
 
 
@@ -188,6 +205,34 @@ class ClockTreePlan:
 
 
 
+    # TODO Stale.
+    # To brute-force the clock tree, we have to try a lot of possible
+    # register values to see what sticks. To do this in a convenient
+    # way, `draft` will accumulate configuration values to be eventually
+    # inserted into `configurations` itself. Since `draft` is a variable
+    # at this scope-level, any function can modify it, no matter how deep
+    # we might be in the brute-forcing stack-trace.
+
+    def brute(self, function, configuration_names):
+
+        self.draft = ContainedNamespace(configuration_names) # TODO `ContainedNamespace` even needed?
+
+        success = function()
+
+        if not success:
+            raise RuntimeError(
+                f'Could not brute-force configurations '
+                f'that satisfies the system parameterization.'
+            )
+
+        draft      = self.draft
+        self.draft = None
+
+        for key, value in draft:
+            self[key] = value
+
+
+
 ################################################################################
 
 
@@ -198,37 +243,6 @@ def SYSTEM_PARAMETERIZE(target):
     map      = ClockTreeMap(target)
     schema   = ClockTreeSchemaWrapper(target)
     plan     = ClockTreePlan(target)
-
-
-
-    # TODO Stale.
-    # To brute-force the clock tree, we have to try a lot of possible
-    # register values to see what sticks. To do this in a convenient
-    # way, `draft` will accumulate configuration values to be eventually
-    # inserted into `configurations` itself. Since `draft` is a variable
-    # at this scope-level, any function can modify it, no matter how deep
-    # we might be in the brute-forcing stack-trace.
-
-    draft = None
-
-    def brute(function, configuration_names):
-
-        nonlocal draft, plan
-
-        draft = ContainedNamespace(configuration_names) # TODO `ContainedNamespace` even needed?
-
-        success = function()
-
-        if not success:
-            raise RuntimeError(
-                f'Could not brute-force configurations '
-                f'that satisfies the system parameterization.'
-            )
-
-        for key, value in draft:
-            plan[key] = value
-
-        draft = None # Prevent values being accidentally referenced.
 
 
 
@@ -502,7 +516,7 @@ def SYSTEM_PARAMETERIZE(target):
         if needed_divider not in database[f'PLL{unit}{channel}_DIVIDER']:
             return False # The divider is not within the specified range.
 
-        draft[f'PLL{unit}_{channel}_DIVIDER'] = needed_divider # We found a divider!
+        plan[f'PLL{unit}_{channel}_DIVIDER'] = needed_divider # We found a divider!
 
         return True
 
@@ -516,30 +530,30 @@ def SYSTEM_PARAMETERIZE(target):
 
         # Try every available predivider that's placed before the PLL unit.
 
-        for draft[f'PLL{unit}_PREDIVIDER'] in database[f'PLL{unit}_PREDIVIDER']:
+        for plan[f'PLL{unit}_PREDIVIDER'] in database[f'PLL{unit}_PREDIVIDER']:
 
 
 
             # Determine the range of the PLL input frequency.
 
-            pll_reference_freq = pll_clock_source_freq / draft[f'PLL{unit}_PREDIVIDER']
+            pll_reference_freq = pll_clock_source_freq / plan[f'PLL{unit}_PREDIVIDER']
 
-            draft[f'PLL{unit}_INPUT_RANGE'] = next((
+            plan[f'PLL{unit}_INPUT_RANGE'] = next((
                 option
                 for upper_freq_range, option in database[f'PLL{unit}_INPUT_RANGE']
                 if pll_reference_freq < upper_freq_range
             ), None)
 
-            if draft[f'PLL{unit}_INPUT_RANGE'] is None:
+            if plan[f'PLL{unit}_INPUT_RANGE'] is None:
                 continue # PLL input frequency is out of range.
 
 
 
             # Try every available multiplier that the PLL can handle.
 
-            for draft[f'PLL{unit}_MULTIPLIER'] in database[f'PLL{unit}_MULTIPLIER']:
+            for plan[f'PLL{unit}_MULTIPLIER'] in database[f'PLL{unit}_MULTIPLIER']:
 
-                pll_vco_freq = pll_reference_freq * draft[f'PLL{unit}_MULTIPLIER']
+                pll_vco_freq = pll_reference_freq * plan[f'PLL{unit}_MULTIPLIER']
 
                 if pll_vco_freq not in database['PLL_VCO_FREQ']:
                     continue # The multiplied frequency is out of range.
@@ -561,7 +575,7 @@ def SYSTEM_PARAMETERIZE(target):
             for channel in mk_dict(database['PLLS'])[unit]
         )
 
-        draft[f'PLL{unit}_ENABLE'] = pll_is_used
+        plan[f'PLL{unit}_ENABLE'] = pll_is_used
 
         if not pll_is_used:
             return True
@@ -594,7 +608,7 @@ def SYSTEM_PARAMETERIZE(target):
 
             case 'STM32H7S3L8H6':
 
-                for pll_clock_source_name, draft.PLL_CLOCK_SOURCE in database['PLL_CLOCK_SOURCE']:
+                for pll_clock_source_name, plan['PLL_CLOCK_SOURCE'] in database['PLL_CLOCK_SOURCE']:
 
                     pll_clock_source_freq = map[pll_clock_source_name]
                     every_pll_satisfied   = all(
@@ -615,7 +629,7 @@ def SYSTEM_PARAMETERIZE(target):
 
                     plln_satisfied = any(
                         parameterize_plln(unit, map[plln_clock_source_name])
-                        for plln_clock_source_name, draft[f'PLL{unit}_CLOCK_SOURCE'] in database[f'PLL{unit}_CLOCK_SOURCE']
+                        for plln_clock_source_name, plan[f'PLL{unit}_CLOCK_SOURCE'] in database[f'PLL{unit}_CLOCK_SOURCE']
                     )
 
                     if not plln_satisfied:
@@ -653,7 +667,7 @@ def SYSTEM_PARAMETERIZE(target):
         for suffix in ('ENABLE', 'PREDIVIDER', 'MULTIPLIER', 'INPUT_RANGE'):
             draft_configuration_names += [f'PLL{unit}_{suffix}']
 
-    brute(parameterize_plls, draft_configuration_names)
+    plan.brute(parameterize_plls, draft_configuration_names)
 
 
 
@@ -702,8 +716,8 @@ def SYSTEM_PARAMETERIZE(target):
     def parameterize_apbx(unit):
 
         needed_apbx_divider         = map['AXI_AHB_CK'] / map[f'APB{unit}_CK']
-        draft[f'APB{unit}_DIVIDER'] = mk_dict(database[f'APB{unit}_DIVIDER']).get(needed_apbx_divider, None)
-        apbx_divider_found          = draft[f'APB{unit}_DIVIDER'] is not None
+        plan[f'APB{unit}_DIVIDER'] = mk_dict(database[f'APB{unit}_DIVIDER']).get(needed_apbx_divider, None)
+        apbx_divider_found          = plan[f'APB{unit}_DIVIDER'] is not None
 
         return apbx_divider_found
 
@@ -713,15 +727,15 @@ def SYSTEM_PARAMETERIZE(target):
 
     def parameterize_scgu():
 
-        for scgu_clock_source_name, draft.SCGU_CLOCK_SOURCE in database['SCGU_CLOCK_SOURCE']:
+        for scgu_clock_source_name, plan['SCGU_CLOCK_SOURCE'] in database['SCGU_CLOCK_SOURCE']:
 
 
 
             # Try to parameterize for the CPU.
 
             needed_cpu_divider = map[scgu_clock_source_name] / map['CPU_CK']
-            draft.CPU_DIVIDER  = mk_dict(database['CPU_DIVIDER']).get(needed_cpu_divider, None)
-            cpu_divider_found  = draft.CPU_DIVIDER is not None
+            plan['CPU_DIVIDER']  = mk_dict(database['CPU_DIVIDER']).get(needed_cpu_divider, None)
+            cpu_divider_found  = plan['CPU_DIVIDER'] is not None
 
             if not cpu_divider_found:
                 continue
@@ -734,9 +748,9 @@ def SYSTEM_PARAMETERIZE(target):
 
                 case 'STM32H7S3L8H6':
 
-                    needed_axi_ahb_divider = map['CPU_CK'] / map['AXI_AHB_CK']
-                    draft.AXI_AHB_DIVIDER  = mk_dict(database['AXI_AHB_DIVIDER']).get(needed_axi_ahb_divider, None)
-                    axi_ahb_divider_found  = draft.AXI_AHB_DIVIDER is not None
+                    needed_axi_ahb_divider   = map['CPU_CK'] / map['AXI_AHB_CK']
+                    plan['AXI_AHB_DIVIDER'] = mk_dict(database['AXI_AHB_DIVIDER']).get(needed_axi_ahb_divider, None)
+                    axi_ahb_divider_found    = plan['AXI_AHB_DIVIDER'] is not None
 
                     if not axi_ahb_divider_found:
                         continue
@@ -773,7 +787,7 @@ def SYSTEM_PARAMETERIZE(target):
 
      # Begin brute-forcing.
 
-    brute(parameterize_scgu, (
+    plan.brute(parameterize_scgu, (
         'SCGU_CLOCK_SOURCE',
         'CPU_DIVIDER',
         'AXI_AHB_DIVIDER',
@@ -804,12 +818,12 @@ def SYSTEM_PARAMETERIZE(target):
 
     def parameterize_systick():
 
-        draft.SYSTICK_ENABLE = bool(map['SYSTICK_CK'])
+        plan['SYSTICK_ENABLE'] = bool(map['SYSTICK_CK'])
 
-        if not draft.SYSTICK_ENABLE:
+        if not plan['SYSTICK_ENABLE']:
             return True # SysTick won't be configured.
 
-        for draft.SYSTICK_USE_CPU_CK in database['SYSTICK_USE_CPU_CK']:
+        for plan['SYSTICK_USE_CPU_CK'] in database['SYSTICK_USE_CPU_CK']:
 
 
 
@@ -817,7 +831,7 @@ def SYSTEM_PARAMETERIZE(target):
             # @/pg 621/sec B3.3.3/`Armv7-M`.
             # @/pg 1859/sec D1.2.238/`Armv8-M`.
 
-            if draft.SYSTICK_USE_CPU_CK:
+            if plan['SYSTICK_USE_CPU_CK']:
                 frequencies = lambda: [map['CPU_CK']]
 
 
@@ -851,21 +865,21 @@ def SYSTEM_PARAMETERIZE(target):
 
             for map['SYSTICK_KERNEL_FREQ'] in frequencies():
 
-                draft.SYSTICK_RELOAD = map['SYSTICK_KERNEL_FREQ'] / map['SYSTICK_CK'] - 1
+                plan['SYSTICK_RELOAD'] = map['SYSTICK_KERNEL_FREQ'] / map['SYSTICK_CK'] - 1
 
-                if not draft.SYSTICK_RELOAD.is_integer():
+                if not plan['SYSTICK_RELOAD'].is_integer():
                     continue # SysTick's reload value wouldn't be a whole number.
 
-                draft.SYSTICK_RELOAD = int(draft.SYSTICK_RELOAD)
+                plan['SYSTICK_RELOAD'] = int(plan['SYSTICK_RELOAD'])
 
-                if draft.SYSTICK_RELOAD not in database['SYSTICK_RELOAD']:
+                if plan['SYSTICK_RELOAD'] not in database['SYSTICK_RELOAD']:
                     continue # SysTick's reload value would be out of range.
 
                 return True
 
 
 
-    brute(parameterize_systick, (
+    plan.brute(parameterize_systick, (
         'SYSTICK_ENABLE',
         'SYSTICK_RELOAD',
         'SYSTICK_USE_CPU_CK'
@@ -926,7 +940,7 @@ def SYSTEM_PARAMETERIZE(target):
 
             # We found the desired divider!
 
-            draft[f'{peripheral}{unit}_BAUD_DIVIDER'] = needed_divider
+            plan[f'{peripheral}{unit}_BAUD_DIVIDER'] = needed_divider
 
             return True
 
@@ -953,7 +967,7 @@ def SYSTEM_PARAMETERIZE(target):
             # Try every available clock source for this
             # set of UXART peripherals and see what sticks.
 
-            for uxart_clock_source_name, draft[f'UXART_{uxart_units}_KERNEL_SOURCE'] in database[f'UXART_{uxart_units}_KERNEL_SOURCE']:
+            for uxart_clock_source_name, plan[f'UXART_{uxart_units}_KERNEL_SOURCE'] in database[f'UXART_{uxart_units}_KERNEL_SOURCE']:
 
                 uxart_clock_source_freq = map[uxart_clock_source_name]
                 every_uxart_satisfied   = all(
@@ -969,7 +983,7 @@ def SYSTEM_PARAMETERIZE(target):
         # Brute force the UXART peripherals to find the needed
         # clock source and the respective baud-dividers.
 
-        brute(parameterize_uxarts, (
+        plan.brute(parameterize_uxarts, (
             f'UXART_{uxart_units}_KERNEL_SOURCE',
             *(
                 f'{peripheral}{unit}_BAUD_DIVIDER'
@@ -1001,9 +1015,9 @@ def SYSTEM_PARAMETERIZE(target):
 
             if needed_baud is None:
 
-                draft[f'I2C{unit}_KERNEL_SOURCE'] = None
-                draft[f'I2C{unit}_PRESC'        ] = None
-                draft[f'I2C{unit}_SCL'          ] = None
+                plan[f'I2C{unit}_KERNEL_SOURCE'] = None
+                plan[f'I2C{unit}_PRESC'        ] = None
+                plan[f'I2C{unit}_SCL'          ] = None
 
                 return True
 
@@ -1047,9 +1061,9 @@ def SYSTEM_PARAMETERIZE(target):
 
                     if best_baud_error is None or actual_baud_error < best_baud_error:
                         best_baud_error                   = actual_baud_error
-                        draft[f'I2C{unit}_KERNEL_SOURCE'] = source_option
-                        draft[f'I2C{unit}_PRESC'        ] = presc
-                        draft[f'I2C{unit}_SCL'          ] = scl
+                        plan[f'I2C{unit}_KERNEL_SOURCE'] = source_option
+                        plan[f'I2C{unit}_PRESC'        ] = presc
+                        plan[f'I2C{unit}_SCL'          ] = scl
 
 
 
@@ -1059,7 +1073,7 @@ def SYSTEM_PARAMETERIZE(target):
 
 
 
-        brute(parameterize, (
+        plan.brute(parameterize, (
             f'I2C{unit}_KERNEL_SOURCE',
             f'I2C{unit}_PRESC',
             f'I2C{unit}_SCL',
@@ -1116,7 +1130,7 @@ def SYSTEM_PARAMETERIZE(target):
                     (True , '0b110') : 1 / 2,
                     (True , '0b111') : 1 / 4,
                 }[(
-                    draft.GLOBAL_TIMER_PRESCALER,
+                    plan['GLOBAL_TIMER_PRESCALER'],
                     plan[f'APB{apb}_DIVIDER'])
                 ]
 
@@ -1131,30 +1145,30 @@ def SYSTEM_PARAMETERIZE(target):
         # Find the pair of divider and modulation values to
         # get an output frequency that's within tolerance.
 
-        for draft[f'TIM{unit}_DIVIDER'] in database[f'TIM{unit}_DIVIDER']:
+        for plan[f'TIM{unit}_DIVIDER'] in database[f'TIM{unit}_DIVIDER']:
 
-            counter_frequency = kernel_frequency / draft[f'TIM{unit}_DIVIDER']
+            counter_frequency = kernel_frequency / plan[f'TIM{unit}_DIVIDER']
 
 
 
             # Determine the modulation value.
 
-            draft[f'TIM{unit}_MODULATION'] = round(counter_frequency / needed_rate)
+            plan[f'TIM{unit}_MODULATION'] = round(counter_frequency / needed_rate)
 
-            if draft[f'TIM{unit}_MODULATION'] == 0:
+            if plan[f'TIM{unit}_MODULATION'] == 0:
                 # Zero will end up disabling the counter.
                 # Since we're approximating for the rate,
                 # anyways we might as well round up to 1.
-                draft[f'TIM{unit}_MODULATION'] = 1
+                plan[f'TIM{unit}_MODULATION'] = 1
 
-            if draft[f'TIM{unit}_MODULATION'] not in database[f'TIM{unit}_MODULATION']:
+            if plan[f'TIM{unit}_MODULATION'] not in database[f'TIM{unit}_MODULATION']:
                 continue
 
 
 
             # See if things are within tolerance.
 
-            actual_rate  = counter_frequency / draft[f'TIM{unit}_MODULATION']
+            actual_rate  = counter_frequency / plan[f'TIM{unit}_MODULATION']
             actual_error = abs(1 - actual_rate / needed_rate)
 
             if actual_error <= 0.001: # TODO Ad-hoc.
@@ -1175,12 +1189,12 @@ def SYSTEM_PARAMETERIZE(target):
 
 
         if not units_to_be_parameterized:
-            draft.GLOBAL_TIMER_PRESCALER = None
+            plan['GLOBAL_TIMER_PRESCALER'] = None
             return True
 
 
 
-        for draft.GLOBAL_TIMER_PRESCALER in database['GLOBAL_TIMER_PRESCALER']:
+        for plan['GLOBAL_TIMER_PRESCALER'] in database['GLOBAL_TIMER_PRESCALER']:
 
             every_timer_satisfied = all(
                 parameterize_timer(unit)
@@ -1193,7 +1207,7 @@ def SYSTEM_PARAMETERIZE(target):
 
 
     if 'TIMERS' in database:
-        brute(parameterize_timers, (
+        plan.brute(parameterize_timers, (
             'GLOBAL_TIMER_PRESCALER',
             *(f'TIM{unit}_DIVIDER'    for unit in database['TIMERS']),
             *(f'TIM{unit}_MODULATION' for unit in database['TIMERS']),
