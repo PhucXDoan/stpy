@@ -79,7 +79,7 @@ for target in PER_TARGET():
         for macro, expansion in justify(
             (
                 ('<', f'CLOCK_TREE_FREQUENCY_OF_{name}' ),
-                ('>', f'{frequency:,}'.replace(',', "'")),
+                ('>', f'{frequency}'.replace(',', "'")),
             )
             for name, frequency in tree
             if name is not None

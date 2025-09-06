@@ -1,5 +1,11 @@
 #meta SYSTEM_PARAMETERIZE : SYSTEM_DATABASE
 
+
+
+import difflib
+
+
+
 def SYSTEM_PARAMETERIZE(target):
 
 
@@ -39,47 +45,51 @@ def SYSTEM_PARAMETERIZE(target):
 
 
 
-    # To ensure we use every option in `target.clock_tree`,
-    # we have a helper function to record every access to it
-    # that we then verify at the very end; a default value can
-    # also be supplied if the option is not in `target.clock_tree`.
+    class ClockTreeSchemaWrapper:
 
-    options      = target.clock_tree
-    used_options = OrderedSet()
-
-    def opts(option, default = ...): # TODO Wrapper around `target.clock_tree`?
-
-        nonlocal used_options
+        def __init__(self):
+            self.used_keys = []
 
 
 
-        # Mark option as used.
+        # We keep track of the clock-tree
+        # options that have been used so far.
 
-        used_options |= { option }
+        def __getitem__(self, key):
+
+            if key not in target.clock_tree:
+                raise RuntimeError(
+                    f'No key {repr(key)} '
+                    f'found in the clock-tree schema '
+                    f'for target {repr(target.name)}; '
+                    f'closest matches are: '
+                    f'{difflib.get_close_matches(key, target.clock_tree, cutoff = 0)}.'
+                )
+
+            if key not in self.used_keys:
+                self.used_keys += [key]
+
+            return target.clock_tree[key]
 
 
 
-        # We found the option in `target.clock_tree`.
+        # Verify that we didn't miss anything.
 
-        if option in options:
-            return options[option]
+        def done(self):
+
+            if unused_keys := [
+                key
+                for key in target.clock_tree
+                if key not in self.used_keys
+            ]:
+                log(ANSI(
+                    f'[WARNING] There are leftover {target.mcu} options: {unused_keys}.',
+                    'fg_yellow'
+                ))
 
 
 
-        # Fallback to the default.
-
-        elif default is not ...:
-            return default
-
-
-
-        # No option in SYSTEM_OPTION nor fallback default!
-
-        else:
-            raise ValueError(
-                f'For {target.mcu}, '
-                f'no system option {repr(option)} was found.'
-            )
+    schema = ClockTreeSchemaWrapper()
 
 
 
@@ -180,7 +190,7 @@ def SYSTEM_PARAMETERIZE(target):
     # we just assume it's disabled and won't be used.
 
     for clock in clocks:
-        tree[clock] = opts(clock, 0)
+        tree[clock] = schema[clock]
 
 
 
@@ -280,7 +290,7 @@ def SYSTEM_PARAMETERIZE(target):
             # @/pg 361/sec 7.5.2/`H7S3rm`.
             # TODO Handle other frequencies.
 
-            configurations.HSI_ENABLE = opts('HSI_ENABLE', None)
+            configurations.HSI_ENABLE = schema['HSI_ENABLE']
             tree.HSI_CK               = 64_000_000 if configurations.HSI_ENABLE else 0
 
 
@@ -288,7 +298,7 @@ def SYSTEM_PARAMETERIZE(target):
             # High-speed-internal oscillator (48MHz).
             # @/pg 363/sec 7.5.2/`H7S3rm`.
 
-            configurations.HSI48_ENABLE = opts('HSI48_ENABLE', None)
+            configurations.HSI48_ENABLE = schema['HSI48_ENABLE']
             tree.HSI48_CK               = 48_000_000 if configurations.HSI48_ENABLE else 0
 
 
@@ -296,7 +306,7 @@ def SYSTEM_PARAMETERIZE(target):
             # "Clock Security System" oscillator (fixed at ~4MHz).
             # @/pg 362/sec 7.5.2/`H7S3rm`.
 
-            configurations.CSI_ENABLE = opts('CSI_ENABLE', None)
+            configurations.CSI_ENABLE = schema['CSI_ENABLE']
             tree.CSI_CK               = 4_000_000 if configurations.CSI_ENABLE else 0
 
 
@@ -313,7 +323,7 @@ def SYSTEM_PARAMETERIZE(target):
             # @/pg 458/sec 11.4.2/`H533rm`.
             # TODO Handle other frequencies.
 
-            configurations.HSI_ENABLE = opts('HSI_ENABLE', None)
+            configurations.HSI_ENABLE = schema['HSI_ENABLE']
             tree.HSI_CK               = 32_000_000 if configurations.HSI_ENABLE else 0
 
 
@@ -321,7 +331,7 @@ def SYSTEM_PARAMETERIZE(target):
             # High-speed-internal oscillator (48MHz).
             # @/pg 460/sec 11.4.4/`H533rm`.
 
-            configurations.HSI48_ENABLE = opts('HSI48_ENABLE', None)
+            configurations.HSI48_ENABLE = schema['HSI48_ENABLE']
             tree.HSI48_CK               = 48_000_000 if configurations.HSI48_ENABLE else 0
 
 
@@ -329,7 +339,7 @@ def SYSTEM_PARAMETERIZE(target):
             # "Clock Security System" oscillator (fixed at ~4MHz).
             # @/pg 459/sec 11.4.3/`H533rm`.
 
-            configurations.CSI_ENABLE = opts('CSI_ENABLE', None)
+            configurations.CSI_ENABLE = schema['CSI_ENABLE']
             tree.CSI_CK               = 4_000_000 if configurations.CSI_ENABLE else 0
 
 
@@ -352,7 +362,7 @@ def SYSTEM_PARAMETERIZE(target):
 
 
 
-    per_ck_source                = opts('PER_CK_SOURCE', None)
+    per_ck_source                = schema['PER_CK_SOURCE']
     configurations.PER_CK_SOURCE = mk_dict(database['PER_CK_SOURCE'])[per_ck_source]
     tree.PER_CK                  = tree[per_ck_source]
 
@@ -374,7 +384,7 @@ def SYSTEM_PARAMETERIZE(target):
 
         for channel in channels:
 
-            goal_pll_channel_freq = opts(f'PLL{unit}_{channel}_CK', None)
+            goal_pll_channel_freq = schema[f'PLL{unit}_{channel}_CK']
 
             if goal_pll_channel_freq is None:
                 continue # This PLL channel isn't used.
@@ -391,7 +401,7 @@ def SYSTEM_PARAMETERIZE(target):
 
     def parameterize_plln_channel(unit, pll_vco_freq, channel):
 
-        goal_pll_channel_freq = opts(f'PLL{unit}_{channel}_CK', None)
+        goal_pll_channel_freq = schema[f'PLL{unit}_{channel}_CK']
 
         if goal_pll_channel_freq is None:
             return True # This PLL channel isn't used.
@@ -461,7 +471,7 @@ def SYSTEM_PARAMETERIZE(target):
         # See if the PLL unit is even used.
 
         pll_is_used = not all(
-            opts(f'PLL{unit}_{channel}_CK', None) is None
+            schema[f'PLL{unit}_{channel}_CK'] is None
             for channel in mk_dict(database['PLLS'])[unit]
         )
 
@@ -696,7 +706,7 @@ def SYSTEM_PARAMETERIZE(target):
 
 
 
-    if options.get('SYSTICK_CK', None) is not None and target.use_freertos:
+    if schema['SYSTICK_CK'] is not None and target.use_freertos:
         raise ValueError(
             f'FreeRTOS already uses SysTick for the time-base; '
             f'so for target {repr(target.name)}, '
@@ -708,7 +718,7 @@ def SYSTEM_PARAMETERIZE(target):
 
     def parameterize_systick():
 
-        draft.SYSTICK_ENABLE = tree.SYSTICK_CK != 0
+        draft.SYSTICK_ENABLE = bool(tree.SYSTICK_CK)
 
         if not draft.SYSTICK_ENABLE:
             return True # SysTick won't be configured.
@@ -807,7 +817,7 @@ def SYSTEM_PARAMETERIZE(target):
 
             # See if this UXART peripheral is even needed.
 
-            needed_baud = opts(f'{peripheral}{unit}_BAUD', None)
+            needed_baud = schema[f'{peripheral}{unit}_BAUD']
 
             if needed_baud is None:
                 return True
@@ -845,7 +855,7 @@ def SYSTEM_PARAMETERIZE(target):
             # Check if this set of UXARTs even needs to be configured for.
 
             using_uxarts = any(
-                opts(f'{peripheral}{unit}_BAUD', None) is not None
+                schema[f'{peripheral}{unit}_BAUD'] is not None
                 for peripheral, unit in uxart_units
             )
 
@@ -901,7 +911,7 @@ def SYSTEM_PARAMETERIZE(target):
 
             # See if the I2C unit even needs to be brute-forced.
 
-            needed_baud = opts(f'I2C{unit}_BAUD', None)
+            needed_baud = schema[f'I2C{unit}_BAUD']
 
             if needed_baud is None:
 
@@ -922,7 +932,7 @@ def SYSTEM_PARAMETERIZE(target):
 
             for source_name, source_option in database[f'I2C{unit}_KERNEL_SOURCE']:
 
-                source_frequency = tree[source_name]
+                source_frequency = tree[source_name] or 0
 
                 for presc in database['I2C_PRESC']:
 
@@ -982,7 +992,7 @@ def SYSTEM_PARAMETERIZE(target):
 
 
 
-        needed_rate = opts(f'TIM{unit}_RATE')
+        needed_rate = schema[f'TIM{unit}_RATE']
 
 
 
@@ -1073,7 +1083,7 @@ def SYSTEM_PARAMETERIZE(target):
         units_to_be_parameterized = [
             unit
             for unit in database['TIMERS']
-            if opts(f'TIM{unit}_RATE', None) is not None
+            if schema[f'TIM{unit}_RATE'] is not None
         ]
 
 
@@ -1112,11 +1122,7 @@ def SYSTEM_PARAMETERIZE(target):
 
 
 
-    if leftovers := options.keys() - used_options:
-        log(ANSI(
-            f'[WARNING] There are leftover {target.mcu} options: {leftovers}.',
-            'fg_yellow'
-        ))
+    schema.done()
 
     return dict(configurations), tree
 
