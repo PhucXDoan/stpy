@@ -213,9 +213,9 @@ class ClockTreePlan:
     # at this scope-level, any function can modify it, no matter how deep
     # we might be in the brute-forcing stack-trace.
 
-    def brute(self, function, configuration_names):
+    def brute(self, function):
 
-        self.draft = ContainedNamespace(configuration_names) # TODO `ContainedNamespace` even needed?
+        self.draft = {} # TODO `ContainedNamespace` even needed?
 
         success = function()
 
@@ -228,7 +228,7 @@ class ClockTreePlan:
         draft      = self.draft
         self.draft = None
 
-        for key, value in draft:
+        for key, value in draft.items():
             self[key] = value
 
 
@@ -567,6 +567,13 @@ def SYSTEM_PARAMETERIZE(target):
     def parameterize_plln(unit, pll_clock_source_freq):
 
 
+        plan[f'PLL{unit}_PREDIVIDER'] = None
+        plan[f'PLL{unit}_INPUT_RANGE'] = None
+        plan[f'PLL{unit}_MULTIPLIER'] = None
+
+        for channel in mk_dict(database['PLLS'])[unit]:
+            plan[f'PLL{unit}_{channel}_DIVIDER'] = None
+
 
         # See if the PLL unit is even used.
 
@@ -645,29 +652,7 @@ def SYSTEM_PARAMETERIZE(target):
 
     # Begin brute-forcing.
 
-    match target.mcu:
-
-        case 'STM32H7S3L8H6':
-            draft_configuration_names = ['PLL_CLOCK_SOURCE']
-
-        case 'STM32H533RET6':
-            draft_configuration_names = [
-                f'PLL{unit}_CLOCK_SOURCE'
-                for unit, channels in database['PLLS']
-            ]
-
-        case _:
-            raise NotImplementedError
-
-    for unit, channels in database['PLLS']:
-
-        for channel in channels:
-            draft_configuration_names += [f'PLL{unit}_{channel}_DIVIDER']
-
-        for suffix in ('ENABLE', 'PREDIVIDER', 'MULTIPLIER', 'INPUT_RANGE'):
-            draft_configuration_names += [f'PLL{unit}_{suffix}']
-
-    plan.brute(parameterize_plls, draft_configuration_names)
+    plan.brute(parameterize_plls)
 
 
 
@@ -787,12 +772,7 @@ def SYSTEM_PARAMETERIZE(target):
 
      # Begin brute-forcing.
 
-    plan.brute(parameterize_scgu, (
-        'SCGU_CLOCK_SOURCE',
-        'CPU_DIVIDER',
-        'AXI_AHB_DIVIDER',
-        *(f'APB{unit}_DIVIDER' for unit in database['APBS']),
-    ))
+    plan.brute(parameterize_scgu)
 
 
 
@@ -879,11 +859,7 @@ def SYSTEM_PARAMETERIZE(target):
 
 
 
-    plan.brute(parameterize_systick, (
-        'SYSTICK_ENABLE',
-        'SYSTICK_RELOAD',
-        'SYSTICK_USE_CPU_CK'
-    ))
+    plan.brute(parameterize_systick)
 
 
 
@@ -951,6 +927,11 @@ def SYSTEM_PARAMETERIZE(target):
         def parameterize_uxarts():
 
 
+            plan[f'UXART_{uxart_units}_KERNEL_SOURCE'] = None
+
+            for uxart_unit in uxart_units:
+                plan[f'{uxart_unit[0]}{uxart_unit[1]}_BAUD_DIVIDER'] = None
+
 
             # Check if this set of UXARTs even needs to be configured for.
 
@@ -983,13 +964,7 @@ def SYSTEM_PARAMETERIZE(target):
         # Brute force the UXART peripherals to find the needed
         # clock source and the respective baud-dividers.
 
-        plan.brute(parameterize_uxarts, (
-            f'UXART_{uxart_units}_KERNEL_SOURCE',
-            *(
-                f'{peripheral}{unit}_BAUD_DIVIDER'
-                for peripheral, unit in uxart_units
-            ),
-        ))
+        plan.brute(parameterize_uxarts)
 
 
 
@@ -1073,11 +1048,7 @@ def SYSTEM_PARAMETERIZE(target):
 
 
 
-        plan.brute(parameterize, (
-            f'I2C{unit}_KERNEL_SOURCE',
-            f'I2C{unit}_PRESC',
-            f'I2C{unit}_SCL',
-        ))
+        plan.brute(parameterize)
 
 
 
@@ -1207,11 +1178,7 @@ def SYSTEM_PARAMETERIZE(target):
 
 
     if 'TIMERS' in database:
-        plan.brute(parameterize_timers, (
-            'GLOBAL_TIMER_PRESCALER',
-            *(f'TIM{unit}_DIVIDER'    for unit in database['TIMERS']),
-            *(f'TIM{unit}_MODULATION' for unit in database['TIMERS']),
-        ))
+        plan.brute(parameterize_timers)
 
 
 
