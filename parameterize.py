@@ -20,28 +20,67 @@ def SYSTEM_PARAMETERIZE(target):
 
 
 
-    # As we parameterize, we keep track of clock
-    # frequencies we have so far in the clock-tree.
-    # e.g:
-    # >
-    # >    tree['PLL2_Q_CK']   ->   200_000_000 Hz
-    # >
+    class ClockTreeMap:
 
-    tree = AllocatingNamespace(
-        { None : 0 }, # So that: tree[None] -> 0 Hz.
-    )
+        def __init__(self):
 
-    def log_tree(): # For debugging the clock-tree if needed.
-        log()
-        for just in justify(
-            (
-                ('<', key          ),
-                ('<', f'{value :,}'),
+            self.items = {
+                None : 0, # No clock source, zero frequency.
+            }
+
+
+
+        # Prevent overwriting keys in the clock-tree map.
+
+        def __setitem__(self, key, value):
+
+            if key in self.items:
+                raise RuntimeError(
+                    f'Key {repr(key)} is already defined in the '
+                    f'clock-tree map for target {repr(target.name)}.'
+                )
+
+            self.items[key] = value
+
+            return value
+
+
+
+        # Ensure the key into the clock-tree map exists.
+
+        def __getitem__(self, key):
+
+            if key not in self.items:
+                raise RuntimeError(
+                    f'No key {repr(key)} '
+                    f'found in the clock-tree map '
+                    f'for target {repr(target.name)}; '
+                    f'closest matches are: '
+                    f'{difflib.get_close_matches(repr(key), self.items, cutoff = 0)}.'
+                )
+
+            return self.items[key]
+
+
+
+        # Output a nice looking table for debugging purposes.
+
+        def __str__(self):
+
+            return '\n'.join(
+                '| {} | {} |'.format(*just)
+                for just in justify(
+                    (
+                        ('<', key       ),
+                        ('<', f'{value}'),
+                    )
+                    for key, value in self.items.items()
+                )
             )
-            for key, value in tree
-        ):
-            log(ANSI('| {} | {} Hz |', 'fg_yellow'), *just)
-        log()
+
+
+
+    map = ClockTreeMap()
 
 
 
@@ -63,7 +102,7 @@ def SYSTEM_PARAMETERIZE(target):
                     f'found in the clock-tree schema '
                     f'for target {repr(target.name)}; '
                     f'closest matches are: '
-                    f'{difflib.get_close_matches(key, target.clock_tree, cutoff = 0)}.'
+                    f'{difflib.get_close_matches(repr(key), target.clock_tree, cutoff = 0)}.'
                 )
 
             if key not in self.used_keys:
@@ -86,6 +125,11 @@ def SYSTEM_PARAMETERIZE(target):
                     f'[WARNING] There are leftover {target.mcu} options: {unused_keys}.',
                     'fg_yellow'
                 ))
+
+
+
+        # TODO Have an easy print.
+        # def __str__(self):
 
 
 
@@ -190,7 +234,7 @@ def SYSTEM_PARAMETERIZE(target):
     # we just assume it's disabled and won't be used.
 
     for clock in clocks:
-        tree[clock] = schema[clock]
+        map[clock] = schema[clock]
 
 
 
@@ -291,7 +335,7 @@ def SYSTEM_PARAMETERIZE(target):
             # TODO Handle other frequencies.
 
             configurations.HSI_ENABLE = schema['HSI_ENABLE']
-            tree.HSI_CK               = 64_000_000 if configurations.HSI_ENABLE else 0
+            map['HSI_CK']             = 64_000_000 if configurations.HSI_ENABLE else 0
 
 
 
@@ -299,7 +343,7 @@ def SYSTEM_PARAMETERIZE(target):
             # @/pg 363/sec 7.5.2/`H7S3rm`.
 
             configurations.HSI48_ENABLE = schema['HSI48_ENABLE']
-            tree.HSI48_CK               = 48_000_000 if configurations.HSI48_ENABLE else 0
+            map['HSI48_CK']             = 48_000_000 if configurations.HSI48_ENABLE else 0
 
 
 
@@ -307,13 +351,13 @@ def SYSTEM_PARAMETERIZE(target):
             # @/pg 362/sec 7.5.2/`H7S3rm`.
 
             configurations.CSI_ENABLE = schema['CSI_ENABLE']
-            tree.CSI_CK               = 4_000_000 if configurations.CSI_ENABLE else 0
+            map['CSI_CK']             = 4_000_000 if configurations.CSI_ENABLE else 0
 
 
 
             # TODO Not implemented yet; here because of the brute-forcing later on.
-            tree.HSE_CK = 0
-            tree.LSE_CK = 0
+            map['HSE_CK'] = 0
+            map['LSE_CK'] = 0
 
 
 
@@ -324,7 +368,7 @@ def SYSTEM_PARAMETERIZE(target):
             # TODO Handle other frequencies.
 
             configurations.HSI_ENABLE = schema['HSI_ENABLE']
-            tree.HSI_CK               = 32_000_000 if configurations.HSI_ENABLE else 0
+            map['HSI_CK']             = 32_000_000 if configurations.HSI_ENABLE else 0
 
 
 
@@ -332,7 +376,7 @@ def SYSTEM_PARAMETERIZE(target):
             # @/pg 460/sec 11.4.4/`H533rm`.
 
             configurations.HSI48_ENABLE = schema['HSI48_ENABLE']
-            tree.HSI48_CK               = 48_000_000 if configurations.HSI48_ENABLE else 0
+            map['HSI48_CK']             = 48_000_000 if configurations.HSI48_ENABLE else 0
 
 
 
@@ -340,13 +384,13 @@ def SYSTEM_PARAMETERIZE(target):
             # @/pg 459/sec 11.4.3/`H533rm`.
 
             configurations.CSI_ENABLE = schema['CSI_ENABLE']
-            tree.CSI_CK               = 4_000_000 if configurations.CSI_ENABLE else 0
+            map['CSI_CK']             = 4_000_000 if configurations.CSI_ENABLE else 0
 
 
 
             # TODO Not implemented yet; here because of the brute-forcing later on.
-            tree.HSE_CK = 0
-            tree.LSE_CK = 0
+            map['HSE_CK'] = 0
+            map['LSE_CK'] = 0
 
 
 
@@ -364,7 +408,7 @@ def SYSTEM_PARAMETERIZE(target):
 
     per_ck_source                = schema['PER_CK_SOURCE']
     configurations.PER_CK_SOURCE = mk_dict(database['PER_CK_SOURCE'])[per_ck_source]
-    tree.PER_CK                  = tree[per_ck_source]
+    map['PER_CK']                = map[per_ck_source]
 
 
 
@@ -510,7 +554,7 @@ def SYSTEM_PARAMETERIZE(target):
 
                 for pll_clock_source_name, draft.PLL_CLOCK_SOURCE in database['PLL_CLOCK_SOURCE']:
 
-                    pll_clock_source_freq = tree[pll_clock_source_name]
+                    pll_clock_source_freq = map[pll_clock_source_name]
                     every_pll_satisfied   = all(
                         parameterize_plln(units, pll_clock_source_freq)
                         for units, channels in database['PLLS']
@@ -528,7 +572,7 @@ def SYSTEM_PARAMETERIZE(target):
                 for unit, channels in database['PLLS']:
 
                     plln_satisfied = any(
-                        parameterize_plln(unit, tree[plln_clock_source_name])
+                        parameterize_plln(unit, map[plln_clock_source_name])
                         for plln_clock_source_name, draft[f'PLL{unit}_CLOCK_SOURCE'] in database[f'PLL{unit}_CLOCK_SOURCE']
                     )
 
@@ -582,27 +626,27 @@ def SYSTEM_PARAMETERIZE(target):
 
     # Verify the values for the SCGU options.
 
-    if tree.CPU_CK not in database['CPU_FREQ']:
+    if map['CPU_CK'] not in database['CPU_FREQ']:
         raise ValueError(
             f'CPU clock frequency is '
-            f'out-of-range: {tree.CPU_CK :_}Hz.'
+            f'out-of-range: {map['CPU_CK'] :_}Hz.'
         )
 
     for unit in database['APBS']:
-        if tree[f'APB{unit}_CK'] not in database['APB_FREQ']:
+        if map[f'APB{unit}_CK'] not in database['APB_FREQ']:
             raise ValueError(
                 f'APB{unit} frequency is '
-                f'out-of-bounds: {tree[f'APB{unit}_CK'] :_}Hz.'
+                f'out-of-bounds: {map[f'APB{unit}_CK'] :_}Hz.'
             )
 
     match target.mcu:
 
         case 'STM32H7S3L8H6':
 
-            if tree.AXI_AHB_CK not in database['AXI_AHB_FREQ']:
+            if map['AXI_AHB_CK'] not in database['AXI_AHB_FREQ']:
                 raise ValueError(
                     f'Bus frequency is '
-                    f'out-of-bounds: {tree.AXI_AHB_CK :_}Hz.'
+                    f'out-of-bounds: {map['AXI_AHB_CK'] :_}Hz.'
                 )
 
         case 'STM32H533RET6':
@@ -615,7 +659,7 @@ def SYSTEM_PARAMETERIZE(target):
 
     def parameterize_apbx(unit):
 
-        needed_apbx_divider         = tree.AXI_AHB_CK / tree[f'APB{unit}_CK']
+        needed_apbx_divider         = map['AXI_AHB_CK'] / map[f'APB{unit}_CK']
         draft[f'APB{unit}_DIVIDER'] = mk_dict(database[f'APB{unit}_DIVIDER']).get(needed_apbx_divider, None)
         apbx_divider_found          = draft[f'APB{unit}_DIVIDER'] is not None
 
@@ -633,7 +677,7 @@ def SYSTEM_PARAMETERIZE(target):
 
             # Try to parameterize for the CPU.
 
-            needed_cpu_divider = tree[scgu_clock_source_name] / tree.CPU_CK
+            needed_cpu_divider = map[scgu_clock_source_name] / map['CPU_CK']
             draft.CPU_DIVIDER  = mk_dict(database['CPU_DIVIDER']).get(needed_cpu_divider, None)
             cpu_divider_found  = draft.CPU_DIVIDER is not None
 
@@ -648,7 +692,7 @@ def SYSTEM_PARAMETERIZE(target):
 
                 case 'STM32H7S3L8H6':
 
-                    needed_axi_ahb_divider = tree.CPU_CK / tree.AXI_AHB_CK
+                    needed_axi_ahb_divider = map['CPU_CK'] / map['AXI_AHB_CK']
                     draft.AXI_AHB_DIVIDER  = mk_dict(database['AXI_AHB_DIVIDER']).get(needed_axi_ahb_divider, None)
                     axi_ahb_divider_found  = draft.AXI_AHB_DIVIDER is not None
 
@@ -659,7 +703,7 @@ def SYSTEM_PARAMETERIZE(target):
 
                 case 'STM32H533RET6':
 
-                    tree.AXI_AHB_CK = tree.CPU_CK
+                    map['AXI_AHB_CK'] = map['CPU_CK']
 
 
 
@@ -718,7 +762,7 @@ def SYSTEM_PARAMETERIZE(target):
 
     def parameterize_systick():
 
-        draft.SYSTICK_ENABLE = bool(tree.SYSTICK_CK)
+        draft.SYSTICK_ENABLE = bool(map['SYSTICK_CK'])
 
         if not draft.SYSTICK_ENABLE:
             return True # SysTick won't be configured.
@@ -732,7 +776,7 @@ def SYSTEM_PARAMETERIZE(target):
             # @/pg 1859/sec D1.2.238/`Armv8-M`.
 
             if draft.SYSTICK_USE_CPU_CK:
-                frequencies = lambda: [tree.CPU_CK]
+                frequencies = lambda: [map['CPU_CK']]
 
 
 
@@ -746,7 +790,7 @@ def SYSTEM_PARAMETERIZE(target):
 
                     case 'STM32H7S3L8H6': # @/pg 378/fig 51/`H7S3rm`.
 
-                        frequencies = lambda: [tree.CPU_CK / 8]
+                        frequencies = lambda: [map['CPU_CK'] / 8]
 
 
 
@@ -763,9 +807,9 @@ def SYSTEM_PARAMETERIZE(target):
 
             # Try out the different kernel frequencies and see what sticks.
 
-            for tree.SYSTICK_KERNEL_FREQ in frequencies():
+            for map['SYSTICK_KERNEL_FREQ'] in frequencies():
 
-                draft.SYSTICK_RELOAD = tree.SYSTICK_KERNEL_FREQ / tree.SYSTICK_CK - 1
+                draft.SYSTICK_RELOAD = map['SYSTICK_KERNEL_FREQ'] / map['SYSTICK_CK'] - 1
 
                 if not draft.SYSTICK_RELOAD.is_integer():
                     continue # SysTick's reload value wouldn't be a whole number.
@@ -869,7 +913,7 @@ def SYSTEM_PARAMETERIZE(target):
 
             for uxart_clock_source_name, draft[f'UXART_{uxart_units}_KERNEL_SOURCE'] in database[f'UXART_{uxart_units}_KERNEL_SOURCE']:
 
-                uxart_clock_source_freq = tree[uxart_clock_source_name]
+                uxart_clock_source_freq = map[uxart_clock_source_name]
                 every_uxart_satisfied   = all(
                     parameterize_uxart(uxart_clock_source_freq, uxart_unit)
                     for uxart_unit in uxart_units
@@ -932,7 +976,7 @@ def SYSTEM_PARAMETERIZE(target):
 
             for source_name, source_option in database[f'I2C{unit}_KERNEL_SOURCE']:
 
-                source_frequency = tree[source_name] or 0
+                source_frequency = map[source_name] or 0
 
                 for presc in database['I2C_PRESC']:
 
@@ -1034,7 +1078,7 @@ def SYSTEM_PARAMETERIZE(target):
                     configurations[f'APB{apb}_DIVIDER'])
                 ]
 
-                kernel_frequency = tree[f'AXI_AHB_CK'] * multiplier
+                kernel_frequency = map[f'AXI_AHB_CK'] * multiplier
 
 
 
@@ -1124,7 +1168,7 @@ def SYSTEM_PARAMETERIZE(target):
 
     schema.done()
 
-    return dict(configurations), tree
+    return dict(configurations), AllocatingNamespace(map.items)
 
 
 
