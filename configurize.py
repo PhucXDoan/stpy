@@ -29,7 +29,7 @@ for mcu in MCUS:
     # Find the CSV file that STM32CubeMX can provide to
     # get all of the alternate functions for GPIOs.
 
-    gpio_afsel_file_path = root(f'./deps/stpy/mcu/{mcu}_gpios.csv')
+    gpio_afsel_file_path = root(f'./deps/stpy/mcu/{mcu}.csv')
 
     if not gpio_afsel_file_path.is_file():
         raise RuntimeError(

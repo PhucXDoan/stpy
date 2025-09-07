@@ -98,7 +98,7 @@ for mcu in MCUS:
 
     # Load and evaluate the Python expression.
 
-    database_file_path = root(f'./deps/stpy/mcu/{mcu}_database.py') # TODO Replace.
+    database_file_path = root(f'./deps/stpy/mcu/{mcu}.py') # TODO Replace.
 
     if not database_file_path.is_file():
         raise RuntimeError(
