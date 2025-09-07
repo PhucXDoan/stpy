@@ -7,6 +7,25 @@ import difflib
 
 
 ################################################################################
+
+
+
+def stringify_table(items):
+
+    return '\n' + '\n'.join(
+        '| {} | {} |'.format(*justs)
+        for justs in justify(
+            (
+                ('<', key),
+                ('>', f'{value :,}' if isinstance(value, (int, float)) else repr(value)),
+            )
+            for key, value in items
+        )
+    ) + '\n'
+
+
+
+################################################################################
 #
 # Helper class for keeping track of values calculated in the clock-tree.
 #
@@ -58,17 +77,7 @@ class ClockTreeBook:
     # Output a nice looking table for debugging purposes.
 
     def __str__(self):
-
-        return '\n'.join(
-            '| {} | {} |'.format(*just)
-            for just in justify(
-                (
-                    ('<', key       ),
-                    ('<', f'{value}'),
-                )
-                for key, value in self.dictionary.items()
-            )
-        )
+        return stringify_table(self.dictionary.items())
 
 
 
@@ -122,8 +131,10 @@ class ClockTreeSchemaWrapper:
 
 
 
-    # TODO Have an easy print.
-    # def __str__(self):
+    # Output a nice looking table for debugging purposes.
+
+    def __str__(self):
+        return stringify_table(self.target.clock_tree.items())
 
 
 
@@ -191,17 +202,7 @@ class ClockTreePlan:
     # Output a nice looking table for debugging purposes.
 
     def __str__(self):
-
-        return '\n'.join(
-            '| {} | {} |'.format(*just)
-            for just in justify(
-                (
-                    ('<', key       ),
-                    ('<', f'{value}'),
-                )
-                for key, value in self.dictionary.items()
-            )
-        )
+        return stringify_table(self.dictionary.items())
 
 
 
