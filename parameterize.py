@@ -41,6 +41,8 @@ def get_similars(given, options):
 # Helper class for keeping track of values calculated in the clock-tree.
 #
 
+
+
 class ClockTreeBook:
 
     def __init__(self, target):
@@ -52,9 +54,9 @@ class ClockTreeBook:
 
 
 
-    # Prevent overwriting keys in the clock-tree book.
-
     def __setitem__(self, key, value):
+
+        # Prevent overwriting keys in the clock-tree book.
 
         if key in self.dictionary:
             raise RuntimeError(
@@ -68,9 +70,9 @@ class ClockTreeBook:
 
 
 
-    # Ensure the key into the clock-tree book exists.
-
     def __getitem__(self, key):
+
+        # Ensure the key into the clock-tree book exists.
 
         if key not in self.dictionary:
             raise RuntimeError(
@@ -85,8 +87,6 @@ class ClockTreeBook:
 
 
 
-    # Output a nice looking table for debugging purposes.
-
     def __str__(self):
         return stringify_table(self.dictionary.items())
 
@@ -97,6 +97,8 @@ class ClockTreeBook:
 # Helper class for keeping track of constraints imposed on the clock-tree.
 #
 
+
+
 class ClockTreeSchemaWrapper:
 
     def __init__(self, target):
@@ -105,10 +107,10 @@ class ClockTreeSchemaWrapper:
 
 
 
-    # We keep track of the clock-tree
-    # options that have been used so far.
-
     def __getitem__(self, key):
+
+        # We keep track of the clock-tree
+        # options that have been used so far.
 
         if key not in self.target.clock_tree:
             raise RuntimeError(
@@ -126,9 +128,9 @@ class ClockTreeSchemaWrapper:
 
 
 
-    # Verify that we didn't miss anything.
-
     def done(self):
+
+        # Verify that we didn't miss anything.
 
         if unused_keys := [
             key
@@ -142,8 +144,6 @@ class ClockTreeSchemaWrapper:
 
 
 
-    # Output a nice looking table for debugging purposes.
-
     def __str__(self):
         return stringify_table(self.target.clock_tree.items())
 
@@ -151,8 +151,10 @@ class ClockTreeSchemaWrapper:
 
 ################################################################################
 #
-# Helper class for keeping track of register values to be written.
+# Helper class for keeping track of configuration values to be used.
 #
+
+
 
 class ClockTreePlan:
 
@@ -165,69 +167,52 @@ class ClockTreePlan:
 
     def __setitem__(self, key, value):
 
+        if key in self.dictionary:
+            raise RuntimeError(
+                f'Key {repr(key)} is already defined in the '
+                f'clock-tree plan for target {repr(self.target.name)}.'
+            )
+
         if self.draft is None:
 
-            # Prevent overwriting keys in the clock-tree plan.
-
-            if key in self.dictionary:
-                raise RuntimeError(
-                    f'Key {repr(key)} is already defined in the '
-                    f'clock-tree plan for target {repr(self.target.name)}.'
-                )
-
+            # We should prevent overwriting keys in the clock-tree plan.
             self.dictionary[key] = value
-
-            return value
 
         else:
 
+            # Overwriting values during brute-forcing is okay.
             self.draft[key] = value
 
-            return value
+        return value
 
 
 
     def __getitem__(self, key):
 
-        if self.draft is None:
+        if self.draft is not None and key in self.draft:
+            return self.draft[key]
 
-            # Ensure the key into the clock-tree plan exists.
+        if key not in self.dictionary:
+            raise RuntimeError(
+                f'No key {repr(key)} '
+                f'found in the clock-tree plan '
+                f'for target {repr(self.target.name)}; '
+                f'closest matches are: '
+                f'{get_similars(key, self.dictionary)}.'
+            )
 
-            if key not in self.dictionary:
-                raise RuntimeError(
-                    f'No key {repr(key)} '
-                    f'found in the clock-tree plan '
-                    f'for target {repr(self.target.name)}; '
-                    f'closest matches are: '
-                    f'{get_similars(key, self.dictionary)}.'
-                )
-
-            return self.dictionary[key]
-
-        else:
-
-            return self.draft[key] if key in self.draft else self.dictionary[key] # TODO Hack.
+        return self.dictionary[key]
 
 
-
-    # Output a nice looking table for debugging purposes.
 
     def __str__(self):
         return stringify_table(self.dictionary.items())
 
 
 
-    # TODO Stale.
-    # To brute-force the clock tree, we have to try a lot of possible
-    # register values to see what sticks. To do this in a convenient
-    # way, `draft` will accumulate configuration values to be eventually
-    # inserted into `configurations` itself. Since `draft` is a variable
-    # at this scope-level, any function can modify it, no matter how deep
-    # we might be in the brute-forcing stack-trace.
-
     def brute(self, function):
 
-        self.draft = {} # TODO `ContainedNamespace` even needed?
+        self.draft = {} # We're beginning to brute-force.
 
         success = function()
 
@@ -237,11 +222,9 @@ class ClockTreePlan:
                 f'that satisfies the system parameterization.'
             )
 
-        draft      = self.draft
-        self.draft = None
+        self.dictionary |= self.draft
 
-        for key, value in draft.items():
-            self[key] = value
+        self.draft = None # No more brute-forcing now.
 
 
 
