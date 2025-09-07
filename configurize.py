@@ -31,13 +31,6 @@ for mcu in system_database:
 
     gpio_afsel_file_path = root(f'./deps/stpy/mcu/{mcu}.csv')
 
-    if not gpio_afsel_file_path.is_file():
-        raise RuntimeError(
-            f'File "{gpio_afsel_file_path}" does not exist; '
-            f'use STM32CubeMX to generate the CSV file '
-            f'(also clear the pinout!).'
-        )
-
 
 
     # Process the CSV file.

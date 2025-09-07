@@ -92,12 +92,6 @@ for mcu in OrderedSet(
 
     database_file_path = root(f'./deps/stpy/mcu/{mcu}.py') # TODO Replace.
 
-    if not database_file_path.is_file():
-        raise RuntimeError(
-            f'File "{database_file_path}" does not exist; '
-            f'it is needed to describe the properties of the MCU.'
-        )
-
     constants, location_tree = eval(database_file_path.read_text(), {}, {})
     entries                  = []
 
