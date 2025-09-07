@@ -11,7 +11,7 @@ import difflib
 # Helper class for keeping track of values calculated in the clock-tree.
 #
 
-class ClockTreeMap:
+class ClockTreeBook:
 
     def __init__(self, target):
 
@@ -22,14 +22,14 @@ class ClockTreeMap:
 
 
 
-    # Prevent overwriting keys in the clock-tree map.
+    # Prevent overwriting keys in the clock-tree book.
 
     def __setitem__(self, key, value):
 
         if key in self.dictionary:
             raise RuntimeError(
                 f'Key {repr(key)} is already defined in the '
-                f'clock-tree map for target {repr(self.target.name)}.'
+                f'clock-tree book for target {repr(self.target.name)}.'
             )
 
         self.dictionary[key] = value
@@ -38,14 +38,14 @@ class ClockTreeMap:
 
 
 
-    # Ensure the key into the clock-tree map exists.
+    # Ensure the key into the clock-tree book exists.
 
     def __getitem__(self, key):
 
         if key not in self.dictionary:
             raise RuntimeError(
                 f'No key {repr(key)} '
-                f'found in the clock-tree map '
+                f'found in the clock-tree book '
                 f'for target {repr(self.target.name)}; '
                 f'closest matches are: '
                 f'{difflib.get_close_matches(repr(key), self.dictionary, cutoff = 0)}.'
@@ -240,7 +240,7 @@ class ClockTreePlan:
 def SYSTEM_PARAMETERIZE(target):
 
     database = SYSTEM_DATABASE[target.mcu]
-    map      = ClockTreeMap(target)
+    book     = ClockTreeBook(target)
     schema   = ClockTreeSchemaWrapper(target)
     plan     = ClockTreePlan(target)
 
@@ -249,7 +249,7 @@ def SYSTEM_PARAMETERIZE(target):
     ################################################################################
     #
     # Some clock frequencies are dictated by the schema,
-    # so we can just immediately add them to the map.
+    # so we can just immediately add them to the book.
     # We'll check later on to make sure that the
     # frequencies are actually solvable.
     #
@@ -294,7 +294,7 @@ def SYSTEM_PARAMETERIZE(target):
 
 
     for key in keys:
-        map[key] = schema[key]
+        book[key] = schema[key]
 
 
 
@@ -408,7 +408,7 @@ def SYSTEM_PARAMETERIZE(target):
     # TODO Handle other frequencies.
 
     plan['HSI_ENABLE'] = schema['HSI_ENABLE']
-    map['HSI_CK']      = 32_000_000 if plan['HSI_ENABLE'] else 0
+    book['HSI_CK']     = 32_000_000 if plan['HSI_ENABLE'] else 0
 
 
 
@@ -417,7 +417,7 @@ def SYSTEM_PARAMETERIZE(target):
     # @/pg 460/sec 11.4.4/`H533rm`.
 
     plan['HSI48_ENABLE'] = schema['HSI48_ENABLE']
-    map['HSI48_CK']      = 48_000_000 if plan['HSI48_ENABLE'] else 0
+    book['HSI48_CK']     = 48_000_000 if plan['HSI48_ENABLE'] else 0
 
 
 
@@ -426,14 +426,14 @@ def SYSTEM_PARAMETERIZE(target):
     # @/pg 459/sec 11.4.3/`H533rm`.
 
     plan['CSI_ENABLE'] = schema['CSI_ENABLE']
-    map['CSI_CK']      = 4_000_000 if plan['CSI_ENABLE'] else 0
+    book['CSI_CK']     = 4_000_000 if plan['CSI_ENABLE'] else 0
 
 
 
     # TODO Not implemented yet.
 
-    map['HSE_CK'] = 0
-    map['LSE_CK'] = 0
+    book['HSE_CK'] = 0
+    book['LSE_CK'] = 0
 
 
 
@@ -447,7 +447,7 @@ def SYSTEM_PARAMETERIZE(target):
 
     option                          = schema['PERIPHERAL_CLOCK_OPTION']
     plan['PERIPHERAL_CLOCK_OPTION'] = mk_dict(database['PERIPHERAL_CLOCK_OPTION'])[option]
-    map['PER_CK']                   = map[option]
+    book['PER_CK']                  = book[option]
 
 
 
@@ -627,7 +627,7 @@ def SYSTEM_PARAMETERIZE(target):
 
                 for pll_clock_source_name, plan['PLL_KERNEL_SOURCE'] in database['PLL_KERNEL_SOURCE']:
 
-                    kernel_frequency     = map[pll_clock_source_name]
+                    kernel_frequency     = book[pll_clock_source_name]
                     every_unit_satisfied = all(
                         parameterize_unit(units, kernel_frequency)
                         for units, channels in database['PLLS']
@@ -644,7 +644,7 @@ def SYSTEM_PARAMETERIZE(target):
 
                 every_unit_satisfied = all(
                     any(
-                        parameterize_unit(unit, map[kernel_source])
+                        parameterize_unit(unit, book[kernel_source])
                         for kernel_source, plan[f'PLL{unit}_KERNEL_SOURCE'] in database[f'PLL{unit}_KERNEL_SOURCE']
                     )
                     for unit, channels in database['PLLS']
@@ -677,27 +677,27 @@ def SYSTEM_PARAMETERIZE(target):
 
 
 
-    if map['CPU_CK'] not in database['CPU_FREQ']:
+    if book['CPU_CK'] not in database['CPU_FREQ']:
         raise ValueError(
             f'CPU_CK is out of range: '
-            f'{map['CPU_CK'] :_}Hz.'
+            f'{book['CPU_CK'] :_}Hz.'
         )
 
     for unit in database['APBS']:
-        if map[f'APB{unit}_CK'] not in database['APB_FREQ']:
+        if book[f'APB{unit}_CK'] not in database['APB_FREQ']:
             raise ValueError(
                 f'APB{unit}_CK is out of range: '
-                f'{map[f'APB{unit}_CK'] :_}Hz.'
+                f'{book[f'APB{unit}_CK'] :_}Hz.'
             )
 
     match target.mcu:
 
         case 'STM32H7S3L8H6':
 
-            if map['AXI_AHB_CK'] not in database['AXI_AHB_FREQ']:
+            if book['AXI_AHB_CK'] not in database['AXI_AHB_FREQ']:
                 raise ValueError(
                     f'AXI_AHB_CK is out-of-range: '
-                    f'{map['AXI_AHB_CK'] :_}Hz.'
+                    f'{book['AXI_AHB_CK'] :_}Hz.'
                 )
 
 
@@ -710,7 +710,7 @@ def SYSTEM_PARAMETERIZE(target):
 
     def parameterize_apb(unit):
 
-        needed_divider             = map['AXI_AHB_CK'] / map[f'APB{unit}_CK']
+        needed_divider             = book['AXI_AHB_CK'] / book[f'APB{unit}_CK']
         plan[f'APB{unit}_DIVIDER'] = mk_dict(database[f'APB{unit}_DIVIDER']).get(needed_divider, None)
 
         return plan[f'APB{unit}_DIVIDER'] is not None
@@ -731,7 +731,7 @@ def SYSTEM_PARAMETERIZE(target):
 
             # CPU.
 
-            needed_cpu_divider  = map[kernel_source] / map['CPU_CK']
+            needed_cpu_divider  = book[kernel_source] / book['CPU_CK']
             plan['CPU_DIVIDER'] = mk_dict(database['CPU_DIVIDER']).get(needed_cpu_divider, None)
 
             if plan['CPU_DIVIDER'] is None:
@@ -745,7 +745,7 @@ def SYSTEM_PARAMETERIZE(target):
 
                 case 'STM32H7S3L8H6':
 
-                    needed_axi_ahb_divider  = map['CPU_CK'] / map['AXI_AHB_CK']
+                    needed_axi_ahb_divider  = book['CPU_CK'] / book['AXI_AHB_CK']
                     plan['AXI_AHB_DIVIDER'] = mk_dict(database['AXI_AHB_DIVIDER']).get(needed_axi_ahb_divider, None)
 
                     if plan['AXI_AHB_DIVIDER'] is None:
@@ -755,7 +755,7 @@ def SYSTEM_PARAMETERIZE(target):
 
                 case 'STM32H533RET6':
 
-                    map['AXI_AHB_CK'] = map['CPU_CK']
+                    book['AXI_AHB_CK'] = book['CPU_CK']
 
 
 
@@ -821,7 +821,7 @@ def SYSTEM_PARAMETERIZE(target):
 
         # See if SysTick is even used.
 
-        plan['SYSTICK_ENABLE'] = map['SYSTICK_CK'] is not None
+        plan['SYSTICK_ENABLE'] = book['SYSTICK_CK'] is not None
 
         if not plan['SYSTICK_ENABLE']:
             return True
@@ -841,7 +841,7 @@ def SYSTEM_PARAMETERIZE(target):
             if plan['SYSTICK_USE_CPU_CK']:
 
                 kernel_frequencies = [
-                    map['CPU_CK']
+                    book['CPU_CK']
                 ]
 
 
@@ -856,7 +856,7 @@ def SYSTEM_PARAMETERIZE(target):
                     case 'STM32H7S3L8H6':
 
                         kernel_frequencies = [
-                            map['CPU_CK'] / 8
+                            book['CPU_CK'] / 8
                         ]
 
 
@@ -876,9 +876,9 @@ def SYSTEM_PARAMETERIZE(target):
 
             # Try out the different kernel frequencies and see what sticks.
 
-            for map['SYSTICK_KERNEL_FREQ'] in kernel_frequencies:
+            for book['SYSTICK_KERNEL_FREQ'] in kernel_frequencies:
 
-                plan['SYSTICK_RELOAD'] = map['SYSTICK_KERNEL_FREQ'] / map['SYSTICK_CK'] - 1
+                plan['SYSTICK_RELOAD'] = book['SYSTICK_KERNEL_FREQ'] / book['SYSTICK_CK'] - 1
 
                 if not plan['SYSTICK_RELOAD'].is_integer():
                     continue
@@ -994,7 +994,7 @@ def SYSTEM_PARAMETERIZE(target):
 
             for kernel_source, plan[f'UXART_{instances}_KERNEL_SOURCE'] in database[f'UXART_{instances}_KERNEL_SOURCE']:
 
-                kernel_frequency         = map[kernel_source]
+                kernel_frequency         = book[kernel_source]
                 every_instance_satisfied = all(
                     parameterize_instance(kernel_frequency, instance)
                     for instance in instances
@@ -1052,7 +1052,7 @@ def SYSTEM_PARAMETERIZE(target):
 
             for kernel_source, kernel_option in database[f'I2C{unit}_KERNEL_SOURCE']:
 
-                kernel_frequency = map[kernel_source] or 0
+                kernel_frequency = book[kernel_source] or 0
 
                 for presc in database['I2C_PRESC']:
 
@@ -1148,7 +1148,7 @@ def SYSTEM_PARAMETERIZE(target):
                     plan[f'APB{apb}_DIVIDER'])
                 ]
 
-                kernel_frequency = map[f'AXI_AHB_CK'] * multiplier
+                kernel_frequency = book[f'AXI_AHB_CK'] * multiplier
 
 
 
@@ -1247,7 +1247,7 @@ def SYSTEM_PARAMETERIZE(target):
 
     schema.done()
 
-    return plan.dictionary, AllocatingNamespace(map.dictionary)
+    return plan.dictionary, AllocatingNamespace(book.dictionary)
 
 
 
