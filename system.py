@@ -1,5 +1,5 @@
 from ..stpy.parameterize import system_parameterize, system_database
-from ..stpy.configurize  import system_configurize, INTERRUPTS, INTERRUPTS_THAT_MUST_BE_DEFINED
+from ..stpy.configurize  import system_configurize, INTERRUPTS_THAT_MUST_BE_DEFINED
 
 
 # TODO Remove dependencies.
@@ -46,7 +46,7 @@ def do(Meta, CMSIS_SET, CMSIS_WRITE, CMSIS_SPINLOCK, PER_TARGET):
             (
                 (interrupt, f'{interrupt}_IRQn')
                 for interrupt, niceness in target.interrupts
-                if INTERRUPTS[target.mcu][interrupt] >= 0
+                if system_database[target.mcu]['INTERRUPTS'].index(interrupt) >= 15
             )
         )
 

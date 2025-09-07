@@ -322,14 +322,6 @@ def PROCESS_GPIOS(target):
 
 
 
-
-INTERRUPTS = {
-    mcu : { interrupt_name : interrupt_i - 15 for interrupt_i, interrupt_name in enumerate(system_database[mcu]['INTERRUPTS']) }
-    for mcu in MCUS
-}
-
-
-
 # These interrupt routines
 # will always be around even
 # if the target didn't explcitly
@@ -356,7 +348,7 @@ def system_configurize(Meta, CMSIS_SET, CMSIS_WRITE, CMSIS_SPINLOCK, PER_TARGET,
     # to be used by the target eists.
 
     for interrupt, niceness in target.interrupts:
-        if interrupt not in INTERRUPTS[target.mcu]:
+        if interrupt not in system_database[target.mcu]['INTERRUPTS']:
 
             import difflib
 
@@ -365,7 +357,7 @@ def system_configurize(Meta, CMSIS_SET, CMSIS_WRITE, CMSIS_SPINLOCK, PER_TARGET,
                 f'no such interrupt {repr(interrupt)} '
                 f'exists on {repr(target.mcu)}; '
                 f'did you mean any of the following? : '
-                f'{difflib.get_close_matches(interrupt, INTERRUPTS[mcu].keys(), n = 5, cutoff = 0)}'
+                f'{difflib.get_close_matches(interrupt, system_database[target.mcu]['INTERRUPTS'].keys(), n = 5, cutoff = 0)}'
             )
 
 
@@ -622,7 +614,7 @@ def system_configurize(Meta, CMSIS_SET, CMSIS_WRITE, CMSIS_SPINLOCK, PER_TARGET,
 
     for routine in OrderedSet((
         *INTERRUPTS_THAT_MUST_BE_DEFINED,
-        *INTERRUPTS[target.mcu]
+        *system_database[target.mcu]['INTERRUPTS']
     )):
 
 
@@ -683,7 +675,7 @@ def system_configurize(Meta, CMSIS_SET, CMSIS_WRITE, CMSIS_SPINLOCK, PER_TARGET,
 
         # Set the Arm-specific interrupts' priorities.
 
-        if INTERRUPTS[target.mcu][interrupt] <= -1:
+        if system_database[target.mcu]['INTERRUPTS'].index(interrupt) <= 14:
 
             assert interrupt in (
                 'MemoryManagement',
