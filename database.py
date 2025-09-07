@@ -16,9 +16,14 @@
 # >            )),
 # >        ),
 # >    )
+# >
 #
 
 class SystemDatabaseOptions(types.SimpleNamespace):
+
+
+
+    # Allow for easy iteration over the possible options.
 
     def __iter__(self):
         return iter(self.options)
@@ -28,6 +33,7 @@ class SystemDatabaseOptions(types.SimpleNamespace):
 ################################################################################
 #
 # For database entries that have valid values within an interval.
+# TODO Have integral and continuous range?
 # e.g:
 # >
 # >    ('SysTick',
@@ -69,7 +75,7 @@ for mcu in MCUS:
 
     # Load and evaluate the Python expression.
 
-    database_file_path = root(f'./deps/stpy/mcu/{mcu}_database.py')
+    database_file_path = root(f'./deps/stpy/mcu/{mcu}_database.py') # TODO Replace.
 
     if not database_file_path.is_file():
         raise RuntimeError(
@@ -246,6 +252,7 @@ for mcu in MCUS:
 
 
 
+# TODO Stale?
 # The microcontroller database contains information found in reference manuals
 # and datasheets. The point of the database is to make it easy to port common
 # code between multiple microcontrollers without having to worry about the exact
