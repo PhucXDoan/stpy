@@ -1,5 +1,6 @@
 from ..stpy.database import system_database
 from ..stpy.gpio     import PROCESS_GPIOS
+from ..stpy.helpers  import put_title as put_title_, CMSIS_SET as CMSIS_SET_, CMSIS_WRITE as CMSIS_WRITE_, CMSIS_SPINLOCK as CMSIS_SPINLOCK_
 
 # TODO Remove dependencies.
 from deps.pxd.utils import root, mk_dict, OrderedSet, find_dupe
@@ -25,9 +26,13 @@ INTERRUPTS_THAT_MUST_BE_DEFINED = (
 
 import collections, builtins
 
-def system_configurize(Meta, CMSIS_SET, CMSIS_WRITE, CMSIS_SPINLOCK, PER_TARGET, put_title, target, configurations):
+def system_configurize(Meta, target, configurations):
 
-
+    import functools
+    put_title      = functools.partial(put_title_    , Meta)
+    CMSIS_SET      = CMSIS_SET_  (Meta)
+    CMSIS_WRITE    = CMSIS_WRITE_(Meta)
+    CMSIS_SPINLOCK = functools.partial(CMSIS_SPINLOCK_, Meta)
 
     # TODO Placement?
 

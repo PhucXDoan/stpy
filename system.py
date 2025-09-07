@@ -1,14 +1,29 @@
 from ..stpy.parameterize import system_parameterize, system_database
 from ..stpy.configurize  import system_configurize, INTERRUPTS_THAT_MUST_BE_DEFINED
+from ..stpy.helpers      import CMSIS_SET, CMSIS_WRITE, CMSIS_SPINLOCK, PER_TARGET as PER_TARGET_, PER_MCU, put_title as put_title_
+
+
+
+
+
+
+
+
+
+
+
 
 
 # TODO Remove dependencies.
 from deps.pxd.utils import justify
 
 
-def do(Meta, CMSIS_SET, CMSIS_WRITE, CMSIS_SPINLOCK, PER_TARGET):
+def do(Meta, targets):
 
+    import functools
+    put_title  = functools.partial(put_title_, Meta)
 
+    PER_TARGET = functools.partial(PER_TARGET_, targets)
 
     # Macros to control the interrupt in NVIC.
     # @/pg 626/tbl B3-8/`Armv7-M`.
@@ -32,7 +47,7 @@ def do(Meta, CMSIS_SET, CMSIS_WRITE, CMSIS_SPINLOCK, PER_TARGET):
 
 
 
-    for target in PER_TARGET():
+    for target in PER_TARGET(Meta):
 
         # For interrupts (used by the target) that
         # are in NVIC, we create an enumeration so
@@ -54,32 +69,13 @@ def do(Meta, CMSIS_SET, CMSIS_WRITE, CMSIS_SPINLOCK, PER_TARGET):
 
     # Initialize the target's GPIOs, interrupts, clock-tree, etc.
 
-    for target in PER_TARGET():
+    for target in PER_TARGET(Meta):
 
         with Meta.enter('''
             extern void
             SYSTEM_init(void)
         '''):
 
-
-            # TODO Copy-pasta.
-            def put_title(title = None):
-
-                if title is None:
-
-                    Meta.line(f'''
-
-                        {"/" * 128}
-
-                    ''')
-
-                else:
-
-                    Meta.line(f'''
-
-                        {"/" * 64} {title} {"/" * 64}
-
-                    ''')
 
 
 
@@ -96,7 +92,7 @@ def do(Meta, CMSIS_SET, CMSIS_WRITE, CMSIS_SPINLOCK, PER_TARGET):
 
             # Figure out the procedure to set the register values for the clock-tree.
 
-            system_configurize(Meta, CMSIS_SET, CMSIS_WRITE, CMSIS_SPINLOCK, PER_TARGET, put_title, target, configuration)
+            system_configurize(Meta, target, configuration)
 
 
 
