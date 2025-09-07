@@ -9,22 +9,6 @@ from deps.pxd.utils import root, find_dupe, OrderedSet
 
 ################################################################################
 #
-# Supported microcontrollers.
-# TODO Copy-pasta.
-#
-
-
-
-MCUS = OrderedSet(
-    item.stem
-    for item in root('./deps/stpy/mcu').iterdir()
-    if item.is_file()
-)
-
-
-
-################################################################################
-#
 # For database entries with a list of valid values given explicitly.
 # e.g:
 # >
@@ -96,7 +80,11 @@ class SystemDatabaseMinMax(types.SimpleNamespace):
 
 system_database = {}
 
-for mcu in MCUS:
+for mcu in OrderedSet(
+    item.stem
+    for item in root('./deps/stpy/mcu').iterdir()
+    if item.is_file()
+):
 
 
 

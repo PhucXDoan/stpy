@@ -1,6 +1,6 @@
 import types
 
-from ..stpy.database import system_database, MCUS
+from ..stpy.database import system_database
 
 # TODO Remove dependencies.
 from deps.pxd.utils import root, mk_dict, OrderedSet, find_dupe
@@ -20,7 +20,7 @@ import csv
 
 GPIO_AFSEL = {}
 
-for mcu in MCUS:
+for mcu in system_database:
 
     GPIO_AFSEL[mcu] = []
 
