@@ -400,33 +400,9 @@ INTERRUPTS_THAT_MUST_BE_DEFINED = (
 
 
 
-
-
-
 import collections, builtins
 
-def system_configurize(Meta, CMSIS_SET, CMSIS_WRITE, CMSIS_SPINLOCK, PER_TARGET, target, configurations):
-
-
-
-    # TODO Copy-pasta.
-    def put_title(title = None):
-
-        if title is None:
-
-            Meta.line(f'''
-
-                {"/" * 128}
-
-            ''')
-
-        else:
-
-            Meta.line(f'''
-
-                {"/" * 64} {title} {"/" * 64}
-
-            ''')
+def system_configurize(Meta, CMSIS_SET, CMSIS_WRITE, CMSIS_SPINLOCK, PER_TARGET, put_title, target, configurations):
 
 
 

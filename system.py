@@ -1,93 +1,119 @@
-#include "SYSTEM_init.meta"
-#meta system_parameterize, system_database, system_configurize, INTERRUPTS, system_configurize, INTERRUPTS, INTERRUPTS_THAT_MUST_BE_DEFINED
-
-
+# TODO Fix import.
 from deps.stpy.parameterize import system_parameterize, system_database
 from deps.stpy.configurize  import system_configurize, INTERRUPTS, INTERRUPTS_THAT_MUST_BE_DEFINED
 
 
-# Macros to control the interrupt in NVIC.
-# @/pg 626/tbl B3-8/`Armv7-M`.
-# @/pg 1452/tbl D1.1.10/`Armv8-M`.
+# TODO Remove dependencies.
+from deps.pxd.utils import justify
 
-Meta.define('NVIC_ENABLE'       , ('NAME'), '((void) (NVIC->ISER[NVICInterrupt_##NAME / 32] = 1 << (NVICInterrupt_##NAME % 32)))')
-Meta.define('NVIC_DISABLE'      , ('NAME'), '((void) (NVIC->ICER[NVICInterrupt_##NAME / 32] = 1 << (NVICInterrupt_##NAME % 32)))')
-Meta.define('NVIC_SET_PENDING'  , ('NAME'), '((void) (NVIC->ISPR[NVICInterrupt_##NAME / 32] = 1 << (NVICInterrupt_##NAME % 32)))')
-Meta.define('NVIC_CLEAR_PENDING', ('NAME'), '((void) (NVIC->ICPR[NVICInterrupt_##NAME / 32] = 1 << (NVICInterrupt_##NAME % 32)))')
+
+def do(Meta, CMSIS_SET, CMSIS_WRITE, CMSIS_SPINLOCK, PER_TARGET):
 
 
 
-# Macros to make using GPIOs in C easy.
-# TODO Use system_database.
+    # Macros to control the interrupt in NVIC.
+    # @/pg 626/tbl B3-8/`Armv7-M`.
+    # @/pg 1452/tbl D1.1.10/`Armv8-M`.
 
-Meta.define('GPIO_HIGH'  , ('NAME'         ), '((void) (CONCAT(GPIO, _PORT_FOR_GPIO_WRITE(NAME))->BSRR = CONCAT(GPIO_BSRR_BS, _NUMBER_FOR_GPIO_WRITE(NAME))))')
-Meta.define('GPIO_LOW'   , ('NAME'         ), '((void) (CONCAT(GPIO, _PORT_FOR_GPIO_WRITE(NAME))->BSRR = CONCAT(GPIO_BSRR_BR, _NUMBER_FOR_GPIO_WRITE(NAME))))')
-Meta.define('GPIO_TOGGLE', ('NAME'         ), '((void) (CONCAT(GPIO, _PORT_FOR_GPIO_WRITE(NAME))->ODR ^= CONCAT(GPIO_ODR_OD , _NUMBER_FOR_GPIO_WRITE(NAME))))')
-Meta.define('GPIO_SET'   , ('NAME', 'VALUE'), '((void) ((VALUE) ? GPIO_HIGH(NAME) : GPIO_LOW(NAME)))')
-Meta.define('GPIO_READ'  , ('NAME'         ), '(!!(CONCAT(GPIO, _PORT_FOR_GPIO_READ(NAME))->IDR & CONCAT(GPIO_IDR_ID, _NUMBER_FOR_GPIO_READ(NAME))))')
-
-
-
-for target in PER_TARGET():
-
-    # For interrupts (used by the target) that
-    # are in NVIC, we create an enumeration so
-    # that the user can only enable those specific
-    # interrupts. Note that some interrupts, like
-    # SysTick, are not a part of NVIC.
-
-    Meta.enums(
-        'NVICInterrupt',
-        'u32',
-        (
-            (interrupt, f'{interrupt}_IRQn')
-            for interrupt, niceness in target.interrupts
-            if INTERRUPTS[target.mcu][interrupt] >= 0
-        )
-    )
+    Meta.define('NVIC_ENABLE'       , ('NAME'), '((void) (NVIC->ISER[NVICInterrupt_##NAME / 32] = 1 << (NVICInterrupt_##NAME % 32)))')
+    Meta.define('NVIC_DISABLE'      , ('NAME'), '((void) (NVIC->ICER[NVICInterrupt_##NAME / 32] = 1 << (NVICInterrupt_##NAME % 32)))')
+    Meta.define('NVIC_SET_PENDING'  , ('NAME'), '((void) (NVIC->ISPR[NVICInterrupt_##NAME / 32] = 1 << (NVICInterrupt_##NAME % 32)))')
+    Meta.define('NVIC_CLEAR_PENDING', ('NAME'), '((void) (NVIC->ICPR[NVICInterrupt_##NAME / 32] = 1 << (NVICInterrupt_##NAME % 32)))')
 
 
 
-# Initialize the target's GPIOs, interrupts, clock-tree, etc.
+    # Macros to make using GPIOs in C easy.
+    # TODO Use system_database.
 
-for target in PER_TARGET():
-
-    with Meta.enter('''
-        extern void
-        SYSTEM_init(void)
-    '''):
-
-
-
-        ################################ Clock-Tree ################################
+    Meta.define('GPIO_HIGH'  , ('NAME'         ), '((void) (CONCAT(GPIO, _PORT_FOR_GPIO_WRITE(NAME))->BSRR = CONCAT(GPIO_BSRR_BS, _NUMBER_FOR_GPIO_WRITE(NAME))))')
+    Meta.define('GPIO_LOW'   , ('NAME'         ), '((void) (CONCAT(GPIO, _PORT_FOR_GPIO_WRITE(NAME))->BSRR = CONCAT(GPIO_BSRR_BR, _NUMBER_FOR_GPIO_WRITE(NAME))))')
+    Meta.define('GPIO_TOGGLE', ('NAME'         ), '((void) (CONCAT(GPIO, _PORT_FOR_GPIO_WRITE(NAME))->ODR ^= CONCAT(GPIO_ODR_OD , _NUMBER_FOR_GPIO_WRITE(NAME))))')
+    Meta.define('GPIO_SET'   , ('NAME', 'VALUE'), '((void) ((VALUE) ? GPIO_HIGH(NAME) : GPIO_LOW(NAME)))')
+    Meta.define('GPIO_READ'  , ('NAME'         ), '(!!(CONCAT(GPIO, _PORT_FOR_GPIO_READ(NAME))->IDR & CONCAT(GPIO_IDR_ID, _NUMBER_FOR_GPIO_READ(NAME))))')
 
 
 
-        # Figure out the register values relating to the clock-tree.
+    for target in PER_TARGET():
 
-        configuration, tree = system_parameterize(target)
+        # For interrupts (used by the target) that
+        # are in NVIC, we create an enumeration so
+        # that the user can only enable those specific
+        # interrupts. Note that some interrupts, like
+        # SysTick, are not a part of NVIC.
 
-
-
-        # Figure out the procedure to set the register values for the clock-tree.
-
-        system_configurize(Meta, CMSIS_SET, CMSIS_WRITE, CMSIS_SPINLOCK, PER_TARGET, target, configuration)
-
-
-
-        # Export the frequencies we found for the clock-tree.
-
-        put_title('Clock-Tree')
-
-        for macro, expansion in justify(
+        Meta.enums(
+            'NVICInterrupt',
+            'u32',
             (
-                ('<', f'CLOCK_TREE_FREQUENCY_OF_{name}' ),
-                ('>', f'{frequency}'.replace(',', "'")),
+                (interrupt, f'{interrupt}_IRQn')
+                for interrupt, niceness in target.interrupts
+                if INTERRUPTS[target.mcu][interrupt] >= 0
             )
-            for name, frequency in tree.items()
-            if name is not None
-        ):
-            Meta.define(macro, f'({expansion})')
+        )
+
+
+
+    # Initialize the target's GPIOs, interrupts, clock-tree, etc.
+
+    for target in PER_TARGET():
+
+        with Meta.enter('''
+            extern void
+            SYSTEM_init(void)
+        '''):
+
+
+            # TODO Copy-pasta.
+            def put_title(title = None):
+
+                if title is None:
+
+                    Meta.line(f'''
+
+                        {"/" * 128}
+
+                    ''')
+
+                else:
+
+                    Meta.line(f'''
+
+                        {"/" * 64} {title} {"/" * 64}
+
+                    ''')
+
+
+
+
+            ################################ Clock-Tree ################################
+
+
+
+            # Figure out the register values relating to the clock-tree.
+
+            configuration, tree = system_parameterize(target)
+
+
+
+            # Figure out the procedure to set the register values for the clock-tree.
+
+            system_configurize(Meta, CMSIS_SET, CMSIS_WRITE, CMSIS_SPINLOCK, PER_TARGET, put_title, target, configuration)
+
+
+
+            # Export the frequencies we found for the clock-tree.
+
+            put_title('Clock-Tree')
+
+            for macro, expansion in justify(
+                (
+                    ('<', f'CLOCK_TREE_FREQUENCY_OF_{name}' ),
+                    ('>', f'{frequency}'.replace(',', "'")),
+                )
+                for name, frequency in tree.items()
+                if name is not None
+            ):
+                Meta.define(macro, f'({expansion})')
 
 
 
