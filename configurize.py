@@ -322,66 +322,11 @@ def PROCESS_GPIOS(target):
 
 
 
-# Parse the CMSIS header files to get the
-# list of interrupts on the microcontroller.
 
-INTERRUPTS = {}
-
-for mcu in MCUS:
-
-
-
-    # The CMSIS header for the microcontroller
-    # will define its interrupts with an enumeration;
-    # we find the enumeration members so we can
-    # automatically get the list of interrupt
-    # names and the corresponding numbers.
-    # e.g:
-    # >
-    # >    typedef enum
-    # >    {
-    # >        Reset_IRQn          = -15,
-    # >        NonMaskableInt_IRQn = -14,
-    # >        ...
-    # >        FDCAN2_IT0_IRQn     = 154,
-    # >        FDCAN2_IT1_IRQn     = 155
-    # >    } IRQn_Type;
-    # >
-
-    irqs = {}
-
-    for line in MCUS[mcu].cmsis_file_path.read_text().splitlines():
-
-        match line.split():
-
-            case [name, '=', number, *_] if '_IRQn' in name:
-
-                name   = name.removesuffix('_IRQn')
-                number = int(number.removesuffix(','))
-
-                assert number not in irqs
-                irqs[number] = name
-
-
-
-    # The first interrupt should be the reset exception defined
-    # by the Arm architecture. Note that the reset exception has
-    # an (exception number) of 1, but the *interrupt number* is
-    # defined to be (exception number - 16).
-    #
-    # @/pg 525/tbl B1-4/`Armv7-M`.
-    # @/pg 625/sec B3.4.1/`Armv7-M`.
-    # @/pg 143/sec B3.30/`Armv8-M`.
-    # @/pg 1855/sec D1.2.236/`Armv8-M`.
-
-    irqs = sorted(irqs.items())
-
-    assert irqs[0] == (-15, 'Reset')
-
-    INTERRUPTS[mcu] = {
-        interrupt_name : interrupt_number
-        for interrupt_number, interrupt_name in irqs
-    }
+INTERRUPTS = {
+    mcu : { interrupt_name : interrupt_i - 15 for interrupt_i, interrupt_name in enumerate(system_database[mcu]['INTERRUPTS']) }
+    for mcu in MCUS
+}
 
 
 
