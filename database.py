@@ -1,9 +1,9 @@
-import types
+import types, pathlib, re
 
 
 
 # TODO Remove dependencies.
-from deps.pxd.utils import root, find_dupe
+from deps.pxd.utils import root, find_dupe, OrderedSet
 
 
 
@@ -15,7 +15,11 @@ from deps.pxd.utils import root, find_dupe
 
 
 
-MCUS = ('STM32H7S3L8H6', 'STM32H533RET6')
+MCUS = OrderedSet(
+    item.stem
+    for item in root('./deps/stpy/mcu').iterdir()
+    if item.is_file()
+)
 
 
 
