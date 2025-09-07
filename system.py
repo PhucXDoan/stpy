@@ -1,6 +1,8 @@
 #include "SYSTEM_init.meta"
-#meta
+#meta system_parameterize, system_database : INTERRUPTS, system_configurize
 
+
+from deps.stpy.parameterize import system_parameterize, system_database
 
 
 # Macros to control the interrupt in NVIC.
