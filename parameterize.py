@@ -2,12 +2,10 @@
 
 
 
-import difflib
-
-
-
 ################################################################################
-
+#
+# Helpers.
+#
 
 
 def stringify_table(items):
@@ -22,6 +20,19 @@ def stringify_table(items):
             for key, value in items
         )
     ) + '\n'
+
+
+
+def get_similars(given, options):
+
+    import difflib
+
+    return difflib.get_close_matches(
+        given if given is not None else 'None',
+        options,
+        n      = 3,
+        cutoff = 0
+    )
 
 
 
@@ -67,7 +78,7 @@ class ClockTreeBook:
                 f'found in the clock-tree book '
                 f'for target {repr(self.target.name)}; '
                 f'closest matches are: '
-                f'{difflib.get_close_matches(repr(key), self.dictionary, cutoff = 0)}.'
+                f'{get_similars(key, self.dictionary.keys())}.'
             )
 
         return self.dictionary[key]
@@ -105,7 +116,7 @@ class ClockTreeSchemaWrapper:
                 f'found in the clock-tree schema '
                 f'for target {repr(self.target.name)}; '
                 f'closest matches are: '
-                f'{difflib.get_close_matches(repr(key), self.target.clock_tree, cutoff = 0)}.'
+                f'{get_similars(key, self.target.clock_tree.keys())}.'
             )
 
         if key not in self.used_keys:
@@ -188,7 +199,7 @@ class ClockTreePlan:
                     f'found in the clock-tree plan '
                     f'for target {repr(self.target.name)}; '
                     f'closest matches are: '
-                    f'{difflib.get_close_matches(repr(key), self.dictionary, cutoff = 0)}.'
+                    f'{get_similars(key, self.dictionary)}.'
                 )
 
             return self.dictionary[key]
@@ -1243,7 +1254,6 @@ def SYSTEM_PARAMETERIZE(target):
     #
     # Parameterization done!
     #
-
 
 
     schema.done()
