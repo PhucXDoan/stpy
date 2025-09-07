@@ -636,18 +636,6 @@ def system_configurize(Meta, CMSIS_SET, CMSIS_WRITE, CMSIS_SPINLOCK, PER_TARGET,
 
 
 
-        # The target and FreeRTOS shouldn't be
-        # in contention with the same interrupt.
-
-        if target.use_freertos and routine in MCUS[target.mcu].freertos_interrupts:
-            raise RuntimeError(
-                f'FreeRTOS is already using the interrupt {repr(routine)}; '
-                f'either disable FreeRTOS for target {repr(target.name)} or '
-                f'just not use {repr(routine)}.'
-            )
-
-
-
         # The macro will ensure only the
         # expected ISRs can be defined.
 
