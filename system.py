@@ -81,7 +81,7 @@ for target in PER_TARGET():
                 ('<', f'CLOCK_TREE_FREQUENCY_OF_{name}' ),
                 ('>', f'{frequency}'.replace(',', "'")),
             )
-            for name, frequency in tree
+            for name, frequency in tree.items()
             if name is not None
         ):
             Meta.define(macro, f'({expansion})')

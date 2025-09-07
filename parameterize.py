@@ -1241,7 +1241,7 @@ def system_parameterize(target):
 
     schema.done()
 
-    return plan.dictionary, AllocatingNamespace(book.dictionary)
+    return plan.dictionary, book.dictionary
 
 
 
