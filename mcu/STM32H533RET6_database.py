@@ -173,8 +173,8 @@
                         ('PLL1_P_CK', '0b011'),
                     ))
                     for field, tag in (
-                        ('SWS', 'EFFECTIVE_SCGU_CLOCK_SOURCE'),
-                        ('SW' , 'SCGU_CLOCK_SOURCE'          ),
+                        ('SWS', 'EFFECTIVE_SCGU_KERNEL_SOURCE'),
+                        ('SW' , 'SCGU_KERNEL_SOURCE'          ),
                     )
                 ),
             ),
@@ -209,7 +209,7 @@
                     (f'PLL{unit}QEN', f'PLL{unit}Q_ENABLE'),
                     (f'PLL{unit}PEN', f'PLL{unit}P_ENABLE'),
                     (f'PLL{unit}M'  , f'PLL{unit}_PREDIVIDER', 1, 63),
-                    (f'PLL{unit}SRC', f'PLL{unit}_CLOCK_SOURCE', (
+                    (f'PLL{unit}SRC', f'PLL{unit}_KERNEL_SOURCE', (
                         (None    , '0b00'),
                         ('HSI_CK', '0b01'),
                         ('CSI_CK', '0b10'),
@@ -357,7 +357,7 @@
             ),
 
             ('CCIPR5',
-                ('CKPERSEL', 'PER_CK_SOURCE', (
+                ('CKPERSEL', 'PERIPHERAL_CLOCK_OPTION', (
                     ('HSI_CK', '0b00'),
                     ('CSI_CK', '0b01'),
                     ('HSE_CK', '0b10'),

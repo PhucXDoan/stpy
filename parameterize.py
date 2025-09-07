@@ -247,56 +247,60 @@ def SYSTEM_PARAMETERIZE(target):
 
 
     ################################################################################
+    #
+    # Some clock frequencies are dictated by the schema,
+    # so we can just immediately add them to the map.
+    # We'll check later on to make sure that the
+    # frequencies are actually solvable.
+    #
 
 
 
-    # Some clock frequencies are dictated by `target.clock_tree`,
-    # so we can just immediately add them to the tree. We'll check
-    # later on to make sure that the frequencies are actually solvable.
-
-    match target.mcu:
-
-        case 'STM32H7S3L8H6':
-            clocks = ['CPU_CK', 'SYSTICK_CK', 'AXI_AHB_CK']
-
-        case 'STM32H533RET6':
-            clocks = ['CPU_CK', 'SYSTICK_CK']
-
-        case _:
-            raise NotImplementedError
-
-
-
-    # This includes peripheral busses (e.g. APB3).
-
-    clocks += [
-        f'APB{n}_CK'
-        for n in database['APBS']
+    keys = [
+        'CPU_CK',
+        'SYSTICK_CK',
     ]
 
 
 
-    # This includes each PLL channel (e.g. PLL2R).
+    match target.mcu:
 
-    clocks += [
-        f'PLL{n}_{channel}_CK'
-        for n, channels in database['PLLS']
+        case 'STM32H7S3L8H6':
+            keys += [
+                'AXI_AHB_CK'
+            ]
+
+        case 'STM32H533RET6':
+            keys += [
+            ]
+
+        case _: raise NotImplementedError
+
+
+
+    keys += [
+        f'APB{unit}_CK'
+        for unit in database['APBS']
+    ]
+
+
+
+    keys += [
+        f'PLL{unit}_{channel}_CK'
+        for unit, channels in database['PLLS']
         for channel in channels
     ]
 
 
 
-    # If `target.clock_tree` doesn't specify the frequency,
-    # we just assume it's disabled and won't be used.
-
-    for clock in clocks:
-        map[clock] = schema[clock]
+    for key in keys:
+        map[key] = schema[key]
 
 
 
     ################################################################################
     #
-    # Determine the flash delays and internal voltage scaling.
+    # Flash and internal voltage.
     #
     # TODO The settings should be dependent upon the AXI frequency,
     #      but for simplicity right now, we're using the max flash
@@ -311,9 +315,12 @@ def SYSTEM_PARAMETERIZE(target):
 
         case 'STM32H7S3L8H6':
 
-            plan['FLASH_LATENCY']            = '0x7'  # @/pg 211/tbl 29/`H7S3rm`.
-            plan['FLASH_PROGRAMMING_DELAY']  = '0b11' # "
-            plan['INTERNAL_VOLTAGE_SCALING'] = {      # @/pg 327/sec 6.8.6/`H7S3rm`.
+            # @/pg 211/tbl 29/`H7S3rm`.
+            plan['FLASH_LATENCY']            = '0x7'
+            plan['FLASH_PROGRAMMING_DELAY']  = '0b11'
+
+            # @/pg 327/sec 6.8.6/`H7S3rm`.
+            plan['INTERNAL_VOLTAGE_SCALING'] = {
                 'low'  : 0,
                 'high' : 1,
             }['high']
@@ -322,9 +329,12 @@ def SYSTEM_PARAMETERIZE(target):
 
         case 'STM32H533RET6':
 
-            plan['FLASH_LATENCY']            = 5      # @/pg 252/tbl 45/`H533rm`.
-            plan['FLASH_PROGRAMMING_DELAY']  = '0b10' # "
-            plan['INTERNAL_VOLTAGE_SCALING'] = {      # @/pg 438/sec 10.11.4/`H533rm`.
+            # @/pg 252/tbl 45/`H533rm`.
+            plan['FLASH_LATENCY']            = 5
+            plan['FLASH_PROGRAMMING_DELAY']  = '0b10'
+
+            # @/pg 438/sec 10.11.4/`H533rm`.
+            plan['INTERNAL_VOLTAGE_SCALING'] = {
                 'VOS3' : '0b00',
                 'VOS2' : '0b01',
                 'VOS1' : '0b10',
@@ -339,7 +349,7 @@ def SYSTEM_PARAMETERIZE(target):
 
     ################################################################################
     #
-    # Determine power-supply setup.
+    # Power-supply setup.
     #
     # TODO We currently only support a system power supply
     #      configuration of LDO. This isn't as power-efficient
@@ -351,7 +361,9 @@ def SYSTEM_PARAMETERIZE(target):
 
     match target.mcu:
 
-        case 'STM32H7S3L8H6': # @/pg 285/fig 21/`H7S3rm`. @/pg 286/tbl 44/`H7S3rm`.
+        # @/pg 285/fig 21/`H7S3rm`.
+        # @/pg 286/tbl 44/`H7S3rm`.
+        case 'STM32H7S3L8H6':
 
             plan['SMPS_OUTPUT_LEVEL']       = None
             plan['SMPS_FORCED_ON']          = None
@@ -361,9 +373,10 @@ def SYSTEM_PARAMETERIZE(target):
 
 
 
-        case 'STM32H533RET6': # @/pg 407/fig 42/`H533rm`.
+        # @/pg 407/fig 42/`H533rm`.
+        # Note that the SMPS is not available. @/pg 402/sec 10.2/`H533rm`.
+        case 'STM32H533RET6':
 
-            # Note that the SMPS is not available. @/pg 402/sec 10.2/`H533rm`.
             plan['LDO_ENABLE']              = True
             plan['POWER_MANAGEMENT_BYPASS'] = False
 
@@ -377,175 +390,121 @@ def SYSTEM_PARAMETERIZE(target):
     #
     # Built-in oscillators.
     #
-    # @/pg 354/fig 40/`H7S3rm`.
-    #
 
 
 
-    match target.mcu:
+    # TODO Put in database.
 
-        case 'STM32H7S3L8H6':
-
-            # General high-speed-internal oscillator.
-            # @/pg 361/sec 7.5.2/`H7S3rm`.
-            # TODO Handle other frequencies.
-
-            plan['HSI_ENABLE'] = schema['HSI_ENABLE']
-            map['HSI_CK']      = 64_000_000 if plan['HSI_ENABLE'] else 0
+    hsi_default_frequency = {
+        'STM32H7S3L8H6' : 64_000_000,
+        'STM32H533RET6' : 32_000_000,
+    }[target.mcu]
 
 
 
-            # High-speed-internal oscillator (48MHz).
-            # @/pg 363/sec 7.5.2/`H7S3rm`.
+    # General high-speed-internal oscillator.
+    # @/pg 361/sec 7.5.2/`H7S3rm`.
+    # @/pg 458/sec 11.4.2/`H533rm`.
+    # TODO Handle other frequencies.
 
-            plan['HSI48_ENABLE'] = schema['HSI48_ENABLE']
-            map['HSI48_CK']      = 48_000_000 if plan['HSI48_ENABLE'] else 0
-
-
-
-            # "Clock Security System" oscillator (fixed at ~4MHz).
-            # @/pg 362/sec 7.5.2/`H7S3rm`.
-
-            plan['CSI_ENABLE'] = schema['CSI_ENABLE']
-            map['CSI_CK']             = 4_000_000 if plan['CSI_ENABLE'] else 0
+    plan['HSI_ENABLE'] = schema['HSI_ENABLE']
+    map['HSI_CK']      = 32_000_000 if plan['HSI_ENABLE'] else 0
 
 
 
-            # TODO Not implemented yet; here because of the brute-forcing later on.
-            map['HSE_CK'] = 0
-            map['LSE_CK'] = 0
+    # High-speed-internal oscillator (48MHz).
+    # @/pg 363/sec 7.5.2/`H7S3rm`.
+    # @/pg 460/sec 11.4.4/`H533rm`.
+
+    plan['HSI48_ENABLE'] = schema['HSI48_ENABLE']
+    map['HSI48_CK']      = 48_000_000 if plan['HSI48_ENABLE'] else 0
 
 
 
-        case 'STM32H533RET6':
+    # "Clock Security System" oscillator (fixed at ~4MHz).
+    # @/pg 362/sec 7.5.2/`H7S3rm`.
+    # @/pg 459/sec 11.4.3/`H533rm`.
 
-            # General high-speed-internal oscillator.
-            # @/pg 458/sec 11.4.2/`H533rm`.
-            # TODO Handle other frequencies.
-
-            plan['HSI_ENABLE'] = schema['HSI_ENABLE']
-            map['HSI_CK']      = 32_000_000 if plan['HSI_ENABLE'] else 0
+    plan['CSI_ENABLE'] = schema['CSI_ENABLE']
+    map['CSI_CK']      = 4_000_000 if plan['CSI_ENABLE'] else 0
 
 
 
-            # High-speed-internal oscillator (48MHz).
-            # @/pg 460/sec 11.4.4/`H533rm`.
+    # TODO Not implemented yet.
 
-            plan['HSI48_ENABLE'] = schema['HSI48_ENABLE']
-            map['HSI48_CK']      = 48_000_000 if plan['HSI48_ENABLE'] else 0
-
-
-
-            # "Clock Security System" oscillator (fixed at ~4MHz).
-            # @/pg 459/sec 11.4.3/`H533rm`.
-
-            plan['CSI_ENABLE'] = schema['CSI_ENABLE']
-            map['CSI_CK']      = 4_000_000 if plan['CSI_ENABLE'] else 0
-
-
-
-            # TODO Not implemented yet; here because of the brute-forcing later on.
-            map['HSE_CK'] = 0
-            map['LSE_CK'] = 0
-
-
-
-        case _: raise NotImplementedError
+    map['HSE_CK'] = 0
+    map['LSE_CK'] = 0
 
 
 
     ################################################################################
     #
-    # Parameterize peripheral clock.
+    # Peripheral clock.
     # TODO Automate.
     #
 
 
 
-    per_ck_source         = schema['PER_CK_SOURCE']
-    plan['PER_CK_SOURCE'] = mk_dict(database['PER_CK_SOURCE'])[per_ck_source]
-    map['PER_CK']         = map[per_ck_source]
+    option                          = schema['PERIPHERAL_CLOCK_OPTION']
+    plan['PERIPHERAL_CLOCK_OPTION'] = mk_dict(database['PERIPHERAL_CLOCK_OPTION'])[option]
+    map['PER_CK']                   = map[option]
 
 
 
     ################################################################################
     #
-    # Parameterize the PLL subsystem.
+    # PLLs.
     #
-    # @/pg 371/fig 48/`H7S3rm`. @/pg 354/fig 40/`H7S3rm`.
-    # @/pg 461/fig 55/`H533rm`. @/pg 456/fig 52/`H533rm`.
+    # @/pg 371/fig 48/`H7S3rm`.
+    # @/pg 354/fig 40/`H7S3rm`.
+    # @/pg 461/fig 55/`H533rm`.
+    # @/pg 456/fig 52/`H533rm`.
     #
 
 
-
-    # Verify the values for the PLL options.
 
     for unit, channels in database['PLLS']:
 
         for channel in channels:
 
-            goal_pll_channel_freq = schema[f'PLL{unit}_{channel}_CK']
+            goal_frequency = schema[f'PLL{unit}_{channel}_CK']
 
-            if goal_pll_channel_freq is None:
-                continue # This PLL channel isn't used.
+            if goal_frequency is None:
+                continue
 
-            if goal_pll_channel_freq not in database['PLL_CHANNEL_FREQ']:
+            if goal_frequency not in database['PLL_CHANNEL_FREQ']:
                 raise ValueError(
-                    f'PLL{unit}{channel} output '
-                    f'frequency is out-of-range: {goal_pll_channel_freq :_}Hz.'
+                    f'PLL{unit}_{channel}_CK frequency is '
+                    f'out of range: {goal_frequency :_}Hz.'
                 )
 
 
 
-    # Brute-forcing of a single PLL channel of a particular PLL unit.
-
-    def parameterize_plln_channel(unit, pll_vco_freq, channel):
-
-        goal_pll_channel_freq = schema[f'PLL{unit}_{channel}_CK']
-
-        if goal_pll_channel_freq is None:
-            return True # This PLL channel isn't used.
-
-        needed_divider = pll_vco_freq / goal_pll_channel_freq
-
-        if not needed_divider.is_integer():
-            return False # We won't be able to get a whole number divider.
-
-        needed_divider = int(needed_divider)
-
-        if needed_divider not in database[f'PLL{unit}{channel}_DIVIDER']:
-            return False # The divider is not within the specified range.
-
-        plan[f'PLL{unit}_{channel}_DIVIDER'] = needed_divider # We found a divider!
-
-        return True
+    #
+    #
+    #
 
 
 
-    # Yield every output frequency a PLL unit can produce given an input frequency.
-
-    def each_pll_vco_freq(unit, pll_clock_source_freq):
-
-
-
-        # Try every available predivider that's placed before the PLL unit.
+    def each_vco_frequency(unit, kernel_frequency):
 
         for plan[f'PLL{unit}_PREDIVIDER'] in database[f'PLL{unit}_PREDIVIDER']:
 
 
 
             # Determine the range of the PLL input frequency.
+            # TODO Simplify.
 
-            pll_reference_freq = pll_clock_source_freq / plan[f'PLL{unit}_PREDIVIDER']
+            reference_frequency = kernel_frequency / plan[f'PLL{unit}_PREDIVIDER']
 
             plan[f'PLL{unit}_INPUT_RANGE'] = next((
                 option
-                for upper_freq_range, option in database[f'PLL{unit}_INPUT_RANGE']
-                if pll_reference_freq < upper_freq_range
+                for upper_frequency_range, option in database[f'PLL{unit}_INPUT_RANGE']
+                if reference_frequency < upper_frequency_range
             ), None)
 
             if plan[f'PLL{unit}_INPUT_RANGE'] is None:
-                continue # PLL input frequency is out of range.
+                continue
 
 
 
@@ -553,77 +512,128 @@ def SYSTEM_PARAMETERIZE(target):
 
             for plan[f'PLL{unit}_MULTIPLIER'] in database[f'PLL{unit}_MULTIPLIER']:
 
-                pll_vco_freq = pll_reference_freq * plan[f'PLL{unit}_MULTIPLIER']
+                vco_frequency = reference_frequency * plan[f'PLL{unit}_MULTIPLIER']
 
-                if pll_vco_freq not in database['PLL_VCO_FREQ']:
-                    continue # The multiplied frequency is out of range.
+                if vco_frequency not in database['PLL_VCO_FREQ']:
+                    continue
 
-                yield pll_vco_freq
-
-
-
-    # Brute-forcing of a single PLL unit.
-
-    def parameterize_plln(unit, pll_clock_source_freq):
+                yield vco_frequency
 
 
-        plan[f'PLL{unit}_PREDIVIDER'] = None
+
+    #
+    #
+    #
+
+
+
+    def parameterize_channel(unit, vco_frequency, channel):
+
+        goal_frequency = schema[f'PLL{unit}_{channel}_CK']
+
+
+
+        # Channel even used?
+
+        if goal_frequency is None:
+
+            needed_divider = None
+
+
+
+        # See what the channel divider would be.
+
+        else:
+
+            needed_divider = vco_frequency / goal_frequency
+
+            if not needed_divider.is_integer():
+                return False
+
+            needed_divider = int(needed_divider)
+
+            if needed_divider not in database[f'PLL{unit}{channel}_DIVIDER']:
+                return False
+
+
+
+        # Got the channel divider!
+
+        plan[f'PLL{unit}_{channel}_DIVIDER'] = needed_divider
+
+        return True
+
+
+
+    #
+    #
+    #
+
+    def parameterize_unit(unit, kernel_frequency):
+
+
+
+        # TODO Unnecessary.
+
+        plan[f'PLL{unit}_PREDIVIDER' ] = None
         plan[f'PLL{unit}_INPUT_RANGE'] = None
-        plan[f'PLL{unit}_MULTIPLIER'] = None
-
+        plan[f'PLL{unit}_MULTIPLIER' ] = None
         for channel in mk_dict(database['PLLS'])[unit]:
             plan[f'PLL{unit}_{channel}_DIVIDER'] = None
 
 
+
         # See if the PLL unit is even used.
 
-        pll_is_used = not all(
+        plan[f'PLL{unit}_ENABLE'] = not all(
             schema[f'PLL{unit}_{channel}_CK'] is None
             for channel in mk_dict(database['PLLS'])[unit]
         )
 
-        plan[f'PLL{unit}_ENABLE'] = pll_is_used
-
-        if not pll_is_used:
+        if not plan[f'PLL{unit}_ENABLE']:
             return True
 
 
 
-        # Try to find a parameterization that satisfies each channel of the PLL unit.
+        # Parameterize each channel.
 
-        for pll_vco_freq in each_pll_vco_freq(unit, pll_clock_source_freq):
+        for vco_frequency in each_vco_frequency(unit, kernel_frequency):
 
-            every_plln_satisfied = all(
-                parameterize_plln_channel(unit, pll_vco_freq, channel)
+            every_channel_satisfied = all(
+                parameterize_channel(unit, vco_frequency, channel)
                 for channel in mk_dict(database['PLLS'])[unit]
             )
 
-            if every_plln_satisfied:
+            if every_channel_satisfied:
                 return True
 
 
 
-    # Brute-forcing every PLL unit.
+    #
+    #
+    #
 
-    def parameterize_plls():
+
+
+    def parameterize_units():
 
         match target.mcu:
 
 
 
-            # All of the PLL units share the same clock source.
+            # All of the PLL units share the same kernel clock source.
 
             case 'STM32H7S3L8H6':
 
-                for pll_clock_source_name, plan['PLL_CLOCK_SOURCE'] in database['PLL_CLOCK_SOURCE']:
+                for pll_clock_source_name, plan['PLL_KERNEL_SOURCE'] in database['PLL_KERNEL_SOURCE']:
 
-                    pll_clock_source_freq = map[pll_clock_source_name]
-                    every_pll_satisfied   = all(
-                        parameterize_plln(units, pll_clock_source_freq)
+                    kernel_frequency     = map[pll_clock_source_name]
+                    every_unit_satisfied = all(
+                        parameterize_unit(units, kernel_frequency)
                         for units, channels in database['PLLS']
                     )
 
-                    if every_pll_satisfied:
+                    if every_unit_satisfied:
                         return True
 
 
@@ -632,17 +642,15 @@ def SYSTEM_PARAMETERIZE(target):
 
             case 'STM32H533RET6':
 
-                for unit, channels in database['PLLS']:
-
-                    plln_satisfied = any(
-                        parameterize_plln(unit, map[plln_clock_source_name])
-                        for plln_clock_source_name, plan[f'PLL{unit}_CLOCK_SOURCE'] in database[f'PLL{unit}_CLOCK_SOURCE']
+                every_unit_satisfied = all(
+                    any(
+                        parameterize_unit(unit, map[kernel_source])
+                        for kernel_source, plan[f'PLL{unit}_KERNEL_SOURCE'] in database[f'PLL{unit}_KERNEL_SOURCE']
                     )
+                    for unit, channels in database['PLLS']
+                )
 
-                    if not plln_satisfied:
-                        return False
-
-                return True
+                return every_unit_satisfied
 
 
 
@@ -650,34 +658,36 @@ def SYSTEM_PARAMETERIZE(target):
 
 
 
-    # Begin brute-forcing.
+    #
+    #
+    #
 
-    plan.brute(parameterize_plls)
+
+
+    plan.brute(parameterize_units)
 
 
 
     ################################################################################
     #
-    # Parameterize the System Clock Generation Unit.
+    # System Clock Generation Unit.
     #
     # @/pg 378/fig 51/`H7S3rm`.
     #
 
 
 
-    # Verify the values for the SCGU options.
-
     if map['CPU_CK'] not in database['CPU_FREQ']:
         raise ValueError(
-            f'CPU clock frequency is '
-            f'out-of-range: {map['CPU_CK'] :_}Hz.'
+            f'CPU_CK is out of range: '
+            f'{map['CPU_CK'] :_}Hz.'
         )
 
     for unit in database['APBS']:
         if map[f'APB{unit}_CK'] not in database['APB_FREQ']:
             raise ValueError(
-                f'APB{unit} frequency is '
-                f'out-of-bounds: {map[f'APB{unit}_CK'] :_}Hz.'
+                f'APB{unit}_CK is out of range: '
+                f'{map[f'APB{unit}_CK'] :_}Hz.'
             )
 
     match target.mcu:
@@ -686,58 +696,59 @@ def SYSTEM_PARAMETERIZE(target):
 
             if map['AXI_AHB_CK'] not in database['AXI_AHB_FREQ']:
                 raise ValueError(
-                    f'Bus frequency is '
-                    f'out-of-bounds: {map['AXI_AHB_CK'] :_}Hz.'
+                    f'AXI_AHB_CK is out-of-range: '
+                    f'{map['AXI_AHB_CK'] :_}Hz.'
                 )
 
-        case 'STM32H533RET6':
-
-            pass
 
 
-
-    # Brute-forcing of a single APB bus.
-
-    def parameterize_apbx(unit):
-
-        needed_apbx_divider         = map['AXI_AHB_CK'] / map[f'APB{unit}_CK']
-        plan[f'APB{unit}_DIVIDER'] = mk_dict(database[f'APB{unit}_DIVIDER']).get(needed_apbx_divider, None)
-        apbx_divider_found          = plan[f'APB{unit}_DIVIDER'] is not None
-
-        return apbx_divider_found
+    #
+    #
+    #
 
 
 
-    # Brute-forcing of the entire SCGU.
+    def parameterize_apb(unit):
+
+        needed_divider             = map['AXI_AHB_CK'] / map[f'APB{unit}_CK']
+        plan[f'APB{unit}_DIVIDER'] = mk_dict(database[f'APB{unit}_DIVIDER']).get(needed_divider, None)
+
+        return plan[f'APB{unit}_DIVIDER'] is not None
+
+
+
+    #
+    #
+    #
+
+
 
     def parameterize_scgu():
 
-        for scgu_clock_source_name, plan['SCGU_CLOCK_SOURCE'] in database['SCGU_CLOCK_SOURCE']:
+        for kernel_source, plan['SCGU_KERNEL_SOURCE'] in database['SCGU_KERNEL_SOURCE']:
 
 
 
-            # Try to parameterize for the CPU.
+            # CPU.
 
-            needed_cpu_divider = map[scgu_clock_source_name] / map['CPU_CK']
-            plan['CPU_DIVIDER']  = mk_dict(database['CPU_DIVIDER']).get(needed_cpu_divider, None)
-            cpu_divider_found  = plan['CPU_DIVIDER'] is not None
+            needed_cpu_divider  = map[kernel_source] / map['CPU_CK']
+            plan['CPU_DIVIDER'] = mk_dict(database['CPU_DIVIDER']).get(needed_cpu_divider, None)
 
-            if not cpu_divider_found:
+            if plan['CPU_DIVIDER'] is None:
                 continue
 
 
 
-            # Try to parameterize for the AXI/AHB busses.
+            # AXI/AHB busses.
 
             match target.mcu:
 
                 case 'STM32H7S3L8H6':
 
-                    needed_axi_ahb_divider   = map['CPU_CK'] / map['AXI_AHB_CK']
+                    needed_axi_ahb_divider  = map['CPU_CK'] / map['AXI_AHB_CK']
                     plan['AXI_AHB_DIVIDER'] = mk_dict(database['AXI_AHB_DIVIDER']).get(needed_axi_ahb_divider, None)
-                    axi_ahb_divider_found    = plan['AXI_AHB_DIVIDER'] is not None
 
-                    if not axi_ahb_divider_found:
+                    if plan['AXI_AHB_DIVIDER'] is None:
                         continue
 
 
@@ -752,10 +763,10 @@ def SYSTEM_PARAMETERIZE(target):
 
 
 
-            # Try to parameterize for each APB bus.
+            # Each APB bus.
 
             every_apb_satisfied = all(
-                parameterize_apbx(unit)
+                parameterize_apb(unit)
                 for unit in database['APBS']
             )
 
@@ -764,13 +775,15 @@ def SYSTEM_PARAMETERIZE(target):
 
 
 
-            # SCGU successfully brute-forced!
-
             return True
 
 
 
-     # Begin brute-forcing.
+    #
+    #
+    #
+
+
 
     plan.brute(parameterize_scgu)
 
@@ -778,7 +791,7 @@ def SYSTEM_PARAMETERIZE(target):
 
     ################################################################################
     #
-    # Parameterize SysTick.
+    # SysTick.
     #
     # @/pg 620/sec B3.3/`Armv7-M`.
     # @/pg 297/sec B11.1/`Armv8-M`.
@@ -796,12 +809,26 @@ def SYSTEM_PARAMETERIZE(target):
 
 
 
-    def parameterize_systick():
+    #
+    #
+    #
 
-        plan['SYSTICK_ENABLE'] = bool(map['SYSTICK_CK'])
+
+
+    def parameterize():
+
+
+
+        # See if SysTick is even used.
+
+        plan['SYSTICK_ENABLE'] = map['SYSTICK_CK'] is not None
 
         if not plan['SYSTICK_ENABLE']:
-            return True # SysTick won't be configured.
+            return True
+
+
+
+        # Try different clock sources.
 
         for plan['SYSTICK_USE_CPU_CK'] in database['SYSTICK_USE_CPU_CK']:
 
@@ -812,28 +839,34 @@ def SYSTEM_PARAMETERIZE(target):
             # @/pg 1859/sec D1.2.238/`Armv8-M`.
 
             if plan['SYSTICK_USE_CPU_CK']:
-                frequencies = lambda: [map['CPU_CK']]
+
+                kernel_frequencies = [
+                    map['CPU_CK']
+                ]
 
 
 
-            # SysTick will use an implementation defined clock source.
+            # SysTick will use an implementation-defined clock source.
 
             else:
 
                 match target.mcu:
 
+                    # @/pg 378/fig 51/`H7S3rm`.
+                    case 'STM32H7S3L8H6':
+
+                        kernel_frequencies = [
+                            map['CPU_CK'] / 8
+                        ]
 
 
-                    case 'STM32H7S3L8H6': # @/pg 378/fig 51/`H7S3rm`.
 
-                        frequencies = lambda: [map['CPU_CK'] / 8]
+                    # @/pg 456/fig 52/`H533rm`.
+                    case 'STM32H533RET6':
 
-
-
-                    case 'STM32H533RET6': # @/pg 456/fig 52/`H533rm`.
-
-                        # TODO Figure out how to do this.
-                        frequencies = lambda: []
+                        kernel_frequencies = [
+                            # TODO.
+                        ]
 
 
 
@@ -843,32 +876,36 @@ def SYSTEM_PARAMETERIZE(target):
 
             # Try out the different kernel frequencies and see what sticks.
 
-            for map['SYSTICK_KERNEL_FREQ'] in frequencies():
+            for map['SYSTICK_KERNEL_FREQ'] in kernel_frequencies:
 
                 plan['SYSTICK_RELOAD'] = map['SYSTICK_KERNEL_FREQ'] / map['SYSTICK_CK'] - 1
 
                 if not plan['SYSTICK_RELOAD'].is_integer():
-                    continue # SysTick's reload value wouldn't be a whole number.
+                    continue
 
                 plan['SYSTICK_RELOAD'] = int(plan['SYSTICK_RELOAD'])
 
                 if plan['SYSTICK_RELOAD'] not in database['SYSTICK_RELOAD']:
-                    continue # SysTick's reload value would be out of range.
+                    continue
 
                 return True
 
 
 
-    plan.brute(parameterize_systick)
+    #
+    #
+    #
+
+
+
+    plan.brute(parameterize)
 
 
 
     ################################################################################
     #
-    # Parameterize the UXART peripherals.
+    # UXARTs.
     # TODO Consider maximum kernel frequency.
-    #
-    # @/pg 394/fig 56/`H7S3rm`.
     #
 
 
@@ -879,19 +916,21 @@ def SYSTEM_PARAMETERIZE(target):
     # baud-rate divider, but nonetheless, we must process each set
     # of connected UXART peripherals as a whole.
 
-    for uxart_units in database['UXARTS']:
+    for instances in database.get('UXARTS', ()):
 
 
 
-        # See if we can get the baud-divider for this UXART unit.
+        #
+        #
+        #
 
-        def parameterize_uxart(uxart_clock_source_freq, uxart_unit):
+        def parameterize_instance(kernel_frequency, instance):
 
-            peripheral, unit = uxart_unit
+            peripheral, unit = instance
 
 
 
-            # See if this UXART peripheral is even needed.
+            # See if this instance is even needed.
 
             needed_baud = schema[f'{peripheral}{unit}_BAUD']
 
@@ -902,7 +941,7 @@ def SYSTEM_PARAMETERIZE(target):
 
             # Check if the needed divider is valid.
 
-            needed_divider = uxart_clock_source_freq / needed_baud
+            needed_divider = kernel_frequency / needed_baud
 
             if not needed_divider.is_integer():
                 return False
@@ -922,55 +961,63 @@ def SYSTEM_PARAMETERIZE(target):
 
 
 
-        # See if we can parameterize this set of UXART peripherals.
+        #
+        #
+        #
 
-        def parameterize_uxarts():
-
-
-            plan[f'UXART_{uxart_units}_KERNEL_SOURCE'] = None
-
-            for uxart_unit in uxart_units:
-                plan[f'{uxart_unit[0]}{uxart_unit[1]}_BAUD_DIVIDER'] = None
+        def parameterize_instances():
 
 
-            # Check if this set of UXARTs even needs to be configured for.
 
-            using_uxarts = any(
+            # TODO Unnecessary.
+
+            plan[f'UXART_{instances}_KERNEL_SOURCE'] = None
+            for instance in instances:
+                plan[f'{instance[0]}{instance[1]}_BAUD_DIVIDER'] = None
+
+
+
+            # Check if an instance in this set is even used.
+
+            using_instances = any(
                 schema[f'{peripheral}{unit}_BAUD'] is not None
-                for peripheral, unit in uxart_units
+                for peripheral, unit in instances
             )
 
-            if not using_uxarts:
+            if not using_instances:
                 return True
 
 
 
             # Try every available clock source for this
-            # set of UXART peripherals and see what sticks.
+            # set of instances and see what sticks.
 
-            for uxart_clock_source_name, plan[f'UXART_{uxart_units}_KERNEL_SOURCE'] in database[f'UXART_{uxart_units}_KERNEL_SOURCE']:
+            for kernel_source, plan[f'UXART_{instances}_KERNEL_SOURCE'] in database[f'UXART_{instances}_KERNEL_SOURCE']:
 
-                uxart_clock_source_freq = map[uxart_clock_source_name]
-                every_uxart_satisfied   = all(
-                    parameterize_uxart(uxart_clock_source_freq, uxart_unit)
-                    for uxart_unit in uxart_units
+                kernel_frequency         = map[kernel_source]
+                every_instance_satisfied = all(
+                    parameterize_instance(kernel_frequency, instance)
+                    for instance in instances
                 )
 
-                if every_uxart_satisfied:
+                if every_instance_satisfied:
                     return True
 
 
 
-        # Brute force the UXART peripherals to find the needed
-        # clock source and the respective baud-dividers.
+        #
+        #
+        #
 
-        plan.brute(parameterize_uxarts)
+
+
+        plan.brute(parameterize_instances)
 
 
 
     ################################################################################
     #
-    # Parameterize the I2C peripherals.
+    # I2Cs.
     # TODO Consider maximum kernel frequency.
     #
 
@@ -984,15 +1031,13 @@ def SYSTEM_PARAMETERIZE(target):
 
 
 
-            # See if the I2C unit even needs to be brute-forced.
+            # See if the unit is even used.
 
             needed_baud = schema[f'I2C{unit}_BAUD']
 
             if needed_baud is None:
 
                 plan[f'I2C{unit}_KERNEL_SOURCE'] = None
-                plan[f'I2C{unit}_PRESC'        ] = None
-                plan[f'I2C{unit}_SCL'          ] = None
 
                 return True
 
@@ -1005,9 +1050,9 @@ def SYSTEM_PARAMETERIZE(target):
 
             best_baud_error = None
 
-            for source_name, source_option in database[f'I2C{unit}_KERNEL_SOURCE']:
+            for kernel_source, kernel_option in database[f'I2C{unit}_KERNEL_SOURCE']:
 
-                source_frequency = map[source_name] or 0
+                kernel_frequency = map[kernel_source] or 0
 
                 for presc in database['I2C_PRESC']:
 
@@ -1015,7 +1060,7 @@ def SYSTEM_PARAMETERIZE(target):
 
                     # Determine the SCL.
 
-                    scl = round(source_frequency / (presc + 1) / needed_baud / 2)
+                    scl = round(kernel_frequency / (presc + 1) / needed_baud / 2)
 
                     if scl not in database['I2C_SCLH']:
                         continue
@@ -1027,7 +1072,7 @@ def SYSTEM_PARAMETERIZE(target):
 
                     # Determine the baud error.
 
-                    actual_baud       = source_frequency / (scl * 2 * (presc + 1) + 1)
+                    actual_baud       = kernel_frequency / (scl * 2 * (presc + 1) + 1)
                     actual_baud_error = abs(1 - actual_baud / needed_baud)
 
 
@@ -1035,8 +1080,8 @@ def SYSTEM_PARAMETERIZE(target):
                     # Keep the best so far.
 
                     if best_baud_error is None or actual_baud_error < best_baud_error:
-                        best_baud_error                   = actual_baud_error
-                        plan[f'I2C{unit}_KERNEL_SOURCE'] = source_option
+                        best_baud_error                  = actual_baud_error
+                        plan[f'I2C{unit}_KERNEL_SOURCE'] = kernel_option
                         plan[f'I2C{unit}_PRESC'        ] = presc
                         plan[f'I2C{unit}_SCL'          ] = scl
 
@@ -1054,20 +1099,18 @@ def SYSTEM_PARAMETERIZE(target):
 
     ################################################################################
     #
-    # Parameterize the timers.
+    # Timers.
     #
 
 
 
-    def parameterize_timer(unit):
-
-
+    def parameterize_unit(unit):
 
         needed_rate = schema[f'TIM{unit}_RATE']
 
 
 
-        # Determine the kernel frequency to the timer peripheral.
+        # Determine the kernel frequency.
 
         match target.mcu:
 
@@ -1123,13 +1166,14 @@ def SYSTEM_PARAMETERIZE(target):
 
 
             # Determine the modulation value.
+            # Note that zero will end up disabling
+            # the counter. Since we're approximating
+            # for the rate, anyways we might as well
+            # round up to 1.
 
             plan[f'TIM{unit}_MODULATION'] = round(counter_frequency / needed_rate)
 
             if plan[f'TIM{unit}_MODULATION'] == 0:
-                # Zero will end up disabling the counter.
-                # Since we're approximating for the rate,
-                # anyways we might as well round up to 1.
                 plan[f'TIM{unit}_MODULATION'] = 1
 
             if plan[f'TIM{unit}_MODULATION'] not in database[f'TIM{unit}_MODULATION']:
@@ -1147,7 +1191,13 @@ def SYSTEM_PARAMETERIZE(target):
 
 
 
-    def parameterize_timers():
+    #
+    #
+    #
+
+
+
+    def parameterize_units():
 
 
 
@@ -1167,24 +1217,30 @@ def SYSTEM_PARAMETERIZE(target):
 
         for plan['GLOBAL_TIMER_PRESCALER'] in database['GLOBAL_TIMER_PRESCALER']:
 
-            every_timer_satisfied = all(
-                parameterize_timer(unit)
+            every_unit_satisfied = all(
+                parameterize_unit(unit)
                 for unit in units_to_be_parameterized
             )
 
-            if every_timer_satisfied:
+            if every_unit_satisfied:
                 return True
 
 
 
+    #
+    #
+    #
+
+
+
     if 'TIMERS' in database:
-        plan.brute(parameterize_timers)
+        plan.brute(parameterize_units)
 
 
 
     ################################################################################
     #
-    # Parameterization of the system is done!
+    # Parameterization done!
     #
 
 

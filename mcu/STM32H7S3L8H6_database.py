@@ -151,8 +151,8 @@
                         ('PLL1_P_CK', '0b011'),
                     ))
                     for field, tag in (
-                        ('SWS', 'EFFECTIVE_SCGU_CLOCK_SOURCE'),
-                        ('SW' , 'SCGU_CLOCK_SOURCE'          ),
+                        ('SWS', 'EFFECTIVE_SCGU_KERNEL_SOURCE'),
+                        ('SW' , 'SCGU_KERNEL_SOURCE'          ),
                     )
                 ),
             ),
@@ -229,10 +229,10 @@
             ),
 
             ('PLLCKSELR',
-                ('DIVM1' , 'PLL1_PREDIVIDER' , 1, 63),
-                ('DIVM2' , 'PLL2_PREDIVIDER' , 1, 63),
-                ('DIVM3' , 'PLL3_PREDIVIDER' , 1, 63),
-                ('PLLSRC', 'PLL_CLOCK_SOURCE', (
+                ('DIVM1' , 'PLL1_PREDIVIDER'  , 1, 63),
+                ('DIVM2' , 'PLL2_PREDIVIDER'  , 1, 63),
+                ('DIVM3' , 'PLL3_PREDIVIDER'  , 1, 63),
+                ('PLLSRC', 'PLL_KERNEL_SOURCE', (
                     ('HSI_CK' , '0b00'),
                     ('CSI_CK' , '0b01'),
                     ('HSE_CK' , '0b10'),
@@ -260,13 +260,13 @@
             ),
 
             ('CCIPR1',
-                ('CKPERSEL', 'PER_CK_SOURCE', (
+                ('CKPERSEL', 'PERIPHERAL_CLOCK_OPTION', (
                     ('HSI_CK' , '0b00'),
                     ('CSI_CK' , '0b01'),
                     ('HSE_CK' , '0b10'),
                     (None     , '0b11'),
                 )),
-                ('SDMMC12SEL', 'SDMMC_CLOCK_SOURCE', (
+                ('SDMMC12SEL', 'SDMMC_KERNEL_SOURCE', (
                     ('PLL2_S_CK', '0b0'),
                     ('PLL2_T_CK', '0b1'),
                 )),

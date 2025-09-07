@@ -1003,7 +1003,7 @@ def SYSTEM_CONFIGURIZE(target, configurations):
     # Set the clock source which will be
     # available for some peripheral to use.
 
-    CMSIS_SET(cfgs('PER_CK_SOURCE', ...))
+    CMSIS_SET(cfgs('PERIPHERAL_CLOCK_OPTION', ...))
 
 
 
@@ -1024,7 +1024,7 @@ def SYSTEM_CONFIGURIZE(target, configurations):
         # Set the clock source shared for all PLLs.
 
         if target.mcu == 'STM32H7S3L8H6':
-            sets += [cfgs('PLL_CLOCK_SOURCE', ...)]
+            sets += [cfgs('PLL_KERNEL_SOURCE', ...)]
 
 
 
@@ -1037,7 +1037,7 @@ def SYSTEM_CONFIGURIZE(target, configurations):
             # Set the clock source for this PLL unit.
 
             if target.mcu == 'STM32H533RET6':
-                sets += [cfgs(f'PLL{unit}_CLOCK_SOURCE', ...)]
+                sets += [cfgs(f'PLL{unit}_KERNEL_SOURCE', ...)]
 
 
 
@@ -1141,14 +1141,14 @@ def SYSTEM_CONFIGURIZE(target, configurations):
 
     # Now switch system clock to the desired source.
 
-    CMSIS_SET(cfgs('SCGU_CLOCK_SOURCE', ...))
+    CMSIS_SET(cfgs('SCGU_KERNEL_SOURCE', ...))
 
 
 
     # Wait until the desired source has been selected.
 
     CMSIS_SPINLOCK(
-        cfgs('EFFECTIVE_SCGU_CLOCK_SOURCE', cfgs('SCGU_CLOCK_SOURCE'))
+        cfgs('EFFECTIVE_SCGU_KERNEL_SOURCE', cfgs('SCGU_KERNEL_SOURCE'))
     )
 
 
