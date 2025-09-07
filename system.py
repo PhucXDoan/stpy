@@ -1,8 +1,9 @@
 #include "SYSTEM_init.meta"
-#meta system_parameterize, system_database : INTERRUPTS, system_configurize
+#meta system_parameterize, system_database, system_configurize, INTERRUPTS, system_configurize, INTERRUPTS, INTERRUPTS_THAT_MUST_BE_DEFINED
 
 
 from deps.stpy.parameterize import system_parameterize, system_database
+from deps.stpy.configurize  import system_configurize, INTERRUPTS, INTERRUPTS_THAT_MUST_BE_DEFINED
 
 
 # Macros to control the interrupt in NVIC.
@@ -70,7 +71,7 @@ for target in PER_TARGET():
 
         # Figure out the procedure to set the register values for the clock-tree.
 
-        system_configurize(target, configuration)
+        system_configurize(Meta, CMSIS_SET, CMSIS_WRITE, CMSIS_SPINLOCK, PER_TARGET, target, configuration)
 
 
 
