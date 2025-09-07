@@ -1,4 +1,4 @@
-#meta SYSTEM_CONFIGURIZE, INTERRUPTS, INTERRUPTS_THAT_MUST_BE_DEFINED, IMPLEMENT_DRIVER_ALIASES : SYSTEM_DATABASE
+#meta system_configurize, INTERRUPTS, INTERRUPTS_THAT_MUST_BE_DEFINED, IMPLEMENT_DRIVER_ALIASES : system_database
 
 
 
@@ -60,7 +60,7 @@ def IMPLEMENT_DRIVER_ALIASES(
                 *(
                     (
                         cmsis_tuple_tag.format(common_name),
-                        CMSIS_TUPLE(SYSTEM_DATABASE[target.mcu][cmsis_tuple_tag.format(instance)])
+                        CMSIS_TUPLE(system_database[target.mcu][cmsis_tuple_tag.format(instance)])
                     )
                     for cmsis_tuple_tag in cmsis_tuple_tags
                 )
@@ -513,7 +513,7 @@ for target in TARGETS:
 
 import collections, builtins
 
-def SYSTEM_CONFIGURIZE(target, configurations):
+def system_configurize(target, configurations):
 
     ################################################################################################################################
 
@@ -521,7 +521,7 @@ def SYSTEM_CONFIGURIZE(target, configurations):
 
     # The database is how we will figure out which register to write and where.
 
-    database = SYSTEM_DATABASE[target.mcu]
+    database = system_database[target.mcu]
 
 
 
@@ -656,9 +656,9 @@ def SYSTEM_CONFIGURIZE(target, configurations):
 
     CMSIS_SET(
         (
-            SYSTEM_DATABASE[target.mcu][f'GPIO{port}_ENABLE'].peripheral,
-            SYSTEM_DATABASE[target.mcu][f'GPIO{port}_ENABLE'].register,
-            SYSTEM_DATABASE[target.mcu][f'GPIO{port}_ENABLE'].field,
+            system_database[target.mcu][f'GPIO{port}_ENABLE'].peripheral,
+            system_database[target.mcu][f'GPIO{port}_ENABLE'].register,
+            system_database[target.mcu][f'GPIO{port}_ENABLE'].field,
             True
         )
         for port in sorted(OrderedSet(
@@ -699,7 +699,7 @@ def SYSTEM_CONFIGURIZE(target, configurations):
             f'GPIO{gpio.port}',
             'OSPEEDR',
             f'OSPEED{gpio.number}',
-            mk_dict(SYSTEM_DATABASE[target.mcu]['GPIO_SPEED'])[gpio.speed]
+            mk_dict(system_database[target.mcu]['GPIO_SPEED'])[gpio.speed]
         )
         for gpio in gpios
         if gpio.pin   is not None
@@ -715,7 +715,7 @@ def SYSTEM_CONFIGURIZE(target, configurations):
             f'GPIO{gpio.port}',
             'PUPDR',
             f'PUPD{gpio.number}',
-            mk_dict(SYSTEM_DATABASE[target.mcu]['GPIO_PULL'])[gpio.pull]
+            mk_dict(system_database[target.mcu]['GPIO_PULL'])[gpio.pull]
         )
         for gpio in gpios
         if gpio.pin  is not None
@@ -747,7 +747,7 @@ def SYSTEM_CONFIGURIZE(target, configurations):
             f'GPIO{gpio.port}',
             'MODER',
             f'MODE{gpio.number}',
-            mk_dict(SYSTEM_DATABASE[target.mcu]['GPIO_MODE'])[gpio.mode]
+            mk_dict(system_database[target.mcu]['GPIO_MODE'])[gpio.mode]
         )
         for gpio in gpios
         if gpio.pin  is not None
@@ -1272,7 +1272,7 @@ def SYSTEM_CONFIGURIZE(target, configurations):
 
 
 # In this meta-directive, we take the configuration
-# values from `SYSTEM_PARAMETERIZE` and generate
+# values from `system_parameterize` and generate
 # code to set the registers in the right order.
 #
 # Order matters because some clock sources depend

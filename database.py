@@ -1,4 +1,4 @@
-#meta SYSTEM_DATABASE
+#meta system_database
 
 
 
@@ -61,7 +61,7 @@ class SystemDatabaseMinMax(types.SimpleNamespace):
 # Parse each MCU's database expression.
 #
 
-SYSTEM_DATABASE = {}
+system_database = {}
 
 for mcu in MCUS:
 
@@ -238,7 +238,7 @@ for mcu in MCUS:
     #         f'there is already a database entry with the location {repr(dupe)}.'
     #     )
 
-    SYSTEM_DATABASE[mcu] = dict(entries)
+    system_database[mcu] = dict(entries)
 
 
 

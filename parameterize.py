@@ -1,4 +1,4 @@
-#meta SYSTEM_PARAMETERIZE : SYSTEM_DATABASE
+#meta system_parameterize : system_database
 
 
 
@@ -232,9 +232,9 @@ class ClockTreePlan:
 
 
 
-def SYSTEM_PARAMETERIZE(target):
+def system_parameterize(target):
 
-    database = SYSTEM_DATABASE[target.mcu]
+    database = system_database[target.mcu]
     book     = ClockTreeBook(target)
     schema   = ClockTreeSchemaWrapper(target)
     plan     = ClockTreePlan(target)
@@ -1249,14 +1249,15 @@ def SYSTEM_PARAMETERIZE(target):
 
 
 
+# TODO Stale.
 # @/`About Parameterization`:
 # This meta-directive figures out the register values needed
 # to configure the MCU's clock-tree, but without necessarily
 # worrying about the proper order that the register values
 # should be written in.
 #
-# The latter is for `SYSTEM_CONFIGURIZE` in <./electrical/system/configurize.py>
-# to do, but here in `SYSTEM_PARAMETERIZE`, we essentially
+# The latter is for `system_configurize` in <./electrical/system/configurize.py>
+# to do, but here in `system_parameterize`, we essentially
 # perform brute-forcing so that we have the CPU be clocked
 # at the desired frequency, the SPI clock be clocking at the
 # rate we want, and so forth.
@@ -1264,7 +1265,7 @@ def SYSTEM_PARAMETERIZE(target):
 # As it turns out, the algorithm to brute-force the clock-tree
 # the very similar across all STM32 microcontrollers. Of course,
 # there are some differences, but most of the logic is heavily
-# overlapped. This is especially true when we have `SYSTEM_DATABASE`
+# overlapped. This is especially true when we have `system_database`
 # to abstract over the details like the exact min/max frequencies
 # allowed and what range is multipliers/dividers are permitted.
 #
@@ -1276,7 +1277,7 @@ def SYSTEM_PARAMETERIZE(target):
 # Remember, the goal of this meta-directive is to figure out what the
 # register values should be (which often mean you need to add new
 # entries to the MCU's database); once you have that down, you can move
-# onto `SYSTEM_CONFIGURIZE` and generate the appropriate code.
+# onto `system_configurize` and generate the appropriate code.
 #
 # This process is more time-consuming than scary really.
 # Obviously, before you do any of this, you should have existing

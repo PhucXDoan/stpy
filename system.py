@@ -15,7 +15,7 @@ Meta.define('NVIC_CLEAR_PENDING', ('NAME'), '((void) (NVIC->ICPR[NVICInterrupt_#
 
 
 # Macros to make using GPIOs in C easy.
-# TODO Use SYSTEM_DATABASE.
+# TODO Use system_database.
 
 Meta.define('GPIO_HIGH'  , ('NAME'         ), '((void) (CONCAT(GPIO, _PORT_FOR_GPIO_WRITE(NAME))->BSRR = CONCAT(GPIO_BSRR_BS, _NUMBER_FOR_GPIO_WRITE(NAME))))')
 Meta.define('GPIO_LOW'   , ('NAME'         ), '((void) (CONCAT(GPIO, _PORT_FOR_GPIO_WRITE(NAME))->BSRR = CONCAT(GPIO_BSRR_BR, _NUMBER_FOR_GPIO_WRITE(NAME))))')
@@ -62,13 +62,13 @@ for target in PER_TARGET():
 
         # Figure out the register values relating to the clock-tree.
 
-        configuration, tree = SYSTEM_PARAMETERIZE(target)
+        configuration, tree = system_parameterize(target)
 
 
 
         # Figure out the procedure to set the register values for the clock-tree.
 
-        SYSTEM_CONFIGURIZE(target, configuration)
+        system_configurize(target, configuration)
 
 
 
