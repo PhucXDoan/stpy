@@ -1,5 +1,7 @@
-#meta system_configurize, INTERRUPTS, INTERRUPTS_THAT_MUST_BE_DEFINED, IMPLEMENT_DRIVER_ALIASES : system_database
+#meta system_configurize, INTERRUPTS, INTERRUPTS_THAT_MUST_BE_DEFINED, IMPLEMENT_DRIVER_ALIASES
 
+
+from deps.stpy.database import system_database, MCUS
 
 
 def IMPLEMENT_DRIVER_ALIASES(

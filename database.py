@@ -1,4 +1,53 @@
-#meta system_database
+import types
+
+
+
+# TODO Remove dependencies.
+from deps.pxd.utils import root, find_dupe
+
+
+
+################################################################################
+#
+# Supported microcontrollers.
+# TODO Copy-pasta.
+#
+
+
+
+MCUS = {
+    'STM32H7S3L8H6' : types.SimpleNamespace(
+        cmsis_file_path        = root('./deps/cmsis_device_h7s3l8/Include/stm32h7s3xx.h'),
+        freertos_port_dir_path = root('./deps/FreeRTOS_Kernel/portable/GCC/ARM_CM7/r0p1'),
+        freertos_interrupts    = {
+            'SysTick' : 'xPortSysTickHandler',
+            'SVCall'  : 'vPortSVCHandler'    ,
+            'PendSV'  : 'xPortPendSVHandler' ,
+        },
+        freertos_source_files = (
+            'deps/FreeRTOS_Kernel/tasks.c',
+            'deps/FreeRTOS_Kernel/queue.c',
+            'deps/FreeRTOS_Kernel/list.c',
+            'port.c',
+        ),
+    ),
+    'STM32H533RET6' : types.SimpleNamespace(
+        cmsis_file_path        = root('./deps/cmsis-device-h5/Include/stm32h533xx.h'),
+        freertos_port_dir_path = root('./deps/FreeRTOS_Kernel/portable/GCC/ARM_CM33_NTZ/non_secure'),
+        freertos_interrupts    = {
+            'SysTick' : 'SysTick_Handler',
+            'SVCall'  : 'SVC_Handler'    ,
+            'PendSV'  : 'PendSV_Handler' ,
+        },
+        freertos_source_files = (
+            'deps/FreeRTOS_Kernel/tasks.c',
+            'deps/FreeRTOS_Kernel/queue.c',
+            'deps/FreeRTOS_Kernel/list.c',
+            'port.c',
+            'portasm.c',
+        ),
+    ),
+}
 
 
 
@@ -18,6 +67,8 @@
 # >    )
 # >
 #
+
+
 
 class SystemDatabaseOptions(types.SimpleNamespace):
 
@@ -44,6 +95,8 @@ class SystemDatabaseOptions(types.SimpleNamespace):
 # >
 #
 
+
+
 class SystemDatabaseMinMax(types.SimpleNamespace):
 
 
@@ -66,6 +119,8 @@ class SystemDatabaseMinMax(types.SimpleNamespace):
 #
 # Parse each MCU's database expression.
 #
+
+
 
 system_database = {}
 
