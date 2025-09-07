@@ -1,7 +1,6 @@
 import types
 
-# TODO Fix import.
-from deps.stpy.database import system_database, MCUS
+from ..stpy.database import system_database, MCUS
 
 # TODO Remove dependencies.
 from deps.pxd.utils import root, mk_dict, OrderedSet, find_dupe

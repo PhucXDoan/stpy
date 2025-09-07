@@ -1,5 +1,4 @@
-# TODO Fix import.
-from deps.stpy.database import system_database
+from ..stpy.database import system_database
 
 # TODO Remove dependencies.
 from deps.pxd.utils import mk_dict

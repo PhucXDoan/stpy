@@ -1,6 +1,5 @@
-# TODO Fix import.
-from deps.stpy.parameterize import system_parameterize, system_database
-from deps.stpy.configurize  import system_configurize, INTERRUPTS, INTERRUPTS_THAT_MUST_BE_DEFINED
+from ..stpy.parameterize import system_parameterize, system_database
+from ..stpy.configurize  import system_configurize, INTERRUPTS, INTERRUPTS_THAT_MUST_BE_DEFINED
 
 
 # TODO Remove dependencies.
