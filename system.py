@@ -1,6 +1,6 @@
 from ..stpy.parameterize import system_parameterize, system_database
 from ..stpy.configurize  import system_configurize, INTERRUPTS_THAT_MUST_BE_DEFINED
-from ..stpy.helpers      import CMSIS_SET, CMSIS_WRITE, CMSIS_SPINLOCK, PER_MCU
+from ..stpy.helpers      import CMSIS_SET, CMSIS_WRITE, CMSIS_SPINLOCK
 
 
 
