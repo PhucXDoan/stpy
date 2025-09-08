@@ -9,15 +9,6 @@ from ..pxd.utils     import root, mk_dict, OrderedSet, find_dupe, coalesce, c_re
 # accessible there (TODO).
 #
 
-def PER_TARGET(targets, Meta):
-
-    for target in targets:
-
-        with Meta.enter(f'#if TARGET_NAME_IS_{target.name}'):
-
-            yield target
-
-
 def PER_MCU(Meta):
 
     for mcu in system_database:

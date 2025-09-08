@@ -1,6 +1,6 @@
 from ..stpy.parameterize import system_parameterize, system_database
 from ..stpy.configurize  import system_configurize, INTERRUPTS_THAT_MUST_BE_DEFINED
-from ..stpy.helpers      import CMSIS_SET, CMSIS_WRITE, CMSIS_SPINLOCK, PER_TARGET as PER_TARGET_, PER_MCU
+from ..stpy.helpers      import CMSIS_SET, CMSIS_WRITE, CMSIS_SPINLOCK, PER_MCU
 
 
 
@@ -18,11 +18,9 @@ from ..stpy.helpers      import CMSIS_SET, CMSIS_WRITE, CMSIS_SPINLOCK, PER_TARG
 from deps.pxd.utils import justify
 
 
-def do(Meta, targets):
+def do(Meta, target):
 
     import functools
-
-    PER_TARGET = functools.partial(PER_TARGET_, targets)
 
     # Macros to control the interrupt in NVIC.
     # @/pg 626/tbl B3-8/`Armv7-M`.
@@ -46,67 +44,55 @@ def do(Meta, targets):
 
 
 
-    for target in PER_TARGET(Meta):
+    # For interrupts (used by the target) that
+    # are in NVIC, we create an enumeration so
+    # that the user can only enable those specific
+    # interrupts. Note that some interrupts, like
+    # SysTick, are not a part of NVIC.
 
-        # For interrupts (used by the target) that
-        # are in NVIC, we create an enumeration so
-        # that the user can only enable those specific
-        # interrupts. Note that some interrupts, like
-        # SysTick, are not a part of NVIC.
-
-        Meta.enums(
-            'NVICInterrupt',
-            'u32',
-            (
-                (interrupt, f'{interrupt}_IRQn')
-                for interrupt, niceness in target.interrupts
-                if system_database[target.mcu]['INTERRUPTS'].index(interrupt) >= 15
-            )
+    Meta.enums(
+        'NVICInterrupt',
+        'u32',
+        (
+            (interrupt, f'{interrupt}_IRQn')
+            for interrupt, niceness in target.interrupts
+            if system_database[target.mcu]['INTERRUPTS'].index(interrupt) >= 15
         )
+    )
 
 
 
     # Initialize the target's GPIOs, interrupts, clock-tree, etc.
 
-    for target in PER_TARGET(Meta):
+    with Meta.enter('''
+        extern void
+        SYSTEM_init(void)
+    '''):
 
-        with Meta.enter('''
-            extern void
-            SYSTEM_init(void)
-        '''):
+        # Figure out the register values relating to the clock-tree.
 
-
-
-
-
-            ################################ Clock-Tree ################################
+        configuration, tree = system_parameterize(target)
 
 
 
-            # Figure out the register values relating to the clock-tree.
+        # Figure out the procedure to set the register values for the clock-tree.
 
-            configuration, tree = system_parameterize(target)
-
-
-
-            # Figure out the procedure to set the register values for the clock-tree.
-
-            system_configurize(Meta, target, configuration)
+        system_configurize(Meta, target, configuration)
 
 
 
-        # Export the frequencies we found for the clock-tree.
+    # Export the frequencies we found for the clock-tree.
 
-        for macro, expansion in justify(
-            (
-                ('<', f'CLOCK_TREE_FREQUENCY_OF_{name}' ),
-                ('>', f'{frequency :,}'.replace(',', "'")),
-            )
-            for name, frequency in tree.items()
-            if name is not None
-            if frequency is not None
-        ):
-            Meta.define(macro, f'({expansion})')
+    for macro, expansion in justify(
+        (
+            ('<', f'CLOCK_TREE_FREQUENCY_OF_{name}' ),
+            ('>', f'{frequency :,}'.replace(',', "'")),
+        )
+        for name, frequency in tree.items()
+        if name is not None
+        if frequency is not None
+    ):
+        Meta.define(macro, f'({expansion})')
 
 
 
