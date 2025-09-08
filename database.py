@@ -1,5 +1,4 @@
-import types, pathlib, re
-from ..pxd.utils import root, find_dupe, OrderedSet
+import types, pathlib, re, collections
 
 
 
@@ -56,6 +55,7 @@ class SystemDatabaseMinMax(types.SimpleNamespace):
     # Allow for sweeping through the whole range of possible values.
 
     def __iter__(self):
+
         return iter(range(self.minimum, self.maximum + 1))
 
 
@@ -63,6 +63,7 @@ class SystemDatabaseMinMax(types.SimpleNamespace):
     # Determine if a value is within the minimum-maximum range.
 
     def __contains__(self, value):
+
         return self.minimum <= value <= self.maximum
 
 
@@ -76,9 +77,9 @@ class SystemDatabaseMinMax(types.SimpleNamespace):
 
 system_database = {}
 
-for mcu in OrderedSet(
+for mcu in dict.fromkeys(
     item.stem
-    for item in root('./deps/stpy/mcu').iterdir()
+    for item in pathlib.Path(__file__).parent.joinpath('mcu').iterdir()
     if item.is_file()
 ):
 
@@ -86,10 +87,11 @@ for mcu in OrderedSet(
 
     # Load and evaluate the Python expression.
 
-    database_file_path = root(f'./deps/stpy/mcu/{mcu}.py') # TODO Replace.
+    database_file_path = pathlib.Path(__file__).parent.joinpath(f'mcu/{mcu}.py')
+
 
     constants, location_tree = eval(database_file_path.read_text(), {}, {})
-    entries                  = []
+    items                    = []
 
 
 
@@ -107,9 +109,9 @@ for mcu in OrderedSet(
             # >    ('APB_UNITS', (1, 2, 3))
             # >
 
-            case (tag, value):
+            case (key, value):
 
-                entries += [(tag, value)]
+                items += [(key, value)]
 
 
 
@@ -119,9 +121,9 @@ for mcu in OrderedSet(
             # >    ('PLL_CHANNEL_FREQ', 1_000_000, 250_000_000)
             # >
 
-            case (tag, minimum, maximum):
+            case (key, minimum, maximum):
 
-                entries += [(tag, SystemDatabaseMinMax(
+                items += [(key, SystemDatabaseMinMax(
                     minimum = minimum,
                     maximum = maximum,
                 ))]
@@ -161,9 +163,9 @@ for mcu in OrderedSet(
                     # >    )
                     # >
 
-                    case (field, tag):
+                    case (field, key):
 
-                        entries += [(tag, SystemDatabaseOptions(
+                        items += [(key, SystemDatabaseOptions(
                             peripheral = peripheral,
                             register   = register,
                             field      = field,
@@ -186,9 +188,9 @@ for mcu in OrderedSet(
                     # >    )
                     # >
 
-                    case (field, tag, options):
+                    case (field, key, options):
 
-                        entries += [(tag, SystemDatabaseOptions(
+                        items += [(key, SystemDatabaseOptions(
                             peripheral = peripheral,
                             register   = register,
                             field      = field,
@@ -207,9 +209,9 @@ for mcu in OrderedSet(
                     # >    )
                     # >
 
-                    case (field, tag, minimum, maximum):
+                    case (field, key, minimum, maximum):
 
-                        entries += [(tag, SystemDatabaseMinMax(
+                        items += [(key, SystemDatabaseMinMax(
                             peripheral  = peripheral,
                             register    = register,
                             field       = field,
@@ -230,26 +232,26 @@ for mcu in OrderedSet(
 
 
 
-    # Check for consistency.
+    # TODO Should we allow for redundant locations?
 
-    if (dupe := find_dupe(tag for tag, entry in entries)) is not ...:
+    if duplicate_keys := [
+        key
+        for key, count in collections.Counter(
+            key for key, entry in items
+        ).items()
+        if count >= 2
+    ]:
+
+        duplicate_key, *_ = duplicate_keys
+
         raise ValueError(
-            f'For {mcu}, '
-            f'there is already a database entry with the tag {repr(dupe)}.'
+            f'For {mcu}, there is already a database '
+            f'entry with the key {repr(duplicate_key)}.'
         )
 
-    # TODO Should we allow for redundant locations?
-    # if (dupe := find_dupe(
-    #     (entry.peripheral, entry.register, entry.field)
-    #     for tag, entry in entries
-    #     if hasattr(entry, 'peripheral')
-    # )) is not ...:
-    #     raise ValueError(
-    #         f'For {mcu}, '
-    #         f'there is already a database entry with the location {repr(dupe)}.'
-    #     )
 
-    system_database[mcu] = dict(entries)
+
+    system_database[mcu] = dict(items)
 
 
 
