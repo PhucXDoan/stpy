@@ -34,7 +34,7 @@ def do(Meta, target):
     # Figure out how to configure the MCU
     # based on the target's constraints.
 
-    plan, book = system_parameterize(target)
+    planner, book = system_parameterize(target)
 
 
 
@@ -45,7 +45,7 @@ def do(Meta, target):
         SYSTEM_init(void)
     '''):
 
-        system_configurize(Meta, target, plan)
+        system_configurize(Meta, target, planner)
 
 
 

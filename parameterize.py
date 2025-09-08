@@ -1,41 +1,7 @@
 from ..stpy.database import system_database
+from ..stpy.planner  import SystemPlanner, stringify_table, get_similars
 from ..pxd.utils     import mk_dict, justify
 from ..pxd.log       import log, ANSI
-
-
-
-################################################################################
-#
-# Helpers.
-#
-
-
-
-def stringify_table(items):
-
-    return '\n' + '\n'.join(
-        '| {} | {} |'.format(*justs)
-        for justs in justify(
-            (
-                ('<', key),
-                ('>', f'{value :,}' if isinstance(value, (int, float)) else repr(value)),
-            )
-            for key, value in items
-        )
-    ) + '\n'
-
-
-
-def get_similars(given, options):
-
-    import difflib
-
-    return difflib.get_close_matches(
-        given if given is not None else 'None',
-        options,
-        n      = 3,
-        cutoff = 0
-    )
 
 
 
@@ -153,122 +119,6 @@ class ClockTreeSchemaWrapper:
 
 
 ################################################################################
-#
-# Helper class for keeping track of configuration values to be used.
-#
-
-
-
-class ClockTreePlan:
-
-    def __init__(self, target):
-        self.target     = target
-        self.dictionary = {}
-        self.draft      = None
-        self.used_keys  = []
-
-
-
-    def __setitem__(self, key, value):
-
-        if key in self.dictionary:
-            raise RuntimeError(
-                f'Key {repr(key)} is already defined in the '
-                f'clock-tree plan for target {repr(self.target.name)}.'
-            )
-
-        if self.draft is None:
-
-            # We should prevent overwriting keys in the clock-tree plan.
-            self.dictionary[key] = value
-
-        else:
-
-            # Overwriting values during brute-forcing is okay.
-            self.draft[key] = value
-
-        return value
-
-
-
-    def __getitem__(self, key):
-
-        if self.draft is not None and key in self.draft:
-            return self.draft[key]
-
-        if key not in self.dictionary:
-            raise RuntimeError(
-                f'No key {repr(key)} '
-                f'found in the clock-tree plan '
-                f'for target {repr(self.target.name)}; '
-                f'closest matches are: '
-                f'{get_similars(key, self.dictionary)}.'
-            )
-
-        if key not in self.used_keys:
-            self.used_keys += [key]
-
-        return self.dictionary[key]
-
-
-
-    def __str__(self):
-        return stringify_table(self.dictionary.items())
-
-
-
-    def brute(self, function):
-
-        self.draft = {} # We're beginning to brute-force.
-
-        success = function()
-
-        if not success:
-            raise RuntimeError(
-                f'Could not brute-force configurations '
-                f'that satisfies the system parameterization.'
-            )
-
-        self.dictionary |= self.draft
-
-        self.draft = None # No more brute-forcing now.
-
-
-
-    def tuple(self, key, value = ...):
-
-        entry = system_database[self.target.mcu][key]
-
-        if value is ...:
-            value = self[key]
-
-        return (entry.peripheral, entry.register, entry.field, value)
-
-
-
-    def done_parameterize(self):
-        self.used_keys = []
-
-
-
-    def done_configurize(self):
-
-        # Verify that we didn't miss anything.
-
-        if unused_keys := [
-            key
-            for key, value in self.dictionary.items()
-            if key not in self.used_keys
-            if value is not None
-        ]:
-            log(ANSI(
-                f'[WARNING] There are unused {self.target.mcu} plan keys: {unused_keys}.',
-                'fg_yellow'
-            ))
-
-
-
-################################################################################
 
 
 
@@ -277,7 +127,7 @@ def system_parameterize(target):
     database = system_database[target.mcu]
     book     = ClockTreeBook(target)
     schema   = ClockTreeSchemaWrapper(target)
-    plan     = ClockTreePlan(target)
+    planner  = SystemPlanner(target)
 
 
 
@@ -351,11 +201,11 @@ def system_parameterize(target):
         case 'STM32H7S3L8H6':
 
             # @/pg 211/tbl 29/`H7S3rm`.
-            plan['FLASH_LATENCY']            = '0x7'
-            plan['FLASH_PROGRAMMING_DELAY']  = '0b11'
+            planner['FLASH_LATENCY']           = '0x7'
+            planner['FLASH_PROGRAMMING_DELAY'] = '0b11'
 
             # @/pg 327/sec 6.8.6/`H7S3rm`.
-            plan['INTERNAL_VOLTAGE_SCALING'] = {
+            planner['INTERNAL_VOLTAGE_SCALING'] = {
                 'low'  : 0,
                 'high' : 1,
             }['high']
@@ -365,11 +215,11 @@ def system_parameterize(target):
         case 'STM32H533RET6':
 
             # @/pg 252/tbl 45/`H533rm`.
-            plan['FLASH_LATENCY']            = 5
-            plan['FLASH_PROGRAMMING_DELAY']  = '0b10'
+            planner['FLASH_LATENCY']           = 5
+            planner['FLASH_PROGRAMMING_DELAY'] = '0b10'
 
             # @/pg 438/sec 10.11.4/`H533rm`.
-            plan['INTERNAL_VOLTAGE_SCALING'] = {
+            planner['INTERNAL_VOLTAGE_SCALING'] = {
                 'VOS3' : '0b00',
                 'VOS2' : '0b01',
                 'VOS1' : '0b10',
@@ -400,11 +250,11 @@ def system_parameterize(target):
         # @/pg 286/tbl 44/`H7S3rm`.
         case 'STM32H7S3L8H6':
 
-            plan['SMPS_OUTPUT_LEVEL']       = None
-            plan['SMPS_FORCED_ON']          = None
-            plan['SMPS_ENABLE']             = False
-            plan['LDO_ENABLE']              = True
-            plan['POWER_MANAGEMENT_BYPASS'] = False
+            planner['SMPS_OUTPUT_LEVEL']       = None
+            planner['SMPS_FORCED_ON']          = None
+            planner['SMPS_ENABLE']             = False
+            planner['LDO_ENABLE']              = True
+            planner['POWER_MANAGEMENT_BYPASS'] = False
 
 
 
@@ -412,8 +262,8 @@ def system_parameterize(target):
         # Note that the SMPS is not available. @/pg 402/sec 10.2/`H533rm`.
         case 'STM32H533RET6':
 
-            plan['LDO_ENABLE']              = True
-            plan['POWER_MANAGEMENT_BYPASS'] = False
+            planner['LDO_ENABLE']              = True
+            planner['POWER_MANAGEMENT_BYPASS'] = False
 
 
 
@@ -442,8 +292,8 @@ def system_parameterize(target):
     # @/pg 458/sec 11.4.2/`H533rm`.
     # TODO Handle other frequencies.
 
-    plan['HSI_ENABLE'] = schema['HSI_ENABLE']
-    book['HSI_CK']     = 32_000_000 if plan['HSI_ENABLE'] else 0
+    planner['HSI_ENABLE'] = schema['HSI_ENABLE']
+    book['HSI_CK']        = 32_000_000 if planner['HSI_ENABLE'] else 0
 
 
 
@@ -451,8 +301,8 @@ def system_parameterize(target):
     # @/pg 363/sec 7.5.2/`H7S3rm`.
     # @/pg 460/sec 11.4.4/`H533rm`.
 
-    plan['HSI48_ENABLE'] = schema['HSI48_ENABLE']
-    book['HSI48_CK']     = 48_000_000 if plan['HSI48_ENABLE'] else 0
+    planner['HSI48_ENABLE'] = schema['HSI48_ENABLE']
+    book['HSI48_CK']        = 48_000_000 if planner['HSI48_ENABLE'] else 0
 
 
 
@@ -460,8 +310,8 @@ def system_parameterize(target):
     # @/pg 362/sec 7.5.2/`H7S3rm`.
     # @/pg 459/sec 11.4.3/`H533rm`.
 
-    plan['CSI_ENABLE'] = schema['CSI_ENABLE']
-    book['CSI_CK']     = 4_000_000 if plan['CSI_ENABLE'] else 0
+    planner['CSI_ENABLE'] = schema['CSI_ENABLE']
+    book['CSI_CK']        = 4_000_000 if planner['CSI_ENABLE'] else 0
 
 
 
@@ -480,9 +330,9 @@ def system_parameterize(target):
 
 
 
-    option                          = schema['PERIPHERAL_CLOCK_OPTION']
-    plan['PERIPHERAL_CLOCK_OPTION'] = mk_dict(database['PERIPHERAL_CLOCK_OPTION'])[option]
-    book['PER_CK']                  = book[option]
+    option                             = schema['PERIPHERAL_CLOCK_OPTION']
+    planner['PERIPHERAL_CLOCK_OPTION'] = mk_dict(database['PERIPHERAL_CLOCK_OPTION'])[option]
+    book['PER_CK']                     = book[option]
 
 
 
@@ -523,31 +373,31 @@ def system_parameterize(target):
 
     def each_vco_frequency(unit, kernel_frequency):
 
-        for plan[f'PLL{unit}_PREDIVIDER'] in database[f'PLL{unit}_PREDIVIDER']:
+        for planner[f'PLL{unit}_PREDIVIDER'] in database[f'PLL{unit}_PREDIVIDER']:
 
 
 
             # Determine the range of the PLL input frequency.
             # TODO Simplify.
 
-            reference_frequency = kernel_frequency / plan[f'PLL{unit}_PREDIVIDER']
+            reference_frequency = kernel_frequency / planner[f'PLL{unit}_PREDIVIDER']
 
-            plan[f'PLL{unit}_INPUT_RANGE'] = next((
+            planner[f'PLL{unit}_INPUT_RANGE'] = next((
                 option
                 for upper_frequency_range, option in database[f'PLL{unit}_INPUT_RANGE']
                 if reference_frequency < upper_frequency_range
             ), None)
 
-            if plan[f'PLL{unit}_INPUT_RANGE'] is None:
+            if planner[f'PLL{unit}_INPUT_RANGE'] is None:
                 continue
 
 
 
             # Try every available multiplier that the PLL can handle.
 
-            for plan[f'PLL{unit}_MULTIPLIER'] in database[f'PLL{unit}_MULTIPLIER']:
+            for planner[f'PLL{unit}_MULTIPLIER'] in database[f'PLL{unit}_MULTIPLIER']:
 
-                vco_frequency = reference_frequency * plan[f'PLL{unit}_MULTIPLIER']
+                vco_frequency = reference_frequency * planner[f'PLL{unit}_MULTIPLIER']
 
                 if vco_frequency not in database['PLL_VCO_FREQ']:
                     continue
@@ -594,7 +444,7 @@ def system_parameterize(target):
 
         # Got the channel divider!
 
-        plan[f'PLL{unit}_{channel}_DIVIDER'] = needed_divider
+        planner[f'PLL{unit}_{channel}_DIVIDER'] = needed_divider
 
         return True
 
@@ -610,22 +460,22 @@ def system_parameterize(target):
 
         # TODO Unnecessary.
 
-        plan[f'PLL{unit}_PREDIVIDER' ] = None
-        plan[f'PLL{unit}_INPUT_RANGE'] = None
-        plan[f'PLL{unit}_MULTIPLIER' ] = None
+        planner[f'PLL{unit}_PREDIVIDER' ] = None
+        planner[f'PLL{unit}_INPUT_RANGE'] = None
+        planner[f'PLL{unit}_MULTIPLIER' ] = None
         for channel in mk_dict(database['PLLS'])[unit]:
-            plan[f'PLL{unit}_{channel}_DIVIDER'] = None
+            planner[f'PLL{unit}_{channel}_DIVIDER'] = None
 
 
 
         # See if the PLL unit is even used.
 
-        plan[f'PLL{unit}_ENABLE'] = not all(
+        planner[f'PLL{unit}_ENABLE'] = not all(
             schema[f'PLL{unit}_{channel}_CK'] is None
             for channel in mk_dict(database['PLLS'])[unit]
         )
 
-        if not plan[f'PLL{unit}_ENABLE']:
+        if not planner[f'PLL{unit}_ENABLE']:
             return True
 
 
@@ -660,7 +510,7 @@ def system_parameterize(target):
 
             case 'STM32H7S3L8H6':
 
-                for pll_clock_source_name, plan['PLL_KERNEL_SOURCE'] in database['PLL_KERNEL_SOURCE']:
+                for pll_clock_source_name, planner['PLL_KERNEL_SOURCE'] in database['PLL_KERNEL_SOURCE']:
 
                     kernel_frequency     = book[pll_clock_source_name]
                     every_unit_satisfied = all(
@@ -680,7 +530,7 @@ def system_parameterize(target):
                 every_unit_satisfied = all(
                     any(
                         parameterize_unit(unit, book[kernel_source])
-                        for kernel_source, plan[f'PLL{unit}_KERNEL_SOURCE'] in database[f'PLL{unit}_KERNEL_SOURCE']
+                        for kernel_source, planner[f'PLL{unit}_KERNEL_SOURCE'] in database[f'PLL{unit}_KERNEL_SOURCE']
                     )
                     for unit, channels in database['PLLS']
                 )
@@ -699,7 +549,7 @@ def system_parameterize(target):
 
 
 
-    plan.brute(parameterize_units)
+    planner.brute(parameterize_units)
 
 
 
@@ -745,10 +595,10 @@ def system_parameterize(target):
 
     def parameterize_apb(unit):
 
-        needed_divider             = book['AXI_AHB_CK'] / book[f'APB{unit}_CK']
-        plan[f'APB{unit}_DIVIDER'] = mk_dict(database[f'APB{unit}_DIVIDER']).get(needed_divider, None)
+        needed_divider                = book['AXI_AHB_CK'] / book[f'APB{unit}_CK']
+        planner[f'APB{unit}_DIVIDER'] = mk_dict(database[f'APB{unit}_DIVIDER']).get(needed_divider, None)
 
-        return plan[f'APB{unit}_DIVIDER'] is not None
+        return planner[f'APB{unit}_DIVIDER'] is not None
 
 
 
@@ -760,16 +610,16 @@ def system_parameterize(target):
 
     def parameterize_scgu():
 
-        for kernel_source, plan['SCGU_KERNEL_SOURCE'] in database['SCGU_KERNEL_SOURCE']:
+        for kernel_source, planner['SCGU_KERNEL_SOURCE'] in database['SCGU_KERNEL_SOURCE']:
 
 
 
             # CPU.
 
-            needed_cpu_divider  = book[kernel_source] / book['CPU_CK']
-            plan['CPU_DIVIDER'] = mk_dict(database['CPU_DIVIDER']).get(needed_cpu_divider, None)
+            needed_cpu_divider     = book[kernel_source] / book['CPU_CK']
+            planner['CPU_DIVIDER'] = mk_dict(database['CPU_DIVIDER']).get(needed_cpu_divider, None)
 
-            if plan['CPU_DIVIDER'] is None:
+            if planner['CPU_DIVIDER'] is None:
                 continue
 
 
@@ -780,10 +630,10 @@ def system_parameterize(target):
 
                 case 'STM32H7S3L8H6':
 
-                    needed_axi_ahb_divider  = book['CPU_CK'] / book['AXI_AHB_CK']
-                    plan['AXI_AHB_DIVIDER'] = mk_dict(database['AXI_AHB_DIVIDER']).get(needed_axi_ahb_divider, None)
+                    needed_axi_ahb_divider     = book['CPU_CK'] / book['AXI_AHB_CK']
+                    planner['AXI_AHB_DIVIDER'] = mk_dict(database['AXI_AHB_DIVIDER']).get(needed_axi_ahb_divider, None)
 
-                    if plan['AXI_AHB_DIVIDER'] is None:
+                    if planner['AXI_AHB_DIVIDER'] is None:
                         continue
 
 
@@ -820,7 +670,7 @@ def system_parameterize(target):
 
 
 
-    plan.brute(parameterize_scgu)
+    planner.brute(parameterize_scgu)
 
 
 
@@ -856,16 +706,16 @@ def system_parameterize(target):
 
         # See if SysTick is even used.
 
-        plan['SYSTICK_ENABLE'] = book['SYSTICK_CK'] is not None
+        planner['SYSTICK_ENABLE'] = book['SYSTICK_CK'] is not None
 
-        if not plan['SYSTICK_ENABLE']:
+        if not planner['SYSTICK_ENABLE']:
             return True
 
 
 
         # Try different clock sources.
 
-        for plan['SYSTICK_USE_CPU_CK'] in database['SYSTICK_USE_CPU_CK']:
+        for planner['SYSTICK_USE_CPU_CK'] in database['SYSTICK_USE_CPU_CK']:
 
 
 
@@ -873,7 +723,7 @@ def system_parameterize(target):
             # @/pg 621/sec B3.3.3/`Armv7-M`.
             # @/pg 1859/sec D1.2.238/`Armv8-M`.
 
-            if plan['SYSTICK_USE_CPU_CK']:
+            if planner['SYSTICK_USE_CPU_CK']:
 
                 kernel_frequencies = [
                     book['CPU_CK']
@@ -913,14 +763,14 @@ def system_parameterize(target):
 
             for book['SYSTICK_KERNEL_FREQ'] in kernel_frequencies:
 
-                plan['SYSTICK_RELOAD'] = book['SYSTICK_KERNEL_FREQ'] / book['SYSTICK_CK'] - 1
+                planner['SYSTICK_RELOAD'] = book['SYSTICK_KERNEL_FREQ'] / book['SYSTICK_CK'] - 1
 
-                if not plan['SYSTICK_RELOAD'].is_integer():
+                if not planner['SYSTICK_RELOAD'].is_integer():
                     continue
 
-                plan['SYSTICK_RELOAD'] = int(plan['SYSTICK_RELOAD'])
+                planner['SYSTICK_RELOAD'] = int(planner['SYSTICK_RELOAD'])
 
-                if plan['SYSTICK_RELOAD'] not in database['SYSTICK_RELOAD']:
+                if planner['SYSTICK_RELOAD'] not in database['SYSTICK_RELOAD']:
                     continue
 
                 return True
@@ -933,7 +783,7 @@ def system_parameterize(target):
 
 
 
-    plan.brute(parameterize)
+    planner.brute(parameterize)
 
 
 
@@ -990,7 +840,7 @@ def system_parameterize(target):
 
             # We found the desired divider!
 
-            plan[f'{peripheral}{unit}_BAUD_DIVIDER'] = needed_divider
+            planner[f'{peripheral}{unit}_BAUD_DIVIDER'] = needed_divider
 
             return True
 
@@ -1006,9 +856,9 @@ def system_parameterize(target):
 
             # TODO Unnecessary.
 
-            plan[f'UXART_{instances}_KERNEL_SOURCE'] = None
+            planner[f'UXART_{instances}_KERNEL_SOURCE'] = None
             for instance in instances:
-                plan[f'{instance[0]}{instance[1]}_BAUD_DIVIDER'] = None
+                planner[f'{instance[0]}{instance[1]}_BAUD_DIVIDER'] = None
 
 
 
@@ -1027,7 +877,7 @@ def system_parameterize(target):
             # Try every available clock source for this
             # set of instances and see what sticks.
 
-            for kernel_source, plan[f'UXART_{instances}_KERNEL_SOURCE'] in database[f'UXART_{instances}_KERNEL_SOURCE']:
+            for kernel_source, planner[f'UXART_{instances}_KERNEL_SOURCE'] in database[f'UXART_{instances}_KERNEL_SOURCE']:
 
                 kernel_frequency         = book[kernel_source]
                 every_instance_satisfied = all(
@@ -1046,7 +896,7 @@ def system_parameterize(target):
 
 
 
-        plan.brute(parameterize_instances)
+        planner.brute(parameterize_instances)
 
 
 
@@ -1072,7 +922,7 @@ def system_parameterize(target):
 
             if needed_baud is None:
 
-                plan[f'I2C{unit}_KERNEL_SOURCE'] = None
+                planner[f'I2C{unit}_KERNEL_SOURCE'] = None
 
                 return True
 
@@ -1115,10 +965,10 @@ def system_parameterize(target):
                     # Keep the best so far.
 
                     if best_baud_error is None or actual_baud_error < best_baud_error:
-                        best_baud_error                  = actual_baud_error
-                        plan[f'I2C{unit}_KERNEL_SOURCE'] = kernel_option
-                        plan[f'I2C{unit}_PRESC'        ] = presc
-                        plan[f'I2C{unit}_SCL'          ] = scl
+                        best_baud_error                     = actual_baud_error
+                        planner[f'I2C{unit}_KERNEL_SOURCE'] = kernel_option
+                        planner[f'I2C{unit}_PRESC'        ] = presc
+                        planner[f'I2C{unit}_SCL'          ] = scl
 
 
 
@@ -1128,7 +978,7 @@ def system_parameterize(target):
 
 
 
-        plan.brute(parameterize)
+        planner.brute(parameterize)
 
 
 
@@ -1179,8 +1029,8 @@ def system_parameterize(target):
                     (True , '0b110') : 1 / 2,
                     (True , '0b111') : 1 / 4,
                 }[(
-                    plan['GLOBAL_TIMER_PRESCALER'],
-                    plan[f'APB{apb}_DIVIDER'])
+                    planner['GLOBAL_TIMER_PRESCALER'],
+                    planner[f'APB{apb}_DIVIDER'])
                 ]
 
                 kernel_frequency = book[f'AXI_AHB_CK'] * multiplier
@@ -1194,9 +1044,9 @@ def system_parameterize(target):
         # Find the pair of divider and modulation values to
         # get an output frequency that's within tolerance.
 
-        for plan[f'TIM{unit}_DIVIDER'] in database[f'TIM{unit}_DIVIDER']:
+        for planner[f'TIM{unit}_DIVIDER'] in database[f'TIM{unit}_DIVIDER']:
 
-            counter_frequency = kernel_frequency / plan[f'TIM{unit}_DIVIDER']
+            counter_frequency = kernel_frequency / planner[f'TIM{unit}_DIVIDER']
 
 
 
@@ -1206,19 +1056,19 @@ def system_parameterize(target):
             # for the rate, anyways we might as well
             # round up to 1.
 
-            plan[f'TIM{unit}_MODULATION'] = round(counter_frequency / needed_rate)
+            planner[f'TIM{unit}_MODULATION'] = round(counter_frequency / needed_rate)
 
-            if plan[f'TIM{unit}_MODULATION'] == 0:
-                plan[f'TIM{unit}_MODULATION'] = 1
+            if planner[f'TIM{unit}_MODULATION'] == 0:
+                planner[f'TIM{unit}_MODULATION'] = 1
 
-            if plan[f'TIM{unit}_MODULATION'] not in database[f'TIM{unit}_MODULATION']:
+            if planner[f'TIM{unit}_MODULATION'] not in database[f'TIM{unit}_MODULATION']:
                 continue
 
 
 
             # See if things are within tolerance.
 
-            actual_rate  = counter_frequency / plan[f'TIM{unit}_MODULATION']
+            actual_rate  = counter_frequency / planner[f'TIM{unit}_MODULATION']
             actual_error = abs(1 - actual_rate / needed_rate)
 
             if actual_error <= 0.001: # TODO Ad-hoc.
@@ -1245,12 +1095,12 @@ def system_parameterize(target):
 
 
         if not units_to_be_parameterized:
-            plan['GLOBAL_TIMER_PRESCALER'] = None
+            planner['GLOBAL_TIMER_PRESCALER'] = None
             return True
 
 
 
-        for plan['GLOBAL_TIMER_PRESCALER'] in database['GLOBAL_TIMER_PRESCALER']:
+        for planner['GLOBAL_TIMER_PRESCALER'] in database['GLOBAL_TIMER_PRESCALER']:
 
             every_unit_satisfied = all(
                 parameterize_unit(unit)
@@ -1269,7 +1119,7 @@ def system_parameterize(target):
 
 
     if 'TIMERS' in database:
-        plan.brute(parameterize_units)
+        planner.brute(parameterize_units)
 
 
 
@@ -1281,9 +1131,9 @@ def system_parameterize(target):
 
     schema.done()
 
-    plan.done_parameterize()
+    planner.done_parameterize()
 
-    return plan, book.dictionary
+    return planner, book.dictionary
 
 
 
