@@ -1,9 +1,7 @@
 from ..stpy.database import system_database
 from ..stpy.gpio     import PROCESS_GPIOS
 from ..stpy.helpers  import put_title as put_title_, CMSIS_SET as CMSIS_SET_, CMSIS_WRITE as CMSIS_WRITE_, CMSIS_SPINLOCK as CMSIS_SPINLOCK_
-
-# TODO Remove dependencies.
-from deps.pxd.utils import root, mk_dict, OrderedSet, find_dupe
+from ..pxd.utils     import root, mk_dict, OrderedSet, find_dupe
 
 
 

@@ -1,9 +1,6 @@
 import types, csv
-
 from ..stpy.database import system_database
-
-# TODO Remove dependencies.
-from deps.pxd.utils import root, mk_dict, OrderedSet, find_dupe
+from ..pxd.utils     import root, mk_dict, OrderedSet, find_dupe
 
 # We create a table to map GPIO pin and alternate
 # function names to alternate function codes.

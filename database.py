@@ -1,9 +1,5 @@
 import types, pathlib, re
-
-
-
-# TODO Remove dependencies.
-from deps.pxd.utils import root, find_dupe, OrderedSet
+from ..pxd.utils import root, find_dupe, OrderedSet
 
 
 

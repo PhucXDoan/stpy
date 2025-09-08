@@ -1,7 +1,5 @@
 from ..stpy.database import system_database
-
-# TODO Remove dependencies.
-from deps.pxd.utils import root, mk_dict, OrderedSet, find_dupe, coalesce, c_repr, justify
+from ..pxd.utils     import root, mk_dict, OrderedSet, find_dupe, coalesce, c_repr, justify
 
 ################################################################################
 #
