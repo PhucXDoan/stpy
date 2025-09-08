@@ -1,5 +1,6 @@
 from ..stpy.database import system_database
 from ..pxd.utils     import mk_dict
+from ..pxd.log       import log, ANSI
 
 
 
@@ -25,7 +26,7 @@ def stringify_table(items):
 
 
 
-def get_similars(given, options):
+def get_similars(given, options): # TODO Copy-pasta.
 
     import difflib
 

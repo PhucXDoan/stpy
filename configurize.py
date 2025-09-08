@@ -3,6 +3,81 @@ from ..stpy.database import system_database
 from ..stpy.gpio     import process_all_gpios
 from ..stpy.helpers  import get_helpers
 from ..pxd.utils     import mk_dict, OrderedSet
+from ..pxd.log       import log, ANSI
+
+
+
+################################################################################
+
+
+
+def get_similars(given, options): # TODO Copy-pasta.
+
+    import difflib
+
+    return difflib.get_close_matches(
+        given if given is not None else 'None',
+        options,
+        n      = 3,
+        cutoff = 0
+    )
+
+
+class ClockTreePlanWrapper:
+
+
+
+    def __init__(self, target, dictionary):
+
+        self.target     = target
+        self.dictionary = dictionary
+        self.used_keys  = []
+
+
+
+    def __getitem__(self, key):
+
+        if key not in self.dictionary:
+            raise RuntimeError(
+                f'No key {repr(key)} '
+                f'found in the clock-tree plan '
+                f'for target {repr(self.target.name)}; '
+                f'closest matches are: '
+                f'{get_similars(key, self.dictionary)}.'
+            )
+
+        if key not in self.used_keys:
+            self.used_keys += [key]
+
+        return self.dictionary[key]
+
+
+
+    def tuple(self, key, value = ...):
+
+        entry = system_database[self.target.mcu][key]
+
+        if value is ...:
+            value = self[key]
+
+        return (entry.peripheral, entry.register, entry.field, value)
+
+
+
+    def done(self):
+
+        # Verify that we didn't miss anything.
+
+        if unused_keys := [
+            key
+            for key, value in self.dictionary.items()
+            if key not in self.used_keys
+            if value is not None
+        ]:
+            log(ANSI(
+                f'[WARNING] There are unused {self.target.mcu} plan keys: {unused_keys}.',
+                'fg_yellow'
+            ))
 
 
 
@@ -31,7 +106,7 @@ INTERRUPTS_THAT_MUST_BE_DEFINED = (
 
 def system_configurize(Meta, target, plan):
 
-    import functools
+    plan = ClockTreePlanWrapper(target, plan)
 
     def put_title(title = None):
 
@@ -83,108 +158,6 @@ def system_configurize(Meta, target, plan):
     # The database is how we will figure out which register to write and where.
 
     database = system_database[target.mcu]
-
-
-
-    # This helper routine can be used to look up a value in `plan`
-    # or look up in the database to find the location of a register;
-    # the value in the peripheral-register-field-value tuple can also be
-    # changed to something else.
-
-    used_configurations = OrderedSet()
-
-    def cfgs(tag, *value): # TODO We can make a wrapper around plan.
-
-
-
-        # Mark the configuration as used if we are accessing it.
-
-        def get_configuration_value():
-
-            nonlocal used_configurations
-
-            if tag not in plan:
-                raise ValueError(
-                    f'For {target.mcu}, '
-                    f'configuration {repr(tag)} was not provided.'
-                )
-
-            used_configurations |= { tag }
-
-            return plan[tag]
-
-
-
-        # Format the output depending on the arguments given.
-
-        match value:
-
-
-
-            # Get the value from `plan` directly.
-            # e.g:
-            # >
-            # >    cfgs('FLASH_LATENCY')
-            # >         ~~~~~~~~~~~~~~~
-            # >                |
-            # >         ~~~~~~~~~~~~~~~
-            # >    plan['FLASH_LATENCY']
-            # >
-
-            case []:
-                return get_configuration_value()
-
-
-
-            # Get the value from `plan` and
-            # append it to the register's location tuple.
-            # e.g:
-            # >
-            # >                       cfgs('FLASH_LATENCY', ...)
-            # >                                             ~~~
-            # >                                              |
-            # >                                ~~~~~~~~~~~~~~~~~~~~~
-            # >    ('FLASH', 'ACR', 'LATENCY', plan['FLASH_LATENCY'])
-            # >
-
-            case [builtins.Ellipsis]:
-                return (
-                    database[tag].peripheral,
-                    database[tag].register,
-                    database[tag].field,
-                    get_configuration_value()
-                )
-
-
-
-            # Append the desired value to the register's location tuple.
-            # e.g:
-            # >
-            # >          cfgs('FLASH_LATENCY', 0b1111)
-            # >                                ~~~~~~
-            # >                                   |
-            # >                                ~~~~~~
-            # >    ('FLASH', 'ACR', 'LATENCY', 0b1111)
-            # >
-
-            case [value]:
-                return (
-                    database[tag].peripheral,
-                    database[tag].register,
-                    database[tag].field,
-                    value
-                )
-
-
-
-            # Ill-defined arguments.
-
-            case _:
-                raise ValueError(
-                    f'Either nothing, "...", '
-                    f'or a single value should be given for the argument; '
-                    f'got: {value}.'
-                )
 
 
 
@@ -432,8 +405,8 @@ def system_configurize(Meta, target, plan):
     # Set the wait-states.
 
     CMSIS_SET(
-        cfgs('FLASH_LATENCY'          , ...),
-        cfgs('FLASH_PROGRAMMING_DELAY', ...),
+        plan.tuple('FLASH_LATENCY'          ),
+        plan.tuple('FLASH_PROGRAMMING_DELAY'),
     )
 
 
@@ -441,8 +414,8 @@ def system_configurize(Meta, target, plan):
     # Ensure the new number of wait-states is taken into account.
 
     CMSIS_SPINLOCK(
-        cfgs('FLASH_LATENCY'          , ...),
-        cfgs('FLASH_PROGRAMMING_DELAY', ...),
+        plan.tuple('FLASH_LATENCY'          ),
+        plan.tuple('FLASH_PROGRAMMING_DELAY'),
     )
 
 
@@ -483,9 +456,9 @@ def system_configurize(Meta, target, plan):
         case _: raise NotImplementedError
 
     CMSIS_SET(
-        cfgs(field, ...)
+        plan.tuple(field)
         for field in fields
-        if cfgs(field) is not None
+        if plan[field] is not None
     )
 
 
@@ -493,15 +466,15 @@ def system_configurize(Meta, target, plan):
     # A higher core voltage means higher power consumption,
     # but better performance in terms of max clock speed.
 
-    CMSIS_SET(cfgs('INTERNAL_VOLTAGE_SCALING', ...))
+    CMSIS_SET(plan.tuple('INTERNAL_VOLTAGE_SCALING'))
 
 
 
     # Ensure the voltage scaling has been selected.
 
     CMSIS_SPINLOCK(
-        cfgs('CURRENT_ACTIVE_VOS'      , cfgs('INTERNAL_VOLTAGE_SCALING')),
-        cfgs('CURRENT_ACTIVE_VOS_READY', True                            ),
+        plan.tuple('CURRENT_ACTIVE_VOS'      , plan['INTERNAL_VOLTAGE_SCALING']),
+        plan.tuple('CURRENT_ACTIVE_VOS_READY', True                            ),
     )
 
 
@@ -516,7 +489,7 @@ def system_configurize(Meta, target, plan):
 
     # High-speed-internal.
 
-    if cfgs('HSI_ENABLE'):
+    if plan['HSI_ENABLE']:
         pass # The HSI oscillator is enabled by default after reset.
     else:
         raise NotImplementedError(
@@ -527,17 +500,17 @@ def system_configurize(Meta, target, plan):
 
     # High-speed-internal (48MHz).
 
-    if cfgs('HSI48_ENABLE'):
-        CMSIS_SET     (cfgs('HSI48_ENABLE', True))
-        CMSIS_SPINLOCK(cfgs('HSI48_READY' , True))
+    if plan['HSI48_ENABLE']:
+        CMSIS_SET     (plan.tuple('HSI48_ENABLE', True))
+        CMSIS_SPINLOCK(plan.tuple('HSI48_READY' , True))
 
 
 
     # Clock-security-internal.
 
-    if cfgs('CSI_ENABLE'):
-        CMSIS_SET     (cfgs('CSI_ENABLE', True))
-        CMSIS_SPINLOCK(cfgs('CSI_READY' , True))
+    if plan['CSI_ENABLE']:
+        CMSIS_SET     (plan.tuple('CSI_ENABLE', True))
+        CMSIS_SPINLOCK(plan.tuple('CSI_READY' , True))
 
 
 
@@ -552,7 +525,7 @@ def system_configurize(Meta, target, plan):
     # Set the clock source which will be
     # available for some peripheral to use.
 
-    CMSIS_SET(cfgs('PERIPHERAL_CLOCK_OPTION', ...))
+    CMSIS_SET(plan.tuple('PERIPHERAL_CLOCK_OPTION'))
 
 
 
@@ -573,7 +546,7 @@ def system_configurize(Meta, target, plan):
         # Set the clock source shared for all PLLs.
 
         if target.mcu == 'STM32H7S3L8H6':
-            sets += [cfgs('PLL_KERNEL_SOURCE', ...)]
+            sets += [plan.tuple('PLL_KERNEL_SOURCE')]
 
 
 
@@ -586,34 +559,34 @@ def system_configurize(Meta, target, plan):
             # Set the clock source for this PLL unit.
 
             if target.mcu == 'STM32H533RET6':
-                sets += [cfgs(f'PLL{unit}_KERNEL_SOURCE', ...)]
+                sets += [plan.tuple(f'PLL{unit}_KERNEL_SOURCE')]
 
 
 
             # Set the PLL's predividers.
 
-            predivider = cfgs(f'PLL{unit}_PREDIVIDER')
+            predivider = plan[f'PLL{unit}_PREDIVIDER']
 
             if predivider is not None:
-                sets += [cfgs(f'PLL{unit}_PREDIVIDER', ...)]
+                sets += [plan.tuple(f'PLL{unit}_PREDIVIDER')]
 
 
 
             # Set each PLL unit's expected input frequency range.
 
-            input_range = cfgs(f'PLL{unit}_INPUT_RANGE')
+            input_range = plan[f'PLL{unit}_INPUT_RANGE']
 
             if input_range is not None:
-                sets += [cfgs(f'PLL{unit}_INPUT_RANGE', ...)]
+                sets += [plan.tuple(f'PLL{unit}_INPUT_RANGE')]
 
 
 
             # Set each PLL unit's multipler.
 
-            multiplier = cfgs(f'PLL{unit}_MULTIPLIER')
+            multiplier = plan[f'PLL{unit}_MULTIPLIER']
 
             if multiplier is not None:
-                sets += [cfgs(f'PLL{unit}_MULTIPLIER', f'{multiplier} - 1')]
+                sets += [plan.tuple(f'PLL{unit}_MULTIPLIER', f'{multiplier} - 1')]
 
 
 
@@ -621,14 +594,14 @@ def system_configurize(Meta, target, plan):
 
             for channel in channels:
 
-                divider = cfgs(f'PLL{unit}_{channel}_DIVIDER')
+                divider = plan[f'PLL{unit}_{channel}_DIVIDER']
 
                 if divider is None:
                     continue
 
                 sets += [
-                    cfgs(f'PLL{unit}{channel}_DIVIDER', f'{divider} - 1'),
-                    cfgs(f'PLL{unit}{channel}_ENABLE' , True            ),
+                    plan.tuple(f'PLL{unit}{channel}_DIVIDER', f'{divider} - 1'),
+                    plan.tuple(f'PLL{unit}{channel}_ENABLE' , True            ),
                 ]
 
 
@@ -636,7 +609,7 @@ def system_configurize(Meta, target, plan):
     # Enable each PLL unit that is to be used.
 
     CMSIS_SET(
-        cfgs(f'PLL{unit}_ENABLE', ...)
+        plan.tuple(f'PLL{unit}_ENABLE')
         for unit, channels in database['PLLS']
     )
 
@@ -646,10 +619,10 @@ def system_configurize(Meta, target, plan):
 
     for unit, channels in database['PLLS']:
 
-        pllx_enable = cfgs(f'PLL{unit}_ENABLE')
+        pllx_enable = plan[f'PLL{unit}_ENABLE']
 
         if pllx_enable:
-            CMSIS_SPINLOCK(cfgs(f'PLL{unit}_READY', True))
+            CMSIS_SPINLOCK(plan.tuple(f'PLL{unit}_READY', True))
 
 
 
@@ -667,19 +640,19 @@ def system_configurize(Meta, target, plan):
 
         case 'STM32H7S3L8H6':
             CMSIS_SET(
-                cfgs('CPU_DIVIDER', ...),
-                cfgs('AXI_AHB_DIVIDER', ...),
+                plan.tuple('CPU_DIVIDER'),
+                plan.tuple('AXI_AHB_DIVIDER'),
                 *(
-                    cfgs(f'APB{unit}_DIVIDER', ...)
+                    plan.tuple(f'APB{unit}_DIVIDER')
                     for unit in database['APBS']
                 ),
             )
 
         case 'STM32H533RET6':
             CMSIS_SET(
-                cfgs('CPU_DIVIDER', ...),
+                plan.tuple('CPU_DIVIDER'),
                 *(
-                    cfgs(f'APB{unit}_DIVIDER', ...)
+                    plan.tuple(f'APB{unit}_DIVIDER')
                     for unit in database['APBS']
                 ),
             )
@@ -690,14 +663,14 @@ def system_configurize(Meta, target, plan):
 
     # Now switch system clock to the desired source.
 
-    CMSIS_SET(cfgs('SCGU_KERNEL_SOURCE', ...))
+    CMSIS_SET(plan.tuple('SCGU_KERNEL_SOURCE'))
 
 
 
     # Wait until the desired source has been selected.
 
     CMSIS_SPINLOCK(
-        cfgs('EFFECTIVE_SCGU_KERNEL_SOURCE', cfgs('SCGU_KERNEL_SOURCE'))
+        plan.tuple('EFFECTIVE_SCGU_KERNEL_SOURCE', plan['SCGU_KERNEL_SOURCE'])
     )
 
 
@@ -706,18 +679,18 @@ def system_configurize(Meta, target, plan):
 
 
 
-    if cfgs('SYSTICK_ENABLE'):
+    if plan['SYSTICK_ENABLE']:
 
         put_title('SysTick')
 
         # @/pg 621/tbl B3-7/`Armv7-M`.
         # @/pg 1861/sec D1.2.239/`Armv8-M`.
         CMSIS_SET(
-            cfgs('SYSTICK_RELOAD'          , ... ), # Modulation of the counter.
-            cfgs('SYSTICK_USE_CPU_CK'      , ... ), # Use CPU clock or the vendor-provided one.
-            cfgs('SYSTICK_COUNTER'         , 0   ), # SYST_CVR value is UNKNOWN on reset.
-            cfgs('SYSTICK_INTERRUPT_ENABLE', True), # Enable SysTick interrupt, triggered at every overflow.
-            cfgs('SYSTICK_ENABLE'          , True), # Enable SysTick counter.
+            plan.tuple('SYSTICK_RELOAD'          ), # Modulation of the counter.
+            plan.tuple('SYSTICK_USE_CPU_CK'      ), # Use CPU clock or the vendor-provided one.
+            plan.tuple('SYSTICK_COUNTER'         , 0   ), # SYST_CVR value is UNKNOWN on reset.
+            plan.tuple('SYSTICK_INTERRUPT_ENABLE', True), # Enable SysTick interrupt, triggered at every overflow.
+            plan.tuple('SYSTICK_ENABLE'          , True), # Enable SysTick counter.
         )
 
 
@@ -728,24 +701,24 @@ def system_configurize(Meta, target, plan):
 
     for instances in database.get('UXARTS', ()):
 
-        if cfgs(f'UXART_{instances}_KERNEL_SOURCE') is None:
+        if plan[f'UXART_{instances}_KERNEL_SOURCE'] is None:
             continue
 
         put_title(' / '.join(f'{peripheral}{number}' for peripheral, number in instances))
 
         # TODO I honestly don't know how to feel about doing it this way.
         for peripheral, unit in instances:
-            Meta.define(f'{peripheral}{unit}_KERNEL_SOURCE_init', cfgs(f'UXART_{instances}_KERNEL_SOURCE'))
+            Meta.define(f'{peripheral}{unit}_KERNEL_SOURCE_init', plan[f'UXART_{instances}_KERNEL_SOURCE'])
 
         # TODO Deprecate...?
         Meta.define(
             f'UXART_{'_'.join(str(number) for peripheral, number in instances)}_KERNEL_SOURCE_init',
-            cfgs(f'UXART_{instances}_KERNEL_SOURCE')
+            plan[f'UXART_{instances}_KERNEL_SOURCE']
         )
 
         for peripheral, number in instances:
 
-            baud_divider = cfgs(f'{peripheral}{number}_BAUD_DIVIDER')
+            baud_divider = plan[f'{peripheral}{number}_BAUD_DIVIDER']
 
             if baud_divider is None:
                 continue
@@ -754,7 +727,7 @@ def system_configurize(Meta, target, plan):
             Meta.define(f'{peripheral}{number}_BRR_BRR_init', baud_divider)
 
         # TODO Deprecate.
-        CMSIS_SET(cfgs(f'UXART_{instances}_KERNEL_SOURCE', ...))
+        CMSIS_SET(plan.tuple(f'UXART_{instances}_KERNEL_SOURCE'))
 
 
 
@@ -764,14 +737,14 @@ def system_configurize(Meta, target, plan):
 
     for unit in database.get('I2CS', ()):
 
-        if cfgs(f'I2C{unit}_KERNEL_SOURCE') is None:
+        if plan[f'I2C{unit}_KERNEL_SOURCE'] is None:
             continue
 
         put_title(f'I2C{unit}')
 
-        Meta.define(f'I2C{unit}_KERNEL_SOURCE_init', cfgs(f'I2C{unit}_KERNEL_SOURCE'))
-        Meta.define(f'I2C{unit}_TIMINGR_PRESC_init', cfgs(f'I2C{unit}_PRESC'        ))
-        Meta.define(f'I2C{unit}_TIMINGR_SCL_init'  , cfgs(f'I2C{unit}_SCL'          ))
+        Meta.define(f'I2C{unit}_KERNEL_SOURCE_init', plan[f'I2C{unit}_KERNEL_SOURCE'])
+        Meta.define(f'I2C{unit}_TIMINGR_PRESC_init', plan[f'I2C{unit}_PRESC'        ])
+        Meta.define(f'I2C{unit}_TIMINGR_SCL_init'  , plan[f'I2C{unit}_SCL'          ])
 
 
 
@@ -779,40 +752,26 @@ def system_configurize(Meta, target, plan):
 
 
 
-    if plan.get('GLOBAL_TIMER_PRESCALER', None) is not None:
+    if plan.dictionary.get('GLOBAL_TIMER_PRESCALER', None) is not None:
 
         put_title('Timers')
 
-        Meta.define(f'GLOBAL_TIMER_PRESCALER_init', cfgs('GLOBAL_TIMER_PRESCALER'))
+        Meta.define(f'GLOBAL_TIMER_PRESCALER_init', plan['GLOBAL_TIMER_PRESCALER'])
 
         for unit in database.get('TIMERS', ()):
 
-            if plan.get(f'TIM{unit}_DIVIDER', None) is not None:
-                Meta.define(f'TIM{unit}_DIVIDER_init', f'({cfgs(f'TIM{unit}_DIVIDER')} - 1)')
+            if plan.dictionary.get(f'TIM{unit}_DIVIDER', None) is not None:
+                Meta.define(f'TIM{unit}_DIVIDER_init', f'({plan[f'TIM{unit}_DIVIDER']} - 1)')
 
-            if plan.get(f'TIM{unit}_MODULATION', None) is not None:
-                Meta.define(f'TIM{unit}_MODULATION_init', f'({cfgs(f'TIM{unit}_MODULATION')} - 1)')
+            if plan.dictionary.get(f'TIM{unit}_MODULATION', None) is not None:
+                Meta.define(f'TIM{unit}_MODULATION_init', f'({plan[f'TIM{unit}_MODULATION']} - 1)')
 
 
 
     ################################################################################
 
 
-
-    # Ensure we've used all the configurations given.
-
-    defined_configurations = OrderedSet(
-        key
-        for key, value in plan.items()
-        if value is not None
-    )
-
-    if unused := defined_configurations - used_configurations:
-        log(ANSI(
-            f'[WARNING] For {target.name}, '
-            f'there are leftover configurations: {repr(unused)}.',
-            'fg_yellow'
-        ))
+    plan.done()
 
 
 
