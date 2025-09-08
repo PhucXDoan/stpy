@@ -1,7 +1,7 @@
 import collections, builtins, difflib
 from ..stpy.database import system_database
 from ..stpy.gpio     import process_all_gpios
-from ..stpy.helpers  import CMSIS_SET as CMSIS_SET_, CMSIS_WRITE as CMSIS_WRITE_, CMSIS_SPINLOCK as CMSIS_SPINLOCK_
+from ..stpy.helpers  import get_helpers
 from ..pxd.utils     import mk_dict, OrderedSet
 
 
@@ -51,9 +51,11 @@ def system_configurize(Meta, target, configurations):
 
             ''')
 
-    CMSIS_SET      = CMSIS_SET_  (Meta)
-    CMSIS_WRITE    = CMSIS_WRITE_(Meta)
-    CMSIS_SPINLOCK = functools.partial(CMSIS_SPINLOCK_, Meta)
+    helpers = get_helpers(Meta)
+
+    CMSIS_SET      = helpers.CMSIS_SET
+    CMSIS_WRITE    = helpers.CMSIS_WRITE
+    CMSIS_SPINLOCK = helpers.CMSIS_SPINLOCK
 
     ################################################################################
 
