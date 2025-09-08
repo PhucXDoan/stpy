@@ -1,5 +1,5 @@
 from ..stpy.database import system_database
-from ..stpy.gpio     import PROCESS_GPIOS
+from ..stpy.gpio     import process_all_gpios
 from ..stpy.helpers  import put_title as put_title_, CMSIS_SET as CMSIS_SET_, CMSIS_WRITE as CMSIS_WRITE_, CMSIS_SPINLOCK as CMSIS_SPINLOCK_
 from ..pxd.utils     import root, mk_dict, OrderedSet, find_dupe
 
@@ -167,7 +167,7 @@ def system_configurize(Meta, target, configurations):
 
     put_title('GPIOs') # @/`How GPIOs Are Made`:
 
-    gpios = PROCESS_GPIOS(target)
+    gpios = process_all_gpios(target)
 
 
 

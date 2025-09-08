@@ -1,33 +1,29 @@
-import types, csv
+import types, csv, pathlib, collections
 from ..stpy.database import system_database
-from ..pxd.utils     import root, mk_dict, OrderedSet, find_dupe
 
-# We create a table to map GPIO pin and alternate
-# function names to alternate function codes.
-# e.g:
-# >
-# >    ('A', 0, 'UART4_TX')   ->   0b1000
-# >
 
-GPIO_AFSEL = {}
+
+################################################################################
+#
+# STM32CubeMX can generate a CSV file that'll detail all of the MCU's GPIO's
+# alternate functions; when working a particular MCU, we should have this file
+# generated already.
+#
+
+
+
+GPIO_ALTERNATE_FUNCTION_CODES = {}
 
 for mcu in system_database:
 
-    GPIO_AFSEL[mcu] = []
-
-
-
-    # Find the CSV file that STM32CubeMX can provide to
-    # get all of the alternate functions for GPIOs.
-
-    gpio_afsel_file_path = root(f'./deps/stpy/mcu/{mcu}.csv')
-
-
-
-    # Process the CSV file.
+    GPIO_ALTERNATE_FUNCTION_CODES[mcu] = {}
 
     for entry in csv.DictReader(
-        gpio_afsel_file_path.read_text().splitlines()
+        pathlib.Path(__file__)
+            .parent
+            .joinpath(f'mcu/{mcu}.csv')
+            .read_text()
+            .splitlines()
     ):
 
         match entry['Type']:
@@ -38,16 +34,18 @@ for mcu in system_database:
 
             case 'I/O':
 
-                # Some GPIO names are suffixed with
-                # additional things, like for instance:
-                #
-                #     PC14-OSC32_IN(OSC32_IN)
-                #     PH1-OSC_OUT(PH1)
-                #     PA14(JTCK/SWCLK)
-                #     PC2_C
-                #
-                # So we need to format it slightly so that
-                # we just get the port letter and pin number.
+
+
+                # Some GPIO names are suffixed with additional things,
+                # so we need to format it slightly so that we just get
+                # the port letter and pin number.
+                # e.g:
+                # >
+                # >     PC14-OSC32_IN(OSC32_IN) -> PC14
+                # >     PH1-OSC_OUT(PH1)        -> PH1
+                # >     PA14(JTCK/SWCLK)        -> PA14
+                # >     PC2_C                   -> PC2
+                # >
 
                 pin    = entry['Name']
                 pin    = pin.split('-', 1)[0]
@@ -62,13 +60,13 @@ for mcu in system_database:
 
                 # Gather all the alternate functions of the GPIO, if any.
 
-                for afsel_code in range(16):
+                for code in range(16):
 
 
 
                     # Skip empty cells.
 
-                    if not entry[f'AF{afsel_code}']:
+                    if not entry[f'AF{code}']:
                         continue
 
 
@@ -76,11 +74,13 @@ for mcu in system_database:
                     # Some have multiple names for the
                     # same AFSEL code (e.g. "I2S3_CK/SPI3_SCK").
 
-                    GPIO_AFSEL[mcu] += [
-                        ((port, number, afsel_name), afsel_code)
-                        for afsel_name in entry[f'AF{afsel_code}'].split('/')
-                    ]
+                    for alternate_function in entry[f'AF{code}'].split('/'):
 
+                        key = (port, number, alternate_function)
+
+                        assert key not in GPIO_ALTERNATE_FUNCTION_CODES[mcu]
+
+                        GPIO_ALTERNATE_FUNCTION_CODES[mcu][key] = code
 
 
 
@@ -107,18 +107,11 @@ for mcu in system_database:
 
 
 
-    # Done processing the CSV file;
-    # now we have a mapping of GPIO pin
-    # and alternate function name to the
-    # alternate function code.
-
-    GPIO_AFSEL[mcu] = mk_dict(GPIO_AFSEL[mcu])
+################################################################################
 
 
 
-# The routine to create a single GPIO instance.
-
-def mk_gpio(target, entry):
+def process_single_gpio(target, entry):
 
     name, pin, mode, properties = entry
 
@@ -202,8 +195,8 @@ def mk_gpio(target, entry):
 
 
 
-            # Alternate GPIOs are denoted by a string like "UART8_TX"
-            # to indicate its alternate function.
+            # Alternate GPIOs are denoted by a string like
+            # "UART8_TX" to indicate its alternate function.
 
             gpio.altfunc = properties.pop('altfunc')
 
@@ -222,6 +215,7 @@ def mk_gpio(target, entry):
         # but it can also serve as a power-saving measure.
 
         case 'ANALOG':
+
             raise NotImplementedError
 
 
@@ -233,6 +227,7 @@ def mk_gpio(target, entry):
         # We ignore any properties the reserved pin may have.
 
         case 'RESERVED':
+
             properties = {}
 
 
@@ -240,8 +235,9 @@ def mk_gpio(target, entry):
         # Unknown GPIO mode.
 
         case unknown:
+
             raise ValueError(
-                f'GPIO "{name}" has unknown '
+                f'GPIO {repr(name)} has unknown '
                 f'mode: {repr(unknown)}.'
             )
 
@@ -251,7 +247,7 @@ def mk_gpio(target, entry):
 
     if gpio.pin is not None and gpio.altfunc is not None:
 
-        gpio.afsel = GPIO_AFSEL[target.mcu].get(
+        gpio.afsel = GPIO_ALTERNATE_FUNCTION_CODES[target.mcu].get(
             (gpio.port, gpio.number, gpio.altfunc),
             None
         )
@@ -269,37 +265,58 @@ def mk_gpio(target, entry):
 
     if properties:
         raise ValueError(
-            f'GPIO "{name}" has leftover properties: {properties}.'
+            f'GPIO {repr(name)} has leftover properties: {properties}.'
         )
 
     return gpio
 
 
 
-# The routine to ensure the list of GPIOs make sense for the target.
+################################################################################
 
-def PROCESS_GPIOS(target):
+
+
+def process_all_gpios(target):
+
+
 
     gpios = tuple(
-        mk_gpio(target, entry)
-        for entry in target.gpios
+        process_single_gpio(target, gpio)
+        for gpio in target.gpios
     )
 
-    if (name := find_dupe(
-        gpio.name
-        for gpio in gpios
-    )) is not ...:
+
+
+    if duplicate_names := [
+        name
+        for name, count in collections.Counter(
+            gpio.name for gpio in gpios
+        ).items()
+        if count >= 2
+    ]:
+
+        duplicate_name, *_ = duplicate_names
+
         raise ValueError(
-            f'GPIO name {repr(name)} used more than once.'
+            f'GPIO name {repr(duplicate_name)} used more than once.'
         )
 
-    if (pin := find_dupe(
-        gpio.pin
-        for gpio in gpios
-        if gpio.pin is not None
-    )) is not ...:
+
+
+    if duplicate_pins := [
+        pin
+        for pin, count in collections.Counter(
+            gpio.pin for gpio in gpios
+        ).items()
+        if count >= 2
+    ]:
+
+        duplicate_pin, *_ = duplicate_pins
+
         raise ValueError(
-            f'GPIO pin {repr(pin)} used more than once.'
+            f'GPIO pin {repr(duplicate_pin)} used more than once.'
         )
+
+
 
     return gpios
