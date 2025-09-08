@@ -1,5 +1,5 @@
 from ..stpy.database import system_database
-from ..pxd.utils     import mk_dict
+from ..pxd.utils     import mk_dict, justify
 from ..pxd.log       import log, ANSI
 
 
@@ -26,7 +26,7 @@ def stringify_table(items):
 
 
 
-def get_similars(given, options): # TODO Copy-pasta.
+def get_similars(given, options):
 
     import difflib
 
@@ -165,6 +165,7 @@ class ClockTreePlan:
         self.target     = target
         self.dictionary = {}
         self.draft      = None
+        self.used_keys  = []
 
 
 
@@ -204,6 +205,9 @@ class ClockTreePlan:
                 f'{get_similars(key, self.dictionary)}.'
             )
 
+        if key not in self.used_keys:
+            self.used_keys += [key]
+
         return self.dictionary[key]
 
 
@@ -228,6 +232,39 @@ class ClockTreePlan:
         self.dictionary |= self.draft
 
         self.draft = None # No more brute-forcing now.
+
+
+
+    def tuple(self, key, value = ...):
+
+        entry = system_database[self.target.mcu][key]
+
+        if value is ...:
+            value = self[key]
+
+        return (entry.peripheral, entry.register, entry.field, value)
+
+
+
+    def done_parameterize(self):
+        self.used_keys = []
+
+
+
+    def done_configurize(self):
+
+        # Verify that we didn't miss anything.
+
+        if unused_keys := [
+            key
+            for key, value in self.dictionary.items()
+            if key not in self.used_keys
+            if value is not None
+        ]:
+            log(ANSI(
+                f'[WARNING] There are unused {self.target.mcu} plan keys: {unused_keys}.',
+                'fg_yellow'
+            ))
 
 
 
@@ -1244,7 +1281,9 @@ def system_parameterize(target):
 
     schema.done()
 
-    return plan.dictionary, book.dictionary
+    plan.done_parameterize()
+
+    return plan, book.dictionary
 
 
 

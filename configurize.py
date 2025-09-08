@@ -23,63 +23,6 @@ def get_similars(given, options): # TODO Copy-pasta.
     )
 
 
-class ClockTreePlanWrapper:
-
-
-
-    def __init__(self, target, dictionary):
-
-        self.target     = target
-        self.dictionary = dictionary
-        self.used_keys  = []
-
-
-
-    def __getitem__(self, key):
-
-        if key not in self.dictionary:
-            raise RuntimeError(
-                f'No key {repr(key)} '
-                f'found in the clock-tree plan '
-                f'for target {repr(self.target.name)}; '
-                f'closest matches are: '
-                f'{get_similars(key, self.dictionary)}.'
-            )
-
-        if key not in self.used_keys:
-            self.used_keys += [key]
-
-        return self.dictionary[key]
-
-
-
-    def tuple(self, key, value = ...):
-
-        entry = system_database[self.target.mcu][key]
-
-        if value is ...:
-            value = self[key]
-
-        return (entry.peripheral, entry.register, entry.field, value)
-
-
-
-    def done(self):
-
-        # Verify that we didn't miss anything.
-
-        if unused_keys := [
-            key
-            for key, value in self.dictionary.items()
-            if key not in self.used_keys
-            if value is not None
-        ]:
-            log(ANSI(
-                f'[WARNING] There are unused {self.target.mcu} plan keys: {unused_keys}.',
-                'fg_yellow'
-            ))
-
-
 
 ################################################################################
 
@@ -105,8 +48,6 @@ INTERRUPTS_THAT_MUST_BE_DEFINED = (
 
 
 def system_configurize(Meta, target, plan):
-
-    plan = ClockTreePlanWrapper(target, plan)
 
     def put_title(title = None):
 
@@ -771,7 +712,7 @@ def system_configurize(Meta, target, plan):
     ################################################################################
 
 
-    plan.done()
+    plan.done_configurize()
 
 
 
