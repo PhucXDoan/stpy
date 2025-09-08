@@ -1,6 +1,6 @@
 from ..stpy.parameterize import system_parameterize, system_database
 from ..stpy.configurize  import system_configurize, INTERRUPTS_THAT_MUST_BE_DEFINED
-from ..stpy.helpers      import CMSIS_SET, CMSIS_WRITE, CMSIS_SPINLOCK, PER_TARGET as PER_TARGET_, PER_MCU, put_title as put_title_
+from ..stpy.helpers      import CMSIS_SET, CMSIS_WRITE, CMSIS_SPINLOCK, PER_TARGET as PER_TARGET_, PER_MCU
 
 
 
@@ -21,7 +21,6 @@ from deps.pxd.utils import justify
 def do(Meta, targets):
 
     import functools
-    put_title  = functools.partial(put_title_, Meta)
 
     PER_TARGET = functools.partial(PER_TARGET_, targets)
 
@@ -96,19 +95,18 @@ def do(Meta, targets):
 
 
 
-            # Export the frequencies we found for the clock-tree.
+        # Export the frequencies we found for the clock-tree.
 
-            put_title('Clock-Tree')
-
-            for macro, expansion in justify(
-                (
-                    ('<', f'CLOCK_TREE_FREQUENCY_OF_{name}' ),
-                    ('>', f'{frequency}'.replace(',', "'")),
-                )
-                for name, frequency in tree.items()
-                if name is not None
-            ):
-                Meta.define(macro, f'({expansion})')
+        for macro, expansion in justify(
+            (
+                ('<', f'CLOCK_TREE_FREQUENCY_OF_{name}' ),
+                ('>', f'{frequency :,}'.replace(',', "'")),
+            )
+            for name, frequency in tree.items()
+            if name is not None
+            if frequency is not None
+        ):
+            Meta.define(macro, f'({expansion})')
 
 
 

@@ -9,28 +9,6 @@ from ..pxd.utils     import root, mk_dict, OrderedSet, find_dupe, coalesce, c_re
 # accessible there (TODO).
 #
 
-# TODO Copy-pasta.
-def put_title(Meta, title = None):
-
-    if title is None:
-
-        Meta.line(f'''
-
-            {"/" * 128}
-
-        ''')
-
-    else:
-
-        Meta.line(f'''
-
-            {"/" * 64} {title} {"/" * 64}
-
-        ''')
-
-
-
-
 def PER_TARGET(targets, Meta):
 
     for target in targets:

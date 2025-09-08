@@ -1,13 +1,16 @@
+import collections, builtins, difflib
 from ..stpy.database import system_database
 from ..stpy.gpio     import process_all_gpios
-from ..stpy.helpers  import put_title as put_title_, CMSIS_SET as CMSIS_SET_, CMSIS_WRITE as CMSIS_WRITE_, CMSIS_SPINLOCK as CMSIS_SPINLOCK_
-from ..pxd.utils     import root, mk_dict, OrderedSet, find_dupe
+from ..stpy.helpers  import CMSIS_SET as CMSIS_SET_, CMSIS_WRITE as CMSIS_WRITE_, CMSIS_SPINLOCK as CMSIS_SPINLOCK_
+from ..pxd.utils     import mk_dict, OrderedSet
 
 
 
+################################################################################
 
 
 
+# TODO Factor out.
 # These interrupt routines
 # will always be around even
 # if the target didn't explcitly
@@ -22,15 +25,37 @@ INTERRUPTS_THAT_MUST_BE_DEFINED = (
 
 
 
-import collections, builtins
+################################################################################
+
+
 
 def system_configurize(Meta, target, configurations):
 
     import functools
-    put_title      = functools.partial(put_title_    , Meta)
+
+    def put_title(title = None):
+
+        if title is None:
+
+            Meta.line(f'''
+
+                {"/" * 128}
+
+            ''')
+
+        else:
+
+            Meta.line(f'''
+
+                {"/" * 64} {title} {"/" * 64}
+
+            ''')
+
     CMSIS_SET      = CMSIS_SET_  (Meta)
     CMSIS_WRITE    = CMSIS_WRITE_(Meta)
     CMSIS_SPINLOCK = functools.partial(CMSIS_SPINLOCK_, Meta)
+
+    ################################################################################
 
     # TODO Placement?
 
@@ -39,8 +64,6 @@ def system_configurize(Meta, target, configurations):
 
     for interrupt, niceness in target.interrupts:
         if interrupt not in system_database[target.mcu]['INTERRUPTS']:
-
-            import difflib
 
             raise ValueError(
                 f'For target {repr(target.name)}, '
@@ -51,7 +74,7 @@ def system_configurize(Meta, target, configurations):
             )
 
 
-    ################################################################################################################################
+    ################################################################################
 
 
 
@@ -163,7 +186,7 @@ def system_configurize(Meta, target, configurations):
 
 
 
-    ################################################################################################################################
+    ################################################################################
 
     put_title('GPIOs') # @/`How GPIOs Are Made`:
 
@@ -292,7 +315,7 @@ def system_configurize(Meta, target, configurations):
 
 
 
-    ################################################################################################################################
+    ################################################################################
 
 
 
@@ -381,7 +404,7 @@ def system_configurize(Meta, target, configurations):
 
 
 
-    ################################################################################################################################
+    ################################################################################
 
 
 
@@ -393,7 +416,7 @@ def system_configurize(Meta, target, configurations):
 
 
 
-    ################################################################################################################################
+    ################################################################################
 
     # We have to program a delay for reading the flash as it takes time
     # for the data stored in the flash memory to stablize for read operations;
@@ -422,7 +445,7 @@ def system_configurize(Meta, target, configurations):
 
 
 
-    ################################################################################################################################
+    ################################################################################
 
 
 
@@ -481,7 +504,7 @@ def system_configurize(Meta, target, configurations):
 
 
 
-    ################################################################################################################################
+    ################################################################################
 
 
 
@@ -516,7 +539,7 @@ def system_configurize(Meta, target, configurations):
 
 
 
-    ################################################################################################################################
+    ################################################################################
 
 
 
@@ -531,7 +554,7 @@ def system_configurize(Meta, target, configurations):
 
 
 
-    ################################################################################################################################
+    ################################################################################
 
 
 
@@ -628,7 +651,7 @@ def system_configurize(Meta, target, configurations):
 
 
 
-    ################################################################################################################################
+    ################################################################################
 
 
 
@@ -677,7 +700,7 @@ def system_configurize(Meta, target, configurations):
 
 
 
-    ################################################################################################################################
+    ################################################################################
 
 
 
@@ -697,7 +720,7 @@ def system_configurize(Meta, target, configurations):
 
 
 
-    ################################################################################################################################
+    ################################################################################
 
 
 
@@ -733,7 +756,7 @@ def system_configurize(Meta, target, configurations):
 
 
 
-    ################################################################################################################################
+    ################################################################################
 
 
 
@@ -750,7 +773,7 @@ def system_configurize(Meta, target, configurations):
 
 
 
-    ################################################################################################################################
+    ################################################################################
 
 
 
@@ -770,7 +793,7 @@ def system_configurize(Meta, target, configurations):
 
 
 
-    ################################################################################################################################
+    ################################################################################
 
 
 
@@ -791,10 +814,11 @@ def system_configurize(Meta, target, configurations):
 
 
 
-################################################################################################################################
+################################################################################
 
 
 
+# TODO Stale.
 # In this meta-directive, we take the configuration
 # values from `system_parameterize` and generate
 # code to set the registers in the right order.
