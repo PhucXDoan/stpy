@@ -29,7 +29,7 @@ INTERRUPTS_THAT_MUST_BE_DEFINED = (
 
 
 
-def system_configurize(Meta, target, configurations):
+def system_configurize(Meta, target, plan):
 
     import functools
 
@@ -86,14 +86,14 @@ def system_configurize(Meta, target, configurations):
 
 
 
-    # This helper routine can be used to look up a value in `configurations`
+    # This helper routine can be used to look up a value in `plan`
     # or look up in the database to find the location of a register;
     # the value in the peripheral-register-field-value tuple can also be
     # changed to something else.
 
     used_configurations = OrderedSet()
 
-    def cfgs(tag, *value): # TODO We can make a wrapper around configurations.
+    def cfgs(tag, *value): # TODO We can make a wrapper around plan.
 
 
 
@@ -103,7 +103,7 @@ def system_configurize(Meta, target, configurations):
 
             nonlocal used_configurations
 
-            if tag not in configurations:
+            if tag not in plan:
                 raise ValueError(
                     f'For {target.mcu}, '
                     f'configuration {repr(tag)} was not provided.'
@@ -111,7 +111,7 @@ def system_configurize(Meta, target, configurations):
 
             used_configurations |= { tag }
 
-            return configurations[tag]
+            return plan[tag]
 
 
 
@@ -121,14 +121,14 @@ def system_configurize(Meta, target, configurations):
 
 
 
-            # Get the value from `configurations` directly.
+            # Get the value from `plan` directly.
             # e.g:
             # >
-            # >              cfgs('FLASH_LATENCY')
-            # >                   ~~~~~~~~~~~~~~~
-            # >                          |
-            # >                   ~~~~~~~~~~~~~~~
-            # >    configurations['FLASH_LATENCY']
+            # >    cfgs('FLASH_LATENCY')
+            # >         ~~~~~~~~~~~~~~~
+            # >                |
+            # >         ~~~~~~~~~~~~~~~
+            # >    plan['FLASH_LATENCY']
             # >
 
             case []:
@@ -136,15 +136,15 @@ def system_configurize(Meta, target, configurations):
 
 
 
-            # Get the value from `configurations` and
+            # Get the value from `plan` and
             # append it to the register's location tuple.
             # e.g:
             # >
             # >                       cfgs('FLASH_LATENCY', ...)
             # >                                             ~~~
             # >                                              |
-            # >                                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-            # >    ('FLASH', 'ACR', 'LATENCY', configurations['FLASH_LATENCY'])
+            # >                                ~~~~~~~~~~~~~~~~~~~~~
+            # >    ('FLASH', 'ACR', 'LATENCY', plan['FLASH_LATENCY'])
             # >
 
             case [builtins.Ellipsis]:
@@ -779,7 +779,7 @@ def system_configurize(Meta, target, configurations):
 
 
 
-    if configurations.get('GLOBAL_TIMER_PRESCALER', None) is not None:
+    if plan.get('GLOBAL_TIMER_PRESCALER', None) is not None:
 
         put_title('Timers')
 
@@ -787,10 +787,10 @@ def system_configurize(Meta, target, configurations):
 
         for unit in database.get('TIMERS', ()):
 
-            if configurations.get(f'TIM{unit}_DIVIDER', None) is not None:
+            if plan.get(f'TIM{unit}_DIVIDER', None) is not None:
                 Meta.define(f'TIM{unit}_DIVIDER_init', f'({cfgs(f'TIM{unit}_DIVIDER')} - 1)')
 
-            if configurations.get(f'TIM{unit}_MODULATION', None) is not None:
+            if plan.get(f'TIM{unit}_MODULATION', None) is not None:
                 Meta.define(f'TIM{unit}_MODULATION_init', f'({cfgs(f'TIM{unit}_MODULATION')} - 1)')
 
 
@@ -803,7 +803,7 @@ def system_configurize(Meta, target, configurations):
 
     defined_configurations = OrderedSet(
         key
-        for key, value in configurations.items()
+        for key, value in plan.items()
         if value is not None
     )
 

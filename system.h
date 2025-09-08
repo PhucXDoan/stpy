@@ -1,3 +1,25 @@
+// Macros to control the interrupt in NVIC.
+// @/pg 626/tbl B3-8/`Armv7-M`.
+// @/pg 1452/tbl D1.1.10/`Armv8-M`.
+
+#define NVIC_ENABLE(NAME)        ((void) (NVIC->ISER[NVICInterrupt_##NAME / 32] = 1 << (NVICInterrupt_##NAME % 32)))
+#define NVIC_DISABLE(NAME)       ((void) (NVIC->ICER[NVICInterrupt_##NAME / 32] = 1 << (NVICInterrupt_##NAME % 32)))
+#define NVIC_SET_PENDING(NAME)   ((void) (NVIC->ISPR[NVICInterrupt_##NAME / 32] = 1 << (NVICInterrupt_##NAME % 32)))
+#define NVIC_CLEAR_PENDING(NAME) ((void) (NVIC->ICPR[NVICInterrupt_##NAME / 32] = 1 << (NVICInterrupt_##NAME % 32)))
+
+
+
+// Macros to make using GPIOs in C easy.
+// TODO Use system_database.
+
+#define GPIO_HIGH(NAME)       ((void) (CONCAT(GPIO, _PORT_FOR_GPIO_WRITE(NAME))->BSRR = CONCAT(GPIO_BSRR_BS, _NUMBER_FOR_GPIO_WRITE(NAME))))
+#define GPIO_LOW(NAME)        ((void) (CONCAT(GPIO, _PORT_FOR_GPIO_WRITE(NAME))->BSRR = CONCAT(GPIO_BSRR_BR, _NUMBER_FOR_GPIO_WRITE(NAME))))
+#define GPIO_TOGGLE(NAME)     ((void) (CONCAT(GPIO, _PORT_FOR_GPIO_WRITE(NAME))->ODR ^= CONCAT(GPIO_ODR_OD , _NUMBER_FOR_GPIO_WRITE(NAME))))
+#define GPIO_SET(NAME, VALUE) ((void) ((VALUE) ? GPIO_HIGH(NAME) : GPIO_LOW(NAME)))
+#define GPIO_READ(NAME)       (!!(CONCAT(GPIO, _PORT_FOR_GPIO_READ(NAME))->IDR & CONCAT(GPIO_IDR_ID, _NUMBER_FOR_GPIO_READ(NAME))))
+
+
+
 //////////////////////////////////////////////////////////////// CMSIS ////////////////////////////////////////////////////////////////
 
 

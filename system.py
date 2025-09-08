@@ -1,49 +1,19 @@
-from ..stpy.parameterize import system_parameterize, system_database
-from ..stpy.configurize  import system_configurize, INTERRUPTS_THAT_MUST_BE_DEFINED
+from ..stpy.database     import system_database
+from ..stpy.parameterize import system_parameterize
+from ..stpy.configurize  import system_configurize
+from ..pxd.utils         import justify
 
 
 
+################################################################################
 
-
-
-
-
-
-
-
-
-
-# TODO Remove dependencies.
-from deps.pxd.utils import justify
 
 
 def do(Meta, target):
 
-    import functools
-
-    # Macros to control the interrupt in NVIC.
-    # @/pg 626/tbl B3-8/`Armv7-M`.
-    # @/pg 1452/tbl D1.1.10/`Armv8-M`.
-
-    Meta.define('NVIC_ENABLE'       , ('NAME'), '((void) (NVIC->ISER[NVICInterrupt_##NAME / 32] = 1 << (NVICInterrupt_##NAME % 32)))')
-    Meta.define('NVIC_DISABLE'      , ('NAME'), '((void) (NVIC->ICER[NVICInterrupt_##NAME / 32] = 1 << (NVICInterrupt_##NAME % 32)))')
-    Meta.define('NVIC_SET_PENDING'  , ('NAME'), '((void) (NVIC->ISPR[NVICInterrupt_##NAME / 32] = 1 << (NVICInterrupt_##NAME % 32)))')
-    Meta.define('NVIC_CLEAR_PENDING', ('NAME'), '((void) (NVIC->ICPR[NVICInterrupt_##NAME / 32] = 1 << (NVICInterrupt_##NAME % 32)))')
 
 
-
-    # Macros to make using GPIOs in C easy.
-    # TODO Use system_database.
-
-    Meta.define('GPIO_HIGH'  , ('NAME'         ), '((void) (CONCAT(GPIO, _PORT_FOR_GPIO_WRITE(NAME))->BSRR = CONCAT(GPIO_BSRR_BS, _NUMBER_FOR_GPIO_WRITE(NAME))))')
-    Meta.define('GPIO_LOW'   , ('NAME'         ), '((void) (CONCAT(GPIO, _PORT_FOR_GPIO_WRITE(NAME))->BSRR = CONCAT(GPIO_BSRR_BR, _NUMBER_FOR_GPIO_WRITE(NAME))))')
-    Meta.define('GPIO_TOGGLE', ('NAME'         ), '((void) (CONCAT(GPIO, _PORT_FOR_GPIO_WRITE(NAME))->ODR ^= CONCAT(GPIO_ODR_OD , _NUMBER_FOR_GPIO_WRITE(NAME))))')
-    Meta.define('GPIO_SET'   , ('NAME', 'VALUE'), '((void) ((VALUE) ? GPIO_HIGH(NAME) : GPIO_LOW(NAME)))')
-    Meta.define('GPIO_READ'  , ('NAME'         ), '(!!(CONCAT(GPIO, _PORT_FOR_GPIO_READ(NAME))->IDR & CONCAT(GPIO_IDR_ID, _NUMBER_FOR_GPIO_READ(NAME))))')
-
-
-
-    # For interrupts (used by the target) that
+    # For interrupts used by the target that
     # are in NVIC, we create an enumeration so
     # that the user can only enable those specific
     # interrupts. Note that some interrupts, like
@@ -61,40 +31,44 @@ def do(Meta, target):
 
 
 
-    # Initialize the target's GPIOs, interrupts, clock-tree, etc.
+    # Figure out how to configure the MCU
+    # based on the target's constraints.
+
+    plan, book = system_parameterize(target)
+
+
+
+    # Generate the code to configure the MCU.
 
     with Meta.enter('''
         extern void
         SYSTEM_init(void)
     '''):
 
-        # Figure out the register values relating to the clock-tree.
-
-        configuration, tree = system_parameterize(target)
+        system_configurize(Meta, target, plan)
 
 
 
-        # Figure out the procedure to set the register values for the clock-tree.
-
-        system_configurize(Meta, target, configuration)
-
-
-
-    # Export the frequencies we found for the clock-tree.
+    # Export the frequencies we found in the clock-tree.
 
     for macro, expansion in justify(
         (
-            ('<', f'CLOCK_TREE_FREQUENCY_OF_{name}' ),
+            ('<', f'CLOCK_TREE_FREQUENCY_OF_{name}'),
             ('>', f'{frequency :,}'.replace(',', "'")),
         )
-        for name, frequency in tree.items()
-        if name is not None
+        for name, frequency in book.items()
+        if name      is not None
         if frequency is not None
     ):
         Meta.define(macro, f'({expansion})')
 
 
 
+################################################################################
+
+
+
+# TODO Stale.
 # @/`Defining Interrupt Handlers`:
 #
 # Most other applications use weak-symbols as a way to have
