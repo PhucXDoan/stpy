@@ -1,6 +1,6 @@
 from ..stpy.database import system_database
 from ..stpy.planner  import SystemPlanner, stringify_table, get_similars
-from ..pxd.utils     import mk_dict, justify
+from ..pxd.utils     import mk_dict
 from ..pxd.log       import log, ANSI
 
 
@@ -205,10 +205,7 @@ def system_parameterize(target):
             planner['FLASH_PROGRAMMING_DELAY'] = '0b11'
 
             # @/pg 327/sec 6.8.6/`H7S3rm`.
-            planner['INTERNAL_VOLTAGE_SCALING'] = {
-                'low'  : 0,
-                'high' : 1,
-            }['high']
+            planner['INTERNAL_VOLTAGE_SCALING'] = 'high'
 
 
 
@@ -219,12 +216,7 @@ def system_parameterize(target):
             planner['FLASH_PROGRAMMING_DELAY'] = '0b10'
 
             # @/pg 438/sec 10.11.4/`H533rm`.
-            planner['INTERNAL_VOLTAGE_SCALING'] = {
-                'VOS3' : '0b00',
-                'VOS2' : '0b01',
-                'VOS1' : '0b10',
-                'VOS0' : '0b11',
-            }['VOS0']
+            planner['INTERNAL_VOLTAGE_SCALING'] = 'VOS0'
 
 
 
@@ -330,9 +322,8 @@ def system_parameterize(target):
 
 
 
-    option                             = schema['PERIPHERAL_CLOCK_OPTION']
-    planner['PERIPHERAL_CLOCK_OPTION'] = mk_dict(database['PERIPHERAL_CLOCK_OPTION'])[option]
-    book['PER_CK']                     = book[option]
+    planner['PERIPHERAL_CLOCK_OPTION'] = schema['PERIPHERAL_CLOCK_OPTION']
+    book['PER_CK']                     = book[schema['PERIPHERAL_CLOCK_OPTION']]
 
 
 
@@ -382,7 +373,7 @@ def system_parameterize(target):
 
             reference_frequency = kernel_frequency / planner[f'PLL{unit}_PREDIVIDER']
 
-            planner[f'PLL{unit}_INPUT_RANGE'] = next((
+            planner[f'PLL{unit}_INPUT_RANGE'] = next(( # TODO Make less weird.
                 option
                 for upper_frequency_range, option in database[f'PLL{unit}_INPUT_RANGE']
                 if reference_frequency < upper_frequency_range
@@ -510,9 +501,9 @@ def system_parameterize(target):
 
             case 'STM32H7S3L8H6':
 
-                for pll_clock_source_name, planner['PLL_KERNEL_SOURCE'] in database['PLL_KERNEL_SOURCE']:
+                for planner['PLL_KERNEL_SOURCE'], _ in database['PLL_KERNEL_SOURCE']:
 
-                    kernel_frequency     = book[pll_clock_source_name]
+                    kernel_frequency     = book[planner['PLL_KERNEL_SOURCE']]
                     every_unit_satisfied = all(
                         parameterize_unit(units, kernel_frequency)
                         for units, channels in database['PLLS']
@@ -529,8 +520,8 @@ def system_parameterize(target):
 
                 every_unit_satisfied = all(
                     any(
-                        parameterize_unit(unit, book[kernel_source])
-                        for kernel_source, planner[f'PLL{unit}_KERNEL_SOURCE'] in database[f'PLL{unit}_KERNEL_SOURCE']
+                        parameterize_unit(unit, book[planner[f'PLL{unit}_KERNEL_SOURCE']])
+                        for planner[f'PLL{unit}_KERNEL_SOURCE'], _ in database[f'PLL{unit}_KERNEL_SOURCE']
                     )
                     for unit, channels in database['PLLS']
                 )
@@ -610,13 +601,13 @@ def system_parameterize(target):
 
     def parameterize_scgu():
 
-        for kernel_source, planner['SCGU_KERNEL_SOURCE'] in database['SCGU_KERNEL_SOURCE']:
+        for planner['SCGU_KERNEL_SOURCE'], _ in database['SCGU_KERNEL_SOURCE']:
 
 
 
             # CPU.
 
-            needed_cpu_divider     = book[kernel_source] / book['CPU_CK']
+            needed_cpu_divider     = book[planner['SCGU_KERNEL_SOURCE']] / book['CPU_CK']
             planner['CPU_DIVIDER'] = mk_dict(database['CPU_DIVIDER']).get(needed_cpu_divider, None)
 
             if planner['CPU_DIVIDER'] is None:
@@ -877,9 +868,9 @@ def system_parameterize(target):
             # Try every available clock source for this
             # set of instances and see what sticks.
 
-            for kernel_source, planner[f'UXART_{instances}_KERNEL_SOURCE'] in database[f'UXART_{instances}_KERNEL_SOURCE']:
+            for planner[f'UXART_{instances}_KERNEL_SOURCE'], _ in database[f'UXART_{instances}_KERNEL_SOURCE']:
 
-                kernel_frequency         = book[kernel_source]
+                kernel_frequency         = book[planner[f'UXART_{instances}_KERNEL_SOURCE']]
                 every_instance_satisfied = all(
                     parameterize_instance(kernel_frequency, instance)
                     for instance in instances
@@ -935,7 +926,7 @@ def system_parameterize(target):
 
             best_baud_error = None
 
-            for kernel_source, kernel_option in database[f'I2C{unit}_KERNEL_SOURCE']:
+            for kernel_source, _ in database[f'I2C{unit}_KERNEL_SOURCE']:
 
                 kernel_frequency = book[kernel_source] or 0
 
@@ -966,7 +957,7 @@ def system_parameterize(target):
 
                     if best_baud_error is None or actual_baud_error < best_baud_error:
                         best_baud_error                     = actual_baud_error
-                        planner[f'I2C{unit}_KERNEL_SOURCE'] = kernel_option
+                        planner[f'I2C{unit}_KERNEL_SOURCE'] = kernel_source
                         planner[f'I2C{unit}_PRESC'        ] = presc
                         planner[f'I2C{unit}_SCL'          ] = scl
 
@@ -1132,6 +1123,47 @@ def system_parameterize(target):
     schema.done()
 
     planner.done_parameterize()
+
+
+
+    planner.dictionary['INTERNAL_VOLTAGE_SCALING'] = {
+        'STM32H7S3L8H6' : {
+            'low'  : 0,
+            'high' : 1,
+        },
+        'STM32H533RET6' : {
+            'VOS3' : '0b00',
+            'VOS2' : '0b01',
+            'VOS1' : '0b10',
+            'VOS0' : '0b11',
+        },
+    }[target.mcu][planner.dictionary['INTERNAL_VOLTAGE_SCALING']]
+
+    planner.dictionary['PERIPHERAL_CLOCK_OPTION'] = mk_dict(database['PERIPHERAL_CLOCK_OPTION'])[planner.dictionary['PERIPHERAL_CLOCK_OPTION']]
+
+
+    match target.mcu:
+
+        case 'STM32H7S3L8H6':
+
+            planner.dictionary['PLL_KERNEL_SOURCE'] = mk_dict(database['PLL_KERNEL_SOURCE'])[planner.dictionary['PLL_KERNEL_SOURCE']]
+
+        case 'STM32H533RET6':
+
+            for unit, channels in database['PLLS']:
+                planner.dictionary[f'PLL{unit}_KERNEL_SOURCE'] = mk_dict(database[f'PLL{unit}_KERNEL_SOURCE'])[planner.dictionary[f'PLL{unit}_KERNEL_SOURCE']]
+
+    planner.dictionary['SCGU_KERNEL_SOURCE'] = mk_dict(database['SCGU_KERNEL_SOURCE'])[planner.dictionary['SCGU_KERNEL_SOURCE']]
+
+    for instances in database.get('UXARTS', ()):
+        if planner.dictionary[f'UXART_{instances}_KERNEL_SOURCE'] is not None:
+            planner.dictionary[f'UXART_{instances}_KERNEL_SOURCE'] = mk_dict(database[f'UXART_{instances}_KERNEL_SOURCE'])[planner.dictionary[f'UXART_{instances}_KERNEL_SOURCE']]
+
+    for unit in database.get('I2CS', ()):
+        if planner.dictionary[f'I2C{unit}_KERNEL_SOURCE'] is not None:
+            planner.dictionary[f'I2C{unit}_KERNEL_SOURCE'] = mk_dict(database[f'I2C{unit}_KERNEL_SOURCE'])[planner.dictionary[f'I2C{unit}_KERNEL_SOURCE']]
+
+
 
     return planner, book.dictionary
 
