@@ -58,7 +58,7 @@ class SystemPlanner:
         if key in self.dictionary:
             raise RuntimeError(
                 f'Key {repr(key)} is already defined in the '
-                f'clock-tree plan for target {repr(self.target.name)}.'
+                f'clock-tree planner for target {repr(self.target.name)}.'
             )
 
         if self.draft is None:
@@ -80,7 +80,7 @@ class SystemPlanner:
         if key not in self.dictionary:
             raise RuntimeError(
                 f'No key {repr(key)} '
-                f'found in the clock-tree plan '
+                f'found in the clock-tree planner '
                 f'for target {repr(self.target.name)}; '
                 f'closest matches are: '
                 f'{get_similars(key, self.dictionary)}.'
@@ -155,6 +155,6 @@ class SystemPlanner:
             if value is not None
         ]:
             log(ANSI(
-                f'[WARNING] There are unused {self.target.mcu} plan keys: {unused_keys}.',
+                f'[WARNING] There are unused {self.target.mcu} planner keys: {unused_keys}.',
                 'fg_yellow'
             ))

@@ -47,7 +47,7 @@ INTERRUPTS_THAT_MUST_BE_DEFINED = (
 
 
 
-def system_configurize(Meta, target, plan):
+def system_configurize(Meta, target, planner):
 
     def put_title(title = None):
 
@@ -346,8 +346,8 @@ def system_configurize(Meta, target, plan):
     # Set the wait-states.
 
     CMSIS_SET(
-        plan.tuple('FLASH_LATENCY'          ),
-        plan.tuple('FLASH_PROGRAMMING_DELAY'),
+        planner.tuple('FLASH_LATENCY'          ),
+        planner.tuple('FLASH_PROGRAMMING_DELAY'),
     )
 
 
@@ -355,8 +355,8 @@ def system_configurize(Meta, target, plan):
     # Ensure the new number of wait-states is taken into account.
 
     CMSIS_SPINLOCK(
-        plan.tuple('FLASH_LATENCY'          ),
-        plan.tuple('FLASH_PROGRAMMING_DELAY'),
+        planner.tuple('FLASH_LATENCY'          ),
+        planner.tuple('FLASH_PROGRAMMING_DELAY'),
     )
 
 
@@ -397,9 +397,9 @@ def system_configurize(Meta, target, plan):
         case _: raise NotImplementedError
 
     CMSIS_SET(
-        plan.tuple(field)
+        planner.tuple(field)
         for field in fields
-        if plan[field] is not None
+        if planner[field] is not None
     )
 
 
@@ -407,15 +407,15 @@ def system_configurize(Meta, target, plan):
     # A higher core voltage means higher power consumption,
     # but better performance in terms of max clock speed.
 
-    CMSIS_SET(plan.tuple('INTERNAL_VOLTAGE_SCALING'))
+    CMSIS_SET(planner.tuple('INTERNAL_VOLTAGE_SCALING'))
 
 
 
     # Ensure the voltage scaling has been selected.
 
     CMSIS_SPINLOCK(
-        plan.tuple('CURRENT_ACTIVE_VOS'      , plan['INTERNAL_VOLTAGE_SCALING']),
-        plan.tuple('CURRENT_ACTIVE_VOS_READY', True                            ),
+        planner.tuple('CURRENT_ACTIVE_VOS'      , planner['INTERNAL_VOLTAGE_SCALING']),
+        planner.tuple('CURRENT_ACTIVE_VOS_READY', True                            ),
     )
 
 
@@ -430,7 +430,7 @@ def system_configurize(Meta, target, plan):
 
     # High-speed-internal.
 
-    if plan['HSI_ENABLE']:
+    if planner['HSI_ENABLE']:
         pass # The HSI oscillator is enabled by default after reset.
     else:
         raise NotImplementedError(
@@ -441,17 +441,17 @@ def system_configurize(Meta, target, plan):
 
     # High-speed-internal (48MHz).
 
-    if plan['HSI48_ENABLE']:
-        CMSIS_SET     (plan.tuple('HSI48_ENABLE', True))
-        CMSIS_SPINLOCK(plan.tuple('HSI48_READY' , True))
+    if planner['HSI48_ENABLE']:
+        CMSIS_SET     (planner.tuple('HSI48_ENABLE', True))
+        CMSIS_SPINLOCK(planner.tuple('HSI48_READY' , True))
 
 
 
     # Clock-security-internal.
 
-    if plan['CSI_ENABLE']:
-        CMSIS_SET     (plan.tuple('CSI_ENABLE', True))
-        CMSIS_SPINLOCK(plan.tuple('CSI_READY' , True))
+    if planner['CSI_ENABLE']:
+        CMSIS_SET     (planner.tuple('CSI_ENABLE', True))
+        CMSIS_SPINLOCK(planner.tuple('CSI_READY' , True))
 
 
 
@@ -466,7 +466,7 @@ def system_configurize(Meta, target, plan):
     # Set the clock source which will be
     # available for some peripheral to use.
 
-    CMSIS_SET(plan.tuple('PERIPHERAL_CLOCK_OPTION'))
+    CMSIS_SET(planner.tuple('PERIPHERAL_CLOCK_OPTION'))
 
 
 
@@ -487,7 +487,7 @@ def system_configurize(Meta, target, plan):
         # Set the clock source shared for all PLLs.
 
         if target.mcu == 'STM32H7S3L8H6':
-            sets += [plan.tuple('PLL_KERNEL_SOURCE')]
+            sets += [planner.tuple('PLL_KERNEL_SOURCE')]
 
 
 
@@ -500,34 +500,34 @@ def system_configurize(Meta, target, plan):
             # Set the clock source for this PLL unit.
 
             if target.mcu == 'STM32H533RET6':
-                sets += [plan.tuple(f'PLL{unit}_KERNEL_SOURCE')]
+                sets += [planner.tuple(f'PLL{unit}_KERNEL_SOURCE')]
 
 
 
             # Set the PLL's predividers.
 
-            predivider = plan[f'PLL{unit}_PREDIVIDER']
+            predivider = planner[f'PLL{unit}_PREDIVIDER']
 
             if predivider is not None:
-                sets += [plan.tuple(f'PLL{unit}_PREDIVIDER')]
+                sets += [planner.tuple(f'PLL{unit}_PREDIVIDER')]
 
 
 
             # Set each PLL unit's expected input frequency range.
 
-            input_range = plan[f'PLL{unit}_INPUT_RANGE']
+            input_range = planner[f'PLL{unit}_INPUT_RANGE']
 
             if input_range is not None:
-                sets += [plan.tuple(f'PLL{unit}_INPUT_RANGE')]
+                sets += [planner.tuple(f'PLL{unit}_INPUT_RANGE')]
 
 
 
             # Set each PLL unit's multipler.
 
-            multiplier = plan[f'PLL{unit}_MULTIPLIER']
+            multiplier = planner[f'PLL{unit}_MULTIPLIER']
 
             if multiplier is not None:
-                sets += [plan.tuple(f'PLL{unit}_MULTIPLIER', f'{multiplier} - 1')]
+                sets += [planner.tuple(f'PLL{unit}_MULTIPLIER', f'{multiplier} - 1')]
 
 
 
@@ -535,14 +535,14 @@ def system_configurize(Meta, target, plan):
 
             for channel in channels:
 
-                divider = plan[f'PLL{unit}_{channel}_DIVIDER']
+                divider = planner[f'PLL{unit}_{channel}_DIVIDER']
 
                 if divider is None:
                     continue
 
                 sets += [
-                    plan.tuple(f'PLL{unit}{channel}_DIVIDER', f'{divider} - 1'),
-                    plan.tuple(f'PLL{unit}{channel}_ENABLE' , True            ),
+                    planner.tuple(f'PLL{unit}{channel}_DIVIDER', f'{divider} - 1'),
+                    planner.tuple(f'PLL{unit}{channel}_ENABLE' , True            ),
                 ]
 
 
@@ -550,7 +550,7 @@ def system_configurize(Meta, target, plan):
     # Enable each PLL unit that is to be used.
 
     CMSIS_SET(
-        plan.tuple(f'PLL{unit}_ENABLE')
+        planner.tuple(f'PLL{unit}_ENABLE')
         for unit, channels in database['PLLS']
     )
 
@@ -560,10 +560,10 @@ def system_configurize(Meta, target, plan):
 
     for unit, channels in database['PLLS']:
 
-        pllx_enable = plan[f'PLL{unit}_ENABLE']
+        pllx_enable = planner[f'PLL{unit}_ENABLE']
 
         if pllx_enable:
-            CMSIS_SPINLOCK(plan.tuple(f'PLL{unit}_READY', True))
+            CMSIS_SPINLOCK(planner.tuple(f'PLL{unit}_READY', True))
 
 
 
@@ -581,19 +581,19 @@ def system_configurize(Meta, target, plan):
 
         case 'STM32H7S3L8H6':
             CMSIS_SET(
-                plan.tuple('CPU_DIVIDER'),
-                plan.tuple('AXI_AHB_DIVIDER'),
+                planner.tuple('CPU_DIVIDER'),
+                planner.tuple('AXI_AHB_DIVIDER'),
                 *(
-                    plan.tuple(f'APB{unit}_DIVIDER')
+                    planner.tuple(f'APB{unit}_DIVIDER')
                     for unit in database['APBS']
                 ),
             )
 
         case 'STM32H533RET6':
             CMSIS_SET(
-                plan.tuple('CPU_DIVIDER'),
+                planner.tuple('CPU_DIVIDER'),
                 *(
-                    plan.tuple(f'APB{unit}_DIVIDER')
+                    planner.tuple(f'APB{unit}_DIVIDER')
                     for unit in database['APBS']
                 ),
             )
@@ -604,14 +604,14 @@ def system_configurize(Meta, target, plan):
 
     # Now switch system clock to the desired source.
 
-    CMSIS_SET(plan.tuple('SCGU_KERNEL_SOURCE'))
+    CMSIS_SET(planner.tuple('SCGU_KERNEL_SOURCE'))
 
 
 
     # Wait until the desired source has been selected.
 
     CMSIS_SPINLOCK(
-        plan.tuple('EFFECTIVE_SCGU_KERNEL_SOURCE', plan['SCGU_KERNEL_SOURCE'])
+        planner.tuple('EFFECTIVE_SCGU_KERNEL_SOURCE', planner['SCGU_KERNEL_SOURCE'])
     )
 
 
@@ -620,18 +620,18 @@ def system_configurize(Meta, target, plan):
 
 
 
-    if plan['SYSTICK_ENABLE']:
+    if planner['SYSTICK_ENABLE']:
 
         put_title('SysTick')
 
         # @/pg 621/tbl B3-7/`Armv7-M`.
         # @/pg 1861/sec D1.2.239/`Armv8-M`.
         CMSIS_SET(
-            plan.tuple('SYSTICK_RELOAD'          ), # Modulation of the counter.
-            plan.tuple('SYSTICK_USE_CPU_CK'      ), # Use CPU clock or the vendor-provided one.
-            plan.tuple('SYSTICK_COUNTER'         , 0   ), # SYST_CVR value is UNKNOWN on reset.
-            plan.tuple('SYSTICK_INTERRUPT_ENABLE', True), # Enable SysTick interrupt, triggered at every overflow.
-            plan.tuple('SYSTICK_ENABLE'          , True), # Enable SysTick counter.
+            planner.tuple('SYSTICK_RELOAD'          ), # Modulation of the counter.
+            planner.tuple('SYSTICK_USE_CPU_CK'      ), # Use CPU clock or the vendor-provided one.
+            planner.tuple('SYSTICK_COUNTER'         , 0   ), # SYST_CVR value is UNKNOWN on reset.
+            planner.tuple('SYSTICK_INTERRUPT_ENABLE', True), # Enable SysTick interrupt, triggered at every overflow.
+            planner.tuple('SYSTICK_ENABLE'          , True), # Enable SysTick counter.
         )
 
 
@@ -642,24 +642,24 @@ def system_configurize(Meta, target, plan):
 
     for instances in database.get('UXARTS', ()):
 
-        if plan[f'UXART_{instances}_KERNEL_SOURCE'] is None:
+        if planner[f'UXART_{instances}_KERNEL_SOURCE'] is None:
             continue
 
         put_title(' / '.join(f'{peripheral}{number}' for peripheral, number in instances))
 
         # TODO I honestly don't know how to feel about doing it this way.
         for peripheral, unit in instances:
-            Meta.define(f'{peripheral}{unit}_KERNEL_SOURCE_init', plan[f'UXART_{instances}_KERNEL_SOURCE'])
+            Meta.define(f'{peripheral}{unit}_KERNEL_SOURCE_init', planner[f'UXART_{instances}_KERNEL_SOURCE'])
 
         # TODO Deprecate...?
         Meta.define(
             f'UXART_{'_'.join(str(number) for peripheral, number in instances)}_KERNEL_SOURCE_init',
-            plan[f'UXART_{instances}_KERNEL_SOURCE']
+            planner[f'UXART_{instances}_KERNEL_SOURCE']
         )
 
         for peripheral, number in instances:
 
-            baud_divider = plan[f'{peripheral}{number}_BAUD_DIVIDER']
+            baud_divider = planner[f'{peripheral}{number}_BAUD_DIVIDER']
 
             if baud_divider is None:
                 continue
@@ -668,7 +668,7 @@ def system_configurize(Meta, target, plan):
             Meta.define(f'{peripheral}{number}_BRR_BRR_init', baud_divider)
 
         # TODO Deprecate.
-        CMSIS_SET(plan.tuple(f'UXART_{instances}_KERNEL_SOURCE'))
+        CMSIS_SET(planner.tuple(f'UXART_{instances}_KERNEL_SOURCE'))
 
 
 
@@ -678,14 +678,14 @@ def system_configurize(Meta, target, plan):
 
     for unit in database.get('I2CS', ()):
 
-        if plan[f'I2C{unit}_KERNEL_SOURCE'] is None:
+        if planner[f'I2C{unit}_KERNEL_SOURCE'] is None:
             continue
 
         put_title(f'I2C{unit}')
 
-        Meta.define(f'I2C{unit}_KERNEL_SOURCE_init', plan[f'I2C{unit}_KERNEL_SOURCE'])
-        Meta.define(f'I2C{unit}_TIMINGR_PRESC_init', plan[f'I2C{unit}_PRESC'        ])
-        Meta.define(f'I2C{unit}_TIMINGR_SCL_init'  , plan[f'I2C{unit}_SCL'          ])
+        Meta.define(f'I2C{unit}_KERNEL_SOURCE_init', planner[f'I2C{unit}_KERNEL_SOURCE'])
+        Meta.define(f'I2C{unit}_TIMINGR_PRESC_init', planner[f'I2C{unit}_PRESC'        ])
+        Meta.define(f'I2C{unit}_TIMINGR_SCL_init'  , planner[f'I2C{unit}_SCL'          ])
 
 
 
@@ -693,26 +693,26 @@ def system_configurize(Meta, target, plan):
 
 
 
-    if plan.dictionary.get('GLOBAL_TIMER_PRESCALER', None) is not None:
+    if planner.dictionary.get('GLOBAL_TIMER_PRESCALER', None) is not None:
 
         put_title('Timers')
 
-        Meta.define(f'GLOBAL_TIMER_PRESCALER_init', plan['GLOBAL_TIMER_PRESCALER'])
+        Meta.define(f'GLOBAL_TIMER_PRESCALER_init', planner['GLOBAL_TIMER_PRESCALER'])
 
         for unit in database.get('TIMERS', ()):
 
-            if plan.dictionary.get(f'TIM{unit}_DIVIDER', None) is not None:
-                Meta.define(f'TIM{unit}_DIVIDER_init', f'({plan[f'TIM{unit}_DIVIDER']} - 1)')
+            if planner.dictionary.get(f'TIM{unit}_DIVIDER', None) is not None:
+                Meta.define(f'TIM{unit}_DIVIDER_init', f'({planner[f'TIM{unit}_DIVIDER']} - 1)')
 
-            if plan.dictionary.get(f'TIM{unit}_MODULATION', None) is not None:
-                Meta.define(f'TIM{unit}_MODULATION_init', f'({plan[f'TIM{unit}_MODULATION']} - 1)')
+            if planner.dictionary.get(f'TIM{unit}_MODULATION', None) is not None:
+                Meta.define(f'TIM{unit}_MODULATION_init', f'({planner[f'TIM{unit}_MODULATION']} - 1)')
 
 
 
     ################################################################################
 
 
-    plan.done_configurize()
+    planner.done_configurize()
 
 
 
