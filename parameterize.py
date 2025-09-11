@@ -1120,39 +1120,10 @@ def system_parameterize(target):
     #
 
 
+
     schema.done()
 
     planner.done_parameterize()
-
-
-
-    planner.dictionary['INTERNAL_VOLTAGE_SCALING'] = database['INTERNAL_VOLTAGE_SCALING'][planner.dictionary['INTERNAL_VOLTAGE_SCALING']]
-
-    planner.dictionary['PERIPHERAL_CLOCK_OPTION'] = database['PERIPHERAL_CLOCK_OPTION'][planner.dictionary['PERIPHERAL_CLOCK_OPTION']]
-
-
-    match target.mcu:
-
-        case 'STM32H7S3L8H6':
-
-            planner.dictionary['PLL_KERNEL_SOURCE'] = database['PLL_KERNEL_SOURCE'][planner.dictionary['PLL_KERNEL_SOURCE']]
-
-        case 'STM32H533RET6':
-
-            for unit, channels in database['PLLS']:
-                planner.dictionary[f'PLL{unit}_KERNEL_SOURCE'] = database[f'PLL{unit}_KERNEL_SOURCE'][planner.dictionary[f'PLL{unit}_KERNEL_SOURCE']]
-
-    planner.dictionary['SCGU_KERNEL_SOURCE'] = database['SCGU_KERNEL_SOURCE'][planner.dictionary['SCGU_KERNEL_SOURCE']]
-
-    for instances in database.get('UXARTS', ()):
-        if planner.dictionary[f'UXART_{instances}_KERNEL_SOURCE'] is not None:
-            planner.dictionary[f'UXART_{instances}_KERNEL_SOURCE'] = database[f'UXART_{instances}_KERNEL_SOURCE'][planner.dictionary[f'UXART_{instances}_KERNEL_SOURCE']]
-
-    for unit in database.get('I2CS', ()):
-        if planner.dictionary[f'I2C{unit}_KERNEL_SOURCE'] is not None:
-            planner.dictionary[f'I2C{unit}_KERNEL_SOURCE'] = database[f'I2C{unit}_KERNEL_SOURCE'][planner.dictionary[f'I2C{unit}_KERNEL_SOURCE']]
-
-
 
     return planner, book.dictionary
 

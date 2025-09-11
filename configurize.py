@@ -73,6 +73,33 @@ def system_configurize(Meta, target, planner):
     CMSIS_WRITE    = helpers.CMSIS_WRITE
     CMSIS_SPINLOCK = helpers.CMSIS_SPINLOCK
 
+
+    def deref(key):
+        planner.dictionary[key] = system_database[target.mcu][key][planner.dictionary[key]]
+
+    deref('INTERNAL_VOLTAGE_SCALING')
+    deref('PERIPHERAL_CLOCK_OPTION')
+    deref('SCGU_KERNEL_SOURCE')
+
+    match target.mcu:
+
+        case 'STM32H7S3L8H6':
+            deref('PLL_KERNEL_SOURCE')
+
+        case 'STM32H533RET6':
+            for unit, channels in system_database[target.mcu]['PLLS']:
+                deref(f'PLL{unit}_KERNEL_SOURCE')
+
+    for instances in system_database[target.mcu].get('UXARTS', ()):
+        if planner.dictionary[f'UXART_{instances}_KERNEL_SOURCE'] is not None:
+            deref(f'UXART_{instances}_KERNEL_SOURCE')
+
+    for unit in system_database[target.mcu].get('I2CS', ()):
+        if planner.dictionary[f'I2C{unit}_KERNEL_SOURCE'] is not None:
+            deref(f'I2C{unit}_KERNEL_SOURCE')
+
+
+
     ################################################################################
 
     # TODO Placement?
