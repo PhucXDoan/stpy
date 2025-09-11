@@ -1,4 +1,5 @@
 import types, pathlib, re, collections
+from ..pxd.utils import mk_dict
 
 
 
@@ -29,6 +30,13 @@ class SystemDatabaseOptions(types.SimpleNamespace):
 
     def __iter__(self):
         return iter(self.options)
+
+
+
+    # Index into the option table.
+
+    def __getitem__(self, key):
+        return mk_dict(self.options)[key] # TODO Stupid call to `mk_dict`.
 
 
 
