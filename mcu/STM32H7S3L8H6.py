@@ -20,7 +20,7 @@
         )),
 
         ('UXARTS', (
-            (('USART', 1),),
+            # TODO: (('USART', 1),),
             (('USART', 2), ('USART', 3), ('UART', 4), ('UART', 5), ('UART', 7), ('UART', 8)),
         )),
 
