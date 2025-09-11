@@ -81,6 +81,7 @@ for mcu in dict.fromkeys(
     item.stem
     for item in pathlib.Path(__file__).parent.joinpath('mcu').iterdir()
     if item.is_file()
+    if item.stem.isidentifier()
 ):
 
 
