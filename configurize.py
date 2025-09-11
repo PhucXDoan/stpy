@@ -49,6 +49,8 @@ INTERRUPTS_THAT_MUST_BE_DEFINED = (
 
 def system_configurize(Meta, target, planner):
 
+    database = system_database[target.mcu]
+
     def put_title(title = None):
 
         if title is None:
@@ -74,8 +76,9 @@ def system_configurize(Meta, target, planner):
     CMSIS_SPINLOCK = helpers.CMSIS_SPINLOCK
 
 
+
     def deref(key):
-        planner.dictionary[key] = system_database[target.mcu][key][planner.dictionary[key]]
+        planner.dictionary[key] = database[key][planner.dictionary[key]]
 
     deref('INTERNAL_VOLTAGE_SCALING')
     deref('PERIPHERAL_CLOCK_OPTION')
@@ -87,14 +90,14 @@ def system_configurize(Meta, target, planner):
             deref('PLL_KERNEL_SOURCE')
 
         case 'STM32H533RET6':
-            for unit, channels in system_database[target.mcu]['PLLS']:
+            for unit, channels in database['PLLS']:
                 deref(f'PLL{unit}_KERNEL_SOURCE')
 
-    for instances in system_database[target.mcu].get('UXARTS', ()):
+    for instances in database.get('UXARTS', ()):
         if planner.dictionary[f'UXART_{instances}_KERNEL_SOURCE'] is not None:
             deref(f'UXART_{instances}_KERNEL_SOURCE')
 
-    for unit in system_database[target.mcu].get('I2CS', ()):
+    for unit in database.get('I2CS', ()):
         if planner.dictionary[f'I2C{unit}_KERNEL_SOURCE'] is not None:
             deref(f'I2C{unit}_KERNEL_SOURCE')
 
@@ -108,14 +111,14 @@ def system_configurize(Meta, target, planner):
     # to be used by the target eists.
 
     for interrupt, niceness in target.interrupts:
-        if interrupt not in system_database[target.mcu]['INTERRUPTS']:
+        if interrupt not in database['INTERRUPTS']:
 
             raise ValueError(
                 f'For target {repr(target.name)}, '
                 f'no such interrupt {repr(interrupt)} '
                 f'exists on {repr(target.mcu)}; '
                 f'did you mean any of the following? : '
-                f'{difflib.get_close_matches(interrupt, system_database[target.mcu]['INTERRUPTS'].keys(), n = 5, cutoff = 0)}'
+                f'{difflib.get_close_matches(interrupt, database['INTERRUPTS'].keys(), n = 5, cutoff = 0)}'
             )
 
 
@@ -125,7 +128,7 @@ def system_configurize(Meta, target, planner):
 
     # The database is how we will figure out which register to write and where.
 
-    database = system_database[target.mcu]
+    database = database
 
 
 
@@ -158,9 +161,9 @@ def system_configurize(Meta, target, planner):
 
     CMSIS_SET(
         (
-            system_database[target.mcu][f'GPIO{port}_ENABLE'].peripheral,
-            system_database[target.mcu][f'GPIO{port}_ENABLE'].register,
-            system_database[target.mcu][f'GPIO{port}_ENABLE'].field,
+            database[f'GPIO{port}_ENABLE'].peripheral,
+            database[f'GPIO{port}_ENABLE'].register,
+            database[f'GPIO{port}_ENABLE'].field,
             True
         )
         for port in sorted(OrderedSet(
@@ -201,7 +204,7 @@ def system_configurize(Meta, target, planner):
             f'GPIO{gpio.port}',
             'OSPEEDR',
             f'OSPEED{gpio.number}',
-            mk_dict(system_database[target.mcu]['GPIO_SPEED'])[gpio.speed]
+            mk_dict(database['GPIO_SPEED'])[gpio.speed]
         )
         for gpio in gpios
         if gpio.pin   is not None
@@ -217,7 +220,7 @@ def system_configurize(Meta, target, planner):
             f'GPIO{gpio.port}',
             'PUPDR',
             f'PUPD{gpio.number}',
-            mk_dict(system_database[target.mcu]['GPIO_PULL'])[gpio.pull]
+            mk_dict(database['GPIO_PULL'])[gpio.pull]
         )
         for gpio in gpios
         if gpio.pin  is not None
@@ -249,7 +252,7 @@ def system_configurize(Meta, target, planner):
             f'GPIO{gpio.port}',
             'MODER',
             f'MODE{gpio.number}',
-            mk_dict(system_database[target.mcu]['GPIO_MODE'])[gpio.mode]
+            mk_dict(database['GPIO_MODE'])[gpio.mode]
         )
         for gpio in gpios
         if gpio.pin  is not None
@@ -270,7 +273,7 @@ def system_configurize(Meta, target, planner):
 
     for routine in OrderedSet((
         *INTERRUPTS_THAT_MUST_BE_DEFINED,
-        *system_database[target.mcu]['INTERRUPTS']
+        *database['INTERRUPTS']
     )):
 
 
@@ -319,7 +322,7 @@ def system_configurize(Meta, target, planner):
 
         # Set the Arm-specific interrupts' priorities.
 
-        if system_database[target.mcu]['INTERRUPTS'].index(interrupt) <= 14:
+        if database['INTERRUPTS'].index(interrupt) <= 14:
 
             assert interrupt in (
                 'MemoryManagement',
