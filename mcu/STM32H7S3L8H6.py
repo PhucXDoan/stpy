@@ -294,7 +294,10 @@
             ),
 
             ('CSR4',
-                ('VOS', 'INTERNAL_VOLTAGE_SCALING'),
+                ('VOS', 'INTERNAL_VOLTAGE_SCALING', (
+                    ('low' , 0),
+                    ('high', 1),
+                )),
             ),
 
         ),

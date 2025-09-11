@@ -1126,18 +1126,7 @@ def system_parameterize(target):
 
 
 
-    planner.dictionary['INTERNAL_VOLTAGE_SCALING'] = {
-        'STM32H7S3L8H6' : {
-            'low'  : 0,
-            'high' : 1,
-        },
-        'STM32H533RET6' : {
-            'VOS3' : '0b00',
-            'VOS2' : '0b01',
-            'VOS1' : '0b10',
-            'VOS0' : '0b11',
-        },
-    }[target.mcu][planner.dictionary['INTERNAL_VOLTAGE_SCALING']]
+    planner.dictionary['INTERNAL_VOLTAGE_SCALING'] = mk_dict(database['INTERNAL_VOLTAGE_SCALING'])[planner.dictionary['INTERNAL_VOLTAGE_SCALING']]
 
     planner.dictionary['PERIPHERAL_CLOCK_OPTION'] = mk_dict(database['PERIPHERAL_CLOCK_OPTION'])[planner.dictionary['PERIPHERAL_CLOCK_OPTION']]
 

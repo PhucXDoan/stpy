@@ -281,7 +281,12 @@
         ('PWR',
 
             ('VOSCR',
-                ('VOS', 'INTERNAL_VOLTAGE_SCALING'),
+                ('VOS', 'INTERNAL_VOLTAGE_SCALING', (
+                    ('VOS3', '0b00'),
+                    ('VOS2', '0b01'),
+                    ('VOS1', '0b10'),
+                    ('VOS0', '0b11'),
+                )),
             ),
 
             ('VOSSR',
