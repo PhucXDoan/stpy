@@ -373,11 +373,10 @@
                         'HSE_CK' : '0b11',
                     }),
                     (f'PLL{unit}RGE', f'PLL{unit}_INPUT_RANGE', {
-                        1_000_000  : None,
-                        2_000_000  : None, # TODO Can be '0b00', but only for medium VCO. @/pg 124/tbl 47/`H533rm`.
-                        4_000_000  : 0b01,
-                        8_000_000  : 0b10,
-                        16_000_000 : 0b11,
+                        # (1_000_000, 2_000_000 ) : None, # TODO Can be '0b00', but only for medium VCO. @/pg 124/tbl 47/`H533rm`.
+                        (2_000_000, 4_000_000 ) : 0b01,
+                        (4_000_000, 8_000_000 ) : 0b10,
+                        (8_000_000, 16_000_000) : 0b11,
                     }),
                 )
                 for unit in (1, 2, 3)
@@ -423,7 +422,7 @@
                                 'HSI_CK'     : '0b011',
                                 'CSI_CK'     : '0b100',
                                 'LSE_CK'     : '0b101',
-                                None         : '0b110',
+                                # TODO How to handle? None         : '0b110',
                             },
                         ),
                         (
@@ -437,7 +436,7 @@
                                 'HSI_CK'    : '0b011',
                                 'CSI_CK'    : '0b100',
                                 'LSE_CK'    : '0b101',
-                                None        : '0b110',
+                                # TODO How to handle? None        : '0b110',
                             },
                         ),
                     )
@@ -469,7 +468,7 @@
                                 'HSI_CK'     : '0b011',
                                 'CSI_CK'     : '0b100',
                                 'LSE_CK'     : '0b101',
-                                None         : '0b110',
+                                # TODO How to handle? None         : '0b110',
                             },
                         ),
                         (
@@ -483,7 +482,7 @@
                                 'HSI_CK'     : '0b011',
                                 'CSI_CK'     : '0b100',
                                 'LSE_CK'     : '0b101',
-                                None         : '0b110',
+                                # TODO How to handle? None         : '0b110',
                             },
                         ),
                     )
@@ -518,7 +517,7 @@
                     'HSI_CK' : '0b00',
                     'CSI_CK' : '0b01',
                     'HSE_CK' : '0b10',
-                    None     : '0b11',
+                    # TODO How to handle? None     : '0b11',
                 }),
             ),
 

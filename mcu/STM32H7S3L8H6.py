@@ -386,11 +386,10 @@
             ('PLLCFGR',
                 *(
                     (f'PLL{unit}RGE', f'PLL{unit}_INPUT_RANGE', {
-                        1_000_000  : None,
-                        2_000_000  : None, # Can be '0b00', but only for medium VCO.
-                        4_000_000  : 0b01,
-                        8_000_000  : 0b10,
-                        16_000_000 : 0b11,
+                        # (1_000_000, 2_000_000 ) : None, # TODO Can be '0b00', but only for medium VCO.
+                        (2_000_000, 4_000_000 ) : 0b01,
+                        (4_000_000, 8_000_000 ) : 0b10,
+                        (8_000_000, 16_000_000) : 0b11,
                     })
                     for unit in (1, 2, 3)
                 ),
@@ -413,7 +412,7 @@
                     'HSI_CK'  : '0b00',
                     'CSI_CK'  : '0b01',
                     'HSE_CK'  : '0b10',
-                    None      : '0b11',
+                    # TODO How to handle? None      : '0b11',
                 }),
             ),
 
@@ -441,7 +440,7 @@
                     'HSI_CK'  : '0b00',
                     'CSI_CK'  : '0b01',
                     'HSE_CK'  : '0b10',
-                    None      : '0b11',
+                    # TODO How to handle? None      : '0b11',
                 }),
                 ('SDMMC12SEL', 'SDMMC_KERNEL_SOURCE', {
                     'PLL2_S_CK' : '0b0',

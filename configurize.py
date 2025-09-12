@@ -1,5 +1,5 @@
 import collections, builtins, difflib
-from ..stpy.database import system_database
+from ..stpy.database import system_database, SystemDatabaseOptions
 from ..stpy.gpio     import process_all_gpios
 from ..stpy.helpers  import get_helpers
 from ..pxd.utils     import OrderedSet
@@ -77,29 +77,11 @@ def system_configurize(Meta, target, planner):
 
 
 
-    def deref(key):
-        planner.dictionary[key] = database[key][planner.dictionary[key]]
+    for key, value in planner.dictionary.items():
+        if key in database and isinstance(database[key], SystemDatabaseOptions) and isinstance(database[key].options, dict):
+            if planner.dictionary[key] in database[key]:
+                planner.dictionary[key] = database[key][planner.dictionary[key]]
 
-    deref('INTERNAL_VOLTAGE_SCALING')
-    deref('PERIPHERAL_CLOCK_OPTION')
-    deref('SCGU_KERNEL_SOURCE')
-
-    match target.mcu:
-
-        case 'STM32H7S3L8H6':
-            deref('PLL_KERNEL_SOURCE')
-
-        case 'STM32H533RET6':
-            for unit, channels in database['PLLS']:
-                deref(f'PLL{unit}_KERNEL_SOURCE')
-
-    for instances in database.get('UXARTS', ()):
-        if planner.dictionary[f'UXART_{instances}_KERNEL_SOURCE'] is not None:
-            deref(f'UXART_{instances}_KERNEL_SOURCE')
-
-    for unit in database.get('I2CS', ()):
-        if planner.dictionary[f'I2C{unit}_KERNEL_SOURCE'] is not None:
-            deref(f'I2C{unit}_KERNEL_SOURCE')
 
 
 
@@ -489,14 +471,14 @@ def system_configurize(Meta, target, planner):
 
 
 
-    put_title('Peripheral Clock Source')
-
-
-
     # Set the clock source which will be
     # available for some peripheral to use.
 
-    CMSIS_SET(planner.tuple('PERIPHERAL_CLOCK_OPTION'))
+    if planner['PERIPHERAL_CLOCK_OPTION'] is not None:
+
+        put_title('Peripheral Clock Source')
+
+        CMSIS_SET(planner.tuple('PERIPHERAL_CLOCK_OPTION'))
 
 
 

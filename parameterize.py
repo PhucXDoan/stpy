@@ -373,10 +373,10 @@ def system_parameterize(target):
 
             reference_frequency = kernel_frequency / planner[f'PLL{unit}_PREDIVIDER']
 
-            planner[f'PLL{unit}_INPUT_RANGE'] = next(( # TODO Make less weird.
-                option
-                for upper_frequency_range, option in database[f'PLL{unit}_INPUT_RANGE'].options.items()
-                if reference_frequency < upper_frequency_range
+            planner[f'PLL{unit}_INPUT_RANGE'] = next((
+                (lower, upper)
+                for lower, upper in database[f'PLL{unit}_INPUT_RANGE'].options
+                if lower <= reference_frequency < upper
             ), None)
 
             if planner[f'PLL{unit}_INPUT_RANGE'] is None:
