@@ -203,25 +203,25 @@
         # Common values.
         #
 
-        ('GPIO_MODE', (
-            ('INPUT'    , '0b00'),
-            ('OUTPUT'   , '0b01'),
-            ('ALTERNATE', '0b10'),
-            ('ANALOG'   , '0b11'),
-        )),
+        ('GPIO_MODE', {
+            'INPUT'     : '0b00',
+            'OUTPUT'    : '0b01',
+            'ALTERNATE' : '0b10',
+            'ANALOG'    : '0b11',
+        }),
 
-        ('GPIO_SPEED', (
-            ('LOW'      , '0b00'),
-            ('MEDIUM'   , '0b01'),
-            ('HIGH'     , '0b10'),
-            ('VERY_HIGH', '0b11'),
-        )),
+        ('GPIO_SPEED', {
+            'LOW'       : '0b00',
+            'MEDIUM'    : '0b01',
+            'HIGH'      : '0b10',
+            'VERY_HIGH' : '0b11',
+        }),
 
-        ('GPIO_PULL', (
-            (None  , '0b00'),
-            ('UP'  , '0b01'),
-            ('DOWN', '0b10'),
-        )),
+        ('GPIO_PULL', {
+            None   : '0b00',
+            'UP'   : '0b01',
+            'DOWN' : '0b10',
+        }),
 
         ################################################################################
         #
@@ -294,10 +294,10 @@
             ),
 
             ('CSR4',
-                ('VOS', 'INTERNAL_VOLTAGE_SCALING', (
-                    ('low' , 0),
-                    ('high', 1),
-                )),
+                ('VOS', 'INTERNAL_VOLTAGE_SCALING', {
+                    'low'  : 0,
+                    'high' : 1,
+                }),
             ),
 
         ),
@@ -321,12 +321,12 @@
 
             ('CFGR',
                 *(
-                    (field, tag, (
-                        ('HSI_CK'   , '0b000'),
-                        ('CSI_CK'   , '0b001'),
-                        ('HSE_CK'   , '0b010'),
-                        ('PLL1_P_CK', '0b011'),
-                    ))
+                    (field, tag, {
+                        'HSI_CK'    : '0b000',
+                        'CSI_CK'    : '0b001',
+                        'HSE_CK'    : '0b010',
+                        'PLL1_P_CK' : '0b011',
+                    })
                     for field, tag in (
                         ('SWS', 'EFFECTIVE_SCGU_KERNEL_SOURCE'),
                         ('SW' , 'SCGU_KERNEL_SOURCE'          ),
@@ -336,17 +336,17 @@
 
             *(
                 (register,
-                    (field, tag, (
-                        (1  , '0b0000'), # Low three bits are don't-care.
-                        (2  , '0b1000'),
-                        (4  , '0b1001'),
-                        (8  , '0b1010'),
-                        (16 , '0b1011'),
-                        (64 , '0b1100'),
-                        (128, '0b1101'),
-                        (256, '0b1110'),
-                        (512, '0b1111'),
-                    ))
+                    (field, tag, {
+                        1   : '0b0000', # Low three bits are don't-care.
+                        2   : '0b1000',
+                        4   : '0b1001',
+                        8   : '0b1010',
+                        16  : '0b1011',
+                        64  : '0b1100',
+                        128 : '0b1101',
+                        256 : '0b1110',
+                        512 : '0b1111',
+                    })
                 )
                 for register, field, tag in (
                     ('CDCFGR', 'CPRE' , 'CPU_DIVIDER'    ),
@@ -356,13 +356,13 @@
 
             ('APBCFGR',
                 *(
-                    (f'PPRE{unit}', f'APB{unit}_DIVIDER', (
-                        (1 , '0b000'),
-                        (2 , '0b100'),
-                        (4 , '0b101'),
-                        (8 , '0b110'),
-                        (16, '0b111'),
-                    ))
+                    (f'PPRE{unit}', f'APB{unit}_DIVIDER', {
+                        1  : '0b000',
+                        2  : '0b100',
+                        4  : '0b101',
+                        8  : '0b110',
+                        16 : '0b111',
+                    })
                     for unit in (1, 2, 4, 5)
                 ),
             ),
@@ -385,13 +385,13 @@
 
             ('PLLCFGR',
                 *(
-                    (f'PLL{unit}RGE', f'PLL{unit}_INPUT_RANGE', (
-                        ( 1_000_000, None),
-                        ( 2_000_000, None), # Can be '0b00', but only for medium VCO.
-                        ( 4_000_000, 0b01),
-                        ( 8_000_000, 0b10),
-                        (16_000_000, 0b11),
-                    ))
+                    (f'PLL{unit}RGE', f'PLL{unit}_INPUT_RANGE', {
+                        1_000_000  : None,
+                        2_000_000  : None, # Can be '0b00', but only for medium VCO.
+                        4_000_000  : 0b01,
+                        8_000_000  : 0b10,
+                        16_000_000 : 0b11,
+                    })
                     for unit in (1, 2, 3)
                 ),
                 *(
@@ -409,12 +409,12 @@
                 ('DIVM1' , 'PLL1_PREDIVIDER'  , 1, 63),
                 ('DIVM2' , 'PLL2_PREDIVIDER'  , 1, 63),
                 ('DIVM3' , 'PLL3_PREDIVIDER'  , 1, 63),
-                ('PLLSRC', 'PLL_KERNEL_SOURCE', (
-                    ('HSI_CK' , '0b00'),
-                    ('CSI_CK' , '0b01'),
-                    ('HSE_CK' , '0b10'),
-                    (None     , '0b11'),
-                )),
+                ('PLLSRC', 'PLL_KERNEL_SOURCE', {
+                    'HSI_CK'  : '0b00',
+                    'CSI_CK'  : '0b01',
+                    'HSE_CK'  : '0b10',
+                    None      : '0b11',
+                }),
             ),
 
             *(
@@ -437,39 +437,39 @@
             ),
 
             ('CCIPR1',
-                ('CKPERSEL', 'PERIPHERAL_CLOCK_OPTION', (
-                    ('HSI_CK' , '0b00'),
-                    ('CSI_CK' , '0b01'),
-                    ('HSE_CK' , '0b10'),
-                    (None     , '0b11'),
-                )),
-                ('SDMMC12SEL', 'SDMMC_KERNEL_SOURCE', (
-                    ('PLL2_S_CK', '0b0'),
-                    ('PLL2_T_CK', '0b1'),
-                )),
+                ('CKPERSEL', 'PERIPHERAL_CLOCK_OPTION', {
+                    'HSI_CK'  : '0b00',
+                    'CSI_CK'  : '0b01',
+                    'HSE_CK'  : '0b10',
+                    None      : '0b11',
+                }),
+                ('SDMMC12SEL', 'SDMMC_KERNEL_SOURCE', {
+                    'PLL2_S_CK' : '0b0',
+                    'PLL2_T_CK' : '0b1',
+                }),
             ),
 
             ('CCIPR2',
-                ('UART234578SEL', f'UXART_{(('USART', 2), ('USART', 3), ('UART', 4), ('UART', 5), ('UART', 7), ('UART', 8))}_KERNEL_SOURCE', (
-                    ('APB2_CK'  , '0b000'),
-                    ('PLL2_Q_CK', '0b001'),
-                    ('PLL3_Q_CK', '0b010'),
-                    ('HSI_CK'   , '0b011'),
-                    ('CSI_CK'   , '0b100'),
-                    ('LSE_CK'   , '0b101'),
-                )),
+                ('UART234578SEL', f'UXART_{(('USART', 2), ('USART', 3), ('UART', 4), ('UART', 5), ('UART', 7), ('UART', 8))}_KERNEL_SOURCE', {
+                    'APB2_CK'   : '0b000',
+                    'PLL2_Q_CK' : '0b001',
+                    'PLL3_Q_CK' : '0b010',
+                    'HSI_CK'    : '0b011',
+                    'CSI_CK'    : '0b100',
+                    'LSE_CK'    : '0b101',
+                }),
             ),
 
             ('CCIPR2', # TODO Should we allow for redundant locations?
                 *(
-                    ('UART234578SEL', f'{peripheral}{unit}_KERNEL_SOURCE', (
-                        ('APB2_CK'  , '0b000'),
-                        ('PLL2_Q_CK', '0b001'),
-                        ('PLL3_Q_CK', '0b010'),
-                        ('HSI_CK'   , '0b011'),
-                        ('CSI_CK'   , '0b100'),
-                        ('LSE_CK'   , '0b101'),
-                    ))
+                    ('UART234578SEL', f'{peripheral}{unit}_KERNEL_SOURCE', {
+                        'APB2_CK'   : '0b000',
+                        'PLL2_Q_CK' : '0b001',
+                        'PLL3_Q_CK' : '0b010',
+                        'HSI_CK'    : '0b011',
+                        'CSI_CK'    : '0b100',
+                        'LSE_CK'    : '0b101',
+                    })
                     for peripheral, unit in (('USART', 2), ('USART', 3), ('UART', 4), ('UART', 5), ('UART', 7), ('UART', 8))
                 ),
             ),

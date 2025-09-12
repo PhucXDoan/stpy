@@ -23,13 +23,13 @@ def stringify_table(items):
 
 
 
-def get_similars(given, options):
+def get_similars(given, options): # TODO Copy-pasta.
 
     import difflib
 
     return difflib.get_close_matches(
         given if given is not None else 'None',
-        options,
+        [option if option is not None else 'None' for option in options],
         n      = 3,
         cutoff = 0
     )

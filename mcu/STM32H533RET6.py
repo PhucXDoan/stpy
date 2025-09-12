@@ -205,25 +205,25 @@
         # Common values.
         #
 
-        ('GPIO_MODE', (
-            ('INPUT'    , '0b00'),
-            ('OUTPUT'   , '0b01'),
-            ('ALTERNATE', '0b10'),
-            ('ANALOG'   , '0b11'),
-        )),
+        ('GPIO_MODE', {
+            'INPUT'     : '0b00',
+            'OUTPUT'    : '0b01',
+            'ALTERNATE' : '0b10',
+            'ANALOG'    : '0b11',
+        }),
 
-        ('GPIO_SPEED', (
-            ('LOW'      , '0b00'),
-            ('MEDIUM'   , '0b01'),
-            ('HIGH'     , '0b10'),
-            ('VERY_HIGH', '0b11'),
-        )),
+        ('GPIO_SPEED', {
+            'LOW'       : '0b00',
+            'MEDIUM'    : '0b01',
+            'HIGH'      : '0b10',
+            'VERY_HIGH' : '0b11',
+        }),
 
-        ('GPIO_PULL', (
-            (None  , '0b00'),
-            ('UP'  , '0b01'),
-            ('DOWN', '0b10'),
-        )),
+        ('GPIO_PULL', {
+            None   : '0b00',
+            'UP'   : '0b01',
+            'DOWN' : '0b10',
+        }),
 
         ################################################################################
         #
@@ -281,12 +281,12 @@
         ('PWR',
 
             ('VOSCR',
-                ('VOS', 'INTERNAL_VOLTAGE_SCALING', (
-                    ('VOS3', '0b00'),
-                    ('VOS2', '0b01'),
-                    ('VOS1', '0b10'),
-                    ('VOS0', '0b11'),
-                )),
+                ('VOS', 'INTERNAL_VOLTAGE_SCALING', {
+                    'VOS3' : '0b00',
+                    'VOS2' : '0b01',
+                    'VOS1' : '0b10',
+                    'VOS0' : '0b11',
+                }),
             ),
 
             ('VOSSR',
@@ -323,12 +323,12 @@
             ('CFGR1',
                 ('TIMPRE', 'GLOBAL_TIMER_PRESCALER'),
                 *(
-                    (field, tag, (
-                        ('HSI_CK'   , '0b000'),
-                        ('CSI_CK'   , '0b001'),
-                        ('HSE_CK'   , '0b010'),
-                        ('PLL1_P_CK', '0b011'),
-                    ))
+                    (field, tag, {
+                        'HSI_CK'    : '0b000',
+                        'CSI_CK'    : '0b001',
+                        'HSE_CK'    : '0b010',
+                        'PLL1_P_CK' : '0b011',
+                    })
                     for field, tag in (
                         ('SWS', 'EFFECTIVE_SCGU_KERNEL_SOURCE'),
                         ('SW' , 'SCGU_KERNEL_SOURCE'          ),
@@ -338,26 +338,26 @@
 
             ('CFGR2',
                 *(
-                    (f'PPRE{unit}', f'APB{unit}_DIVIDER', (
-                        (1 , '0b000'),
-                        (2 , '0b100'),
-                        (4 , '0b101'),
-                        (8 , '0b110'),
-                        (16, '0b111'),
-                    ))
+                    (f'PPRE{unit}', f'APB{unit}_DIVIDER', {
+                        1  : '0b000',
+                        2  : '0b100',
+                        4  : '0b101',
+                        8  : '0b110',
+                        16 : '0b111',
+                    })
                     for unit in (1, 2, 3)
                 ),
-                ('HPRE', 'CPU_DIVIDER', (
-                    (1  , '0b0000'), # Low three bits are don't-care.
-                    (2  , '0b1000'),
-                    (4  , '0b1001'),
-                    (8  , '0b1010'),
-                    (16 , '0b1011'),
-                    (64 , '0b1100'),
-                    (128, '0b1101'),
-                    (256, '0b1110'),
-                    (512, '0b1111'),
-                )),
+                ('HPRE', 'CPU_DIVIDER', {
+                    1   : '0b0000', # Low three bits are don't-care.
+                    2   : '0b1000',
+                    4   : '0b1001',
+                    8   : '0b1010',
+                    16  : '0b1011',
+                    64  : '0b1100',
+                    128 : '0b1101',
+                    256 : '0b1110',
+                    512 : '0b1111',
+                }),
             ),
 
             *(
@@ -366,19 +366,19 @@
                     (f'PLL{unit}QEN', f'PLL{unit}Q_ENABLE'),
                     (f'PLL{unit}PEN', f'PLL{unit}P_ENABLE'),
                     (f'PLL{unit}M'  , f'PLL{unit}_PREDIVIDER', 1, 63),
-                    (f'PLL{unit}SRC', f'PLL{unit}_KERNEL_SOURCE', (
-                        (None    , '0b00'),
-                        ('HSI_CK', '0b01'),
-                        ('CSI_CK', '0b10'),
-                        ('HSE_CK', '0b11'),
-                    )),
-                    (f'PLL{unit}RGE', f'PLL{unit}_INPUT_RANGE', (
-                        ( 1_000_000, None),
-                        ( 2_000_000, None), # TODO Can be '0b00', but only for medium VCO. @/pg 124/tbl 47/`H533rm`.
-                        ( 4_000_000, 0b01),
-                        ( 8_000_000, 0b10),
-                        (16_000_000, 0b11),
-                    )),
+                    (f'PLL{unit}SRC', f'PLL{unit}_KERNEL_SOURCE', {
+                        None     : '0b00',
+                        'HSI_CK' : '0b01',
+                        'CSI_CK' : '0b10',
+                        'HSE_CK' : '0b11',
+                    }),
+                    (f'PLL{unit}RGE', f'PLL{unit}_INPUT_RANGE', {
+                        1_000_000  : None,
+                        2_000_000  : None, # TODO Can be '0b00', but only for medium VCO. @/pg 124/tbl 47/`H533rm`.
+                        4_000_000  : 0b01,
+                        8_000_000  : 0b10,
+                        16_000_000 : 0b11,
+                    }),
                 )
                 for unit in (1, 2, 3)
             ),
@@ -416,29 +416,29 @@
                                 ('USART3SEL' , (('USART', 3 ),)),
                                 ('USART2SEL' , (('USART', 2 ),)),
                             ),
-                            (
-                                ('APB1_CK'   , '0b000'),
-                                ('PLL2_Q_CK' , '0b001'),
-                                ('PLL3_Q_CK' , '0b010'),
-                                ('HSI_CK'    , '0b011'),
-                                ('CSI_CK'    , '0b100'),
-                                ('LSE_CK'    , '0b101'),
-                                (None        , '0b110'),
-                            ),
+                            {
+                                'APB1_CK'    : '0b000',
+                                'PLL2_Q_CK'  : '0b001',
+                                'PLL3_Q_CK'  : '0b010',
+                                'HSI_CK'     : '0b011',
+                                'CSI_CK'     : '0b100',
+                                'LSE_CK'     : '0b101',
+                                None         : '0b110',
+                            },
                         ),
                         (
                             (
                                 ('USART1SEL', (('USART', 1),)),
                             ),
-                            (
-                                ('RCC_PCLK2' , '0b000'),
-                                ('PLL2_Q_CK' , '0b001'),
-                                ('PLL3_Q_CK' , '0b010'),
-                                ('HSI_CK'    , '0b011'),
-                                ('CSI_CK'    , '0b100'),
-                                ('LSE_CK'    , '0b101'),
-                                (None        , '0b110'),
-                            ),
+                            {
+                                'RCC_PCLK2' : '0b000',
+                                'PLL2_Q_CK' : '0b001',
+                                'PLL3_Q_CK' : '0b010',
+                                'HSI_CK'    : '0b011',
+                                'CSI_CK'    : '0b100',
+                                'LSE_CK'    : '0b101',
+                                None        : '0b110',
+                            },
                         ),
                     )
                     for field, peripherals in field_peripherals
@@ -462,29 +462,29 @@
                                 ('USART3SEL' , (('USART', 3 ),)),
                                 ('USART2SEL' , (('USART', 2 ),)),
                             ),
-                            (
-                                ('APB1_CK'   , '0b000'),
-                                ('PLL2_Q_CK' , '0b001'),
-                                ('PLL3_Q_CK' , '0b010'),
-                                ('HSI_CK'    , '0b011'),
-                                ('CSI_CK'    , '0b100'),
-                                ('LSE_CK'    , '0b101'),
-                                (None        , '0b110'),
-                            ),
+                            {
+                                'APB1_CK'    : '0b000',
+                                'PLL2_Q_CK'  : '0b001',
+                                'PLL3_Q_CK'  : '0b010',
+                                'HSI_CK'     : '0b011',
+                                'CSI_CK'     : '0b100',
+                                'LSE_CK'     : '0b101',
+                                None         : '0b110',
+                            },
                         ),
                         (
                             (
                                 ('USART1SEL', (('USART', 1),)),
                             ),
-                            (
-                                ('RCC_PCLK2' , '0b000'),
-                                ('PLL2_Q_CK' , '0b001'),
-                                ('PLL3_Q_CK' , '0b010'),
-                                ('HSI_CK'    , '0b011'),
-                                ('CSI_CK'    , '0b100'),
-                                ('LSE_CK'    , '0b101'),
-                                (None        , '0b110'),
-                            ),
+                            {
+                                'RCC_PCLK2'  : '0b000',
+                                'PLL2_Q_CK'  : '0b001',
+                                'PLL3_Q_CK'  : '0b010',
+                                'HSI_CK'     : '0b011',
+                                'CSI_CK'     : '0b100',
+                                'LSE_CK'     : '0b101',
+                                None         : '0b110',
+                            },
                         ),
                     )
                     for field, instances in field_instances
@@ -493,33 +493,33 @@
             ),
 
             ('CCIPR4',
-                ('I2C3SEL', 'I2C3_KERNEL_SOURCE', (
-                    ('APB3_CK'  , '0b00'),
-                    ('PLL3_R_CK', '0b01'),
-                    ('HSI_CK'   , '0b10'),
-                    ('CSI_CK'   , '0b11'),
-                )),
-                ('I2C2SEL', 'I2C2_KERNEL_SOURCE', (
-                    ('APB1_CK'  , '0b00'),
-                    ('PLL3_R_CK', '0b01'),
-                    ('HSI_CK'   , '0b10'),
-                    ('CSI_CK'   , '0b11'),
-                )),
-                ('I2C1SEL', 'I2C1_KERNEL_SOURCE', (
-                    ('APB1_CK'  , '0b00'),
-                    ('PLL3_R_CK', '0b01'),
-                    ('HSI_CK'   , '0b10'),
-                    ('CSI_CK'   , '0b11'),
-                )),
+                ('I2C3SEL', 'I2C3_KERNEL_SOURCE', {
+                    'APB3_CK'   : '0b00',
+                    'PLL3_R_CK' : '0b01',
+                    'HSI_CK'    : '0b10',
+                    'CSI_CK'    : '0b11',
+                }),
+                ('I2C2SEL', 'I2C2_KERNEL_SOURCE', {
+                    'APB1_CK'   : '0b00',
+                    'PLL3_R_CK' : '0b01',
+                    'HSI_CK'    : '0b10',
+                    'CSI_CK'    : '0b11',
+                }),
+                ('I2C1SEL', 'I2C1_KERNEL_SOURCE', {
+                    'APB1_CK'   : '0b00',
+                    'PLL3_R_CK' : '0b01',
+                    'HSI_CK'    : '0b10',
+                    'CSI_CK'    : '0b11',
+                }),
             ),
 
             ('CCIPR5',
-                ('CKPERSEL', 'PERIPHERAL_CLOCK_OPTION', (
-                    ('HSI_CK', '0b00'),
-                    ('CSI_CK', '0b01'),
-                    ('HSE_CK', '0b10'),
-                    (None    , '0b11'),
-                )),
+                ('CKPERSEL', 'PERIPHERAL_CLOCK_OPTION', {
+                    'HSI_CK' : '0b00',
+                    'CSI_CK' : '0b01',
+                    'HSE_CK' : '0b10',
+                    None     : '0b11',
+                }),
             ),
 
             ('AHB2ENR',

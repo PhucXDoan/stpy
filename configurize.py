@@ -2,7 +2,7 @@ import collections, builtins, difflib
 from ..stpy.database import system_database
 from ..stpy.gpio     import process_all_gpios
 from ..stpy.helpers  import get_helpers
-from ..pxd.utils     import mk_dict, OrderedSet
+from ..pxd.utils     import OrderedSet
 from ..pxd.log       import log, ANSI
 
 
@@ -17,7 +17,7 @@ def get_similars(given, options): # TODO Copy-pasta.
 
     return difflib.get_close_matches(
         given if given is not None else 'None',
-        options,
+        [option if option is not None else 'None' for option in options],
         n      = 3,
         cutoff = 0
     )
@@ -204,7 +204,7 @@ def system_configurize(Meta, target, planner):
             f'GPIO{gpio.port}',
             'OSPEEDR',
             f'OSPEED{gpio.number}',
-            mk_dict(database['GPIO_SPEED'])[gpio.speed]
+            database['GPIO_SPEED'].options[gpio.speed]
         )
         for gpio in gpios
         if gpio.pin   is not None
@@ -220,7 +220,7 @@ def system_configurize(Meta, target, planner):
             f'GPIO{gpio.port}',
             'PUPDR',
             f'PUPD{gpio.number}',
-            mk_dict(database['GPIO_PULL'])[gpio.pull]
+            database['GPIO_PULL'][gpio.pull]
         )
         for gpio in gpios
         if gpio.pin  is not None
@@ -252,7 +252,7 @@ def system_configurize(Meta, target, planner):
             f'GPIO{gpio.port}',
             'MODER',
             f'MODE{gpio.number}',
-            mk_dict(database['GPIO_MODE'])[gpio.mode]
+            database['GPIO_MODE'][gpio.mode]
         )
         for gpio in gpios
         if gpio.pin  is not None

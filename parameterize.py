@@ -375,7 +375,7 @@ def system_parameterize(target):
 
             planner[f'PLL{unit}_INPUT_RANGE'] = next(( # TODO Make less weird.
                 option
-                for upper_frequency_range, option in database[f'PLL{unit}_INPUT_RANGE']
+                for upper_frequency_range, option in database[f'PLL{unit}_INPUT_RANGE'].options.items()
                 if reference_frequency < upper_frequency_range
             ), None)
 
@@ -501,7 +501,7 @@ def system_parameterize(target):
 
             case 'STM32H7S3L8H6':
 
-                for planner['PLL_KERNEL_SOURCE'], _ in database['PLL_KERNEL_SOURCE']:
+                for planner['PLL_KERNEL_SOURCE'] in database['PLL_KERNEL_SOURCE']:
 
                     kernel_frequency     = book[planner['PLL_KERNEL_SOURCE']]
                     every_unit_satisfied = all(
@@ -521,7 +521,7 @@ def system_parameterize(target):
                 every_unit_satisfied = all(
                     any(
                         parameterize_unit(unit, book[planner[f'PLL{unit}_KERNEL_SOURCE']])
-                        for planner[f'PLL{unit}_KERNEL_SOURCE'], _ in database[f'PLL{unit}_KERNEL_SOURCE']
+                        for planner[f'PLL{unit}_KERNEL_SOURCE'] in database[f'PLL{unit}_KERNEL_SOURCE']
                     )
                     for unit, channels in database['PLLS']
                 )
@@ -587,7 +587,7 @@ def system_parameterize(target):
     def parameterize_apb(unit):
 
         needed_divider                = book['AXI_AHB_CK'] / book[f'APB{unit}_CK']
-        planner[f'APB{unit}_DIVIDER'] = mk_dict(database[f'APB{unit}_DIVIDER']).get(needed_divider, None)
+        planner[f'APB{unit}_DIVIDER'] = database[f'APB{unit}_DIVIDER'].options.get(needed_divider, None)
 
         return planner[f'APB{unit}_DIVIDER'] is not None
 
@@ -601,14 +601,14 @@ def system_parameterize(target):
 
     def parameterize_scgu():
 
-        for planner['SCGU_KERNEL_SOURCE'], _ in database['SCGU_KERNEL_SOURCE']:
+        for planner['SCGU_KERNEL_SOURCE'] in database['SCGU_KERNEL_SOURCE']:
 
 
 
             # CPU.
 
             needed_cpu_divider     = book[planner['SCGU_KERNEL_SOURCE']] / book['CPU_CK']
-            planner['CPU_DIVIDER'] = mk_dict(database['CPU_DIVIDER']).get(needed_cpu_divider, None)
+            planner['CPU_DIVIDER'] = database['CPU_DIVIDER'].options.get(needed_cpu_divider, None)
 
             if planner['CPU_DIVIDER'] is None:
                 continue
@@ -622,7 +622,7 @@ def system_parameterize(target):
                 case 'STM32H7S3L8H6':
 
                     needed_axi_ahb_divider     = book['CPU_CK'] / book['AXI_AHB_CK']
-                    planner['AXI_AHB_DIVIDER'] = mk_dict(database['AXI_AHB_DIVIDER']).get(needed_axi_ahb_divider, None)
+                    planner['AXI_AHB_DIVIDER'] = database['AXI_AHB_DIVIDER'].options.get(needed_axi_ahb_divider, None)
 
                     if planner['AXI_AHB_DIVIDER'] is None:
                         continue
@@ -868,7 +868,7 @@ def system_parameterize(target):
             # Try every available clock source for this
             # set of instances and see what sticks.
 
-            for planner[f'UXART_{instances}_KERNEL_SOURCE'], _ in database[f'UXART_{instances}_KERNEL_SOURCE']:
+            for planner[f'UXART_{instances}_KERNEL_SOURCE'] in database[f'UXART_{instances}_KERNEL_SOURCE']:
 
                 kernel_frequency         = book[planner[f'UXART_{instances}_KERNEL_SOURCE']]
                 every_instance_satisfied = all(
@@ -926,7 +926,7 @@ def system_parameterize(target):
 
             best_baud_error = None
 
-            for kernel_source, _ in database[f'I2C{unit}_KERNEL_SOURCE']:
+            for kernel_source in database[f'I2C{unit}_KERNEL_SOURCE']:
 
                 kernel_frequency = book[kernel_source] or 0
 
