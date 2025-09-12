@@ -285,7 +285,7 @@ def system_parameterize(target):
     # TODO Handle other frequencies.
 
     planner['HSI_ENABLE'] = schema['HSI_ENABLE']
-    book['HSI_CK']        = 32_000_000 if planner['HSI_ENABLE'] else 0
+    book['HSI_CK']        = hsi_default_frequency if planner['HSI_ENABLE'] else 0
 
 
 
