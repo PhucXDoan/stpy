@@ -10,7 +10,7 @@
 
 
 // Macros to make using GPIOs in C easy.
-// TODO Use system_database.
+// TODO Use system_properties.
 
 #define GPIO_HIGH(NAME)       ((void) (CONCAT(GPIO, _PORT_FOR_GPIO_WRITE(NAME))->BSRR = CONCAT(GPIO_BSRR_BS, _NUMBER_FOR_GPIO_WRITE(NAME))))
 #define GPIO_LOW(NAME)        ((void) (CONCAT(GPIO, _PORT_FOR_GPIO_WRITE(NAME))->BSRR = CONCAT(GPIO_BSRR_BR, _NUMBER_FOR_GPIO_WRITE(NAME))))

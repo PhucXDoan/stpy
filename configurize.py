@@ -1,5 +1,5 @@
 import collections, builtins, difflib
-from ..stpy.database import system_database, system_locations
+from ..stpy.database import system_properties, system_locations
 from ..stpy.gpio     import process_all_gpios
 from ..stpy.helpers  import get_helpers
 from ..pxd.utils     import OrderedSet
@@ -49,7 +49,7 @@ INTERRUPTS_THAT_MUST_BE_DEFINED = (
 
 def system_configurize(Meta, target, planner):
 
-    database = system_database[target.mcu]
+    database = system_properties[target.mcu]
 
     def put_title(title = None):
 

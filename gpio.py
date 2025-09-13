@@ -1,5 +1,5 @@
 import types, csv, pathlib, collections
-from ..stpy.database import system_database
+from ..stpy.database import system_properties
 
 
 
@@ -14,7 +14,7 @@ from ..stpy.database import system_database
 
 GPIO_ALTERNATE_FUNCTION_CODES = {}
 
-for mcu in system_database:
+for mcu in system_properties:
 
     GPIO_ALTERNATE_FUNCTION_CODES[mcu] = {}
 

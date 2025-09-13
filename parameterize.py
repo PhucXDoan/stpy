@@ -1,4 +1,4 @@
-from ..stpy.database import system_database
+from ..stpy.database import system_properties
 from ..stpy.planner  import SystemPlanner, stringify_table, get_similars
 from ..pxd.utils     import mk_dict
 from ..pxd.log       import log, ANSI
@@ -188,7 +188,7 @@ class ClockTreeSchemaWrapper:
 
 def system_parameterize(target):
 
-    database  = system_database[target.mcu]
+    database  = system_properties[target.mcu]
     schema    = ClockTreeSchemaWrapper(target)
     blueprint = SystemBlueprint(target)
 
@@ -1217,7 +1217,7 @@ def system_parameterize(target):
 # As it turns out, the algorithm to brute-force the clock-tree
 # the very similar across all STM32 microcontrollers. Of course,
 # there are some differences, but most of the logic is heavily
-# overlapped. This is especially true when we have `system_database`
+# overlapped. This is especially true when we have `system_properties`
 # to abstract over the details like the exact min/max frequencies
 # allowed and what range is multipliers/dividers are permitted.
 #

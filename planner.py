@@ -1,4 +1,4 @@
-from ..stpy.database import system_database, system_locations
+from ..stpy.database import system_properties, system_locations
 from ..pxd.log       import log, ANSI
 from ..pxd.utils     import justify
 

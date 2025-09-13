@@ -1,4 +1,4 @@
-from ..stpy.database     import system_database
+from ..stpy.database     import system_properties
 from ..stpy.parameterize import system_parameterize
 from ..stpy.configurize  import system_configurize
 from ..pxd.utils         import justify
@@ -25,7 +25,7 @@ def do(Meta, target):
         (
             (interrupt, f'{interrupt}_IRQn')
             for interrupt, niceness in target.interrupts
-            if system_database[target.mcu]['INTERRUPTS'].index(interrupt) >= 15
+            if system_properties[target.mcu]['INTERRUPTS'].index(interrupt) >= 15
         )
     )
 

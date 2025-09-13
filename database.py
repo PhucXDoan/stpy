@@ -35,8 +35,8 @@ class IntMinMax:
 
 
 
-system_locations = {}
-system_database  = {}
+system_locations  = {}
+system_properties = {}
 
 for mcu in dict.fromkeys( # TODO Cleaner way to determine the MCUs?
     item.stem
@@ -102,7 +102,7 @@ for mcu in dict.fromkeys( # TODO Cleaner way to determine the MCUs?
 
 
 
-    system_database[mcu] = dict(items)
+    system_properties[mcu] = dict(items)
     system_locations[mcu] = dict(locations)
 
 
