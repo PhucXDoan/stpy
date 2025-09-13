@@ -232,12 +232,12 @@
         # TODO 600MHz only when ECC is disabled.
         #
 
-        ('SDMMC_KERNEL_FREQ', 0          , 200_000_000),
-        ('CPU_FREQ'         , 0          , 600_000_000),
-        ('AXI_AHB_FREQ'     , 0          , 300_000_000),
-        ('APB_FREQ'         , 0          , 150_000_000),
-        ('PLL_CHANNEL_FREQ' , 1_500_000  , 600_000_000),
-        ('PLL_VCO_FREQ'     , 192_000_000, 836_000_000),
+        ('SDMMC_KERNEL_FREQ', RealMinMax(0          , 200_000_000)),
+        ('CPU_FREQ'         , RealMinMax(0          , 600_000_000)),
+        ('AXI_AHB_FREQ'     , RealMinMax(0          , 300_000_000)),
+        ('APB_FREQ'         , RealMinMax(0          , 150_000_000)),
+        ('PLL_CHANNEL_FREQ' , RealMinMax(1_500_000  , 600_000_000)),
+        ('PLL_VCO_FREQ'     , RealMinMax(192_000_000, 836_000_000)),
 
     ),
     (
@@ -247,11 +247,11 @@
         ('SysTick',
 
             ('LOAD',
-                ('RELOAD', 'SYSTICK_RELOAD', 1, (1 << 24) - 1),
+                ('RELOAD', 'SYSTICK_RELOAD', IntMinMax(1, (1 << 24) - 1)),
             ),
 
             ('VAL',
-                ('CURRENT', 'SYSTICK_COUNTER', 0, (1 << 32) - 1),
+                ('CURRENT', 'SYSTICK_COUNTER', IntMinMax(0, (1 << 32) - 1)),
             ),
 
             ('CTRL',
@@ -271,7 +271,7 @@
                     '0b00',
                     '0b11'
                 )),
-                ('LATENCY', 'FLASH_LATENCY', 0b0000, 0b1111),
+                ('LATENCY', 'FLASH_LATENCY', IntMinMax(0b0000, 0b1111)),
             ),
 
         ),
@@ -405,9 +405,9 @@
             ),
 
             ('PLLCKSELR',
-                ('DIVM1' , 'PLL1_PREDIVIDER'  , 1, 63),
-                ('DIVM2' , 'PLL2_PREDIVIDER'  , 1, 63),
-                ('DIVM3' , 'PLL3_PREDIVIDER'  , 1, 63),
+                ('DIVM1' , 'PLL1_PREDIVIDER'  , IntMinMax(1, 63)),
+                ('DIVM2' , 'PLL2_PREDIVIDER'  , IntMinMax(1, 63)),
+                ('DIVM3' , 'PLL3_PREDIVIDER'  , IntMinMax(1, 63)),
                 ('PLLSRC', 'PLL_KERNEL_SOURCE', {
                     'HSI_CK'  : '0b00',
                     'CSI_CK'  : '0b01',
@@ -418,14 +418,14 @@
 
             *(
                 (f'PLL{unit}DIVR1',
-                    ('DIVN', f'PLL{unit}_MULTIPLIER', 12, 420),
+                    ('DIVN', f'PLL{unit}_MULTIPLIER', IntMinMax(12, 420)),
                 )
                 for unit in (1, 2, 3)
             ),
 
             *(
                 (f'PLL{unit}DIVR{2 if channel in ('S', 'T') else 1}',
-                    (f'DIV{channel}', f'PLL{unit}{channel}_DIVIDER', 1, 128),
+                    (f'DIV{channel}', f'PLL{unit}{channel}_DIVIDER', IntMinMax(1, 128)),
                 )
                 for unit, channels in (
                     (1, ('P', 'Q',      'S'     )),
@@ -479,7 +479,7 @@
 
         ('USART',
             ('BRR',
-                ('BRR', 'UXART_BAUD_DIVIDER', 1, 1 << 16),
+                ('BRR', 'UXART_BAUD_DIVIDER', IntMinMax(1, 1 << 16)),
             ),
         ),
 

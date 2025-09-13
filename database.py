@@ -30,6 +30,8 @@ class SystemDatabaseOptions(types.SimpleNamespace):
     def __iter__(self):
         return iter(self.options)
 
+    def __contains__(self, value): # TODO Not necessary.
+        return value in self.options
 
 
     # Index into the option table.
@@ -40,38 +42,30 @@ class SystemDatabaseOptions(types.SimpleNamespace):
 
 
 ################################################################################
-#
-# For database entries that have valid values within an interval.
-# TODO Have integral and continuous range?
-# e.g:
-# >
-# >    ('SysTick',
-# >        ('LOAD',
-# >            ('RELOAD', 'SYSTICK_RELOAD', 1, (1 << 24) - 1),
-# >        ),
-# >    )
-# >
-#
 
 
+class RealMinMax:
 
-class SystemDatabaseMinMax(types.SimpleNamespace):
-
-
-
-    # Allow for sweeping through the whole range of possible values.
-
-    def __iter__(self):
-
-        return iter(range(self.minimum, self.maximum + 1))
-
-
-
-    # Determine if a value is within the minimum-maximum range.
+    def __init__(self, minimum, maximum):
+        self.minimum = minimum
+        self.maximum = maximum
 
     def __contains__(self, value):
-
         return self.minimum <= value <= self.maximum
+
+
+
+class IntMinMax:
+
+    def __init__(self, minimum, maximum):
+        self.minimum = minimum
+        self.maximum = maximum
+
+    def __contains__(self, value):
+        return value.is_integer() and self.minimum <= value <= self.maximum
+
+    def __iter__(self):
+        return iter(range(self.minimum, self.maximum + 1))
 
 
 
@@ -98,54 +92,15 @@ for mcu in dict.fromkeys(
     database_file_path = pathlib.Path(__file__).parent.joinpath(f'mcu/{mcu}.py')
 
 
-    constants, location_tree = eval(database_file_path.read_text(), {}, {})
+    constants, location_tree = eval(database_file_path.read_text(), { 'RealMinMax' : RealMinMax, 'IntMinMax' : IntMinMax }, {})
     items                    = []
 
 
 
     # Parse the constants.
 
-    for constant in constants:
+    items += constants
 
-        match constant:
-
-
-
-            # The constant's value is directly given.
-            # e.g:
-            # >
-            # >    ('APB_UNITS', (1, 2, 3))
-            # >
-
-            case (key, value):
-
-                items += [(key, value)]
-
-
-
-            # The constant's value is an inclusive min-max range.
-            # e.g:
-            # >
-            # >    ('PLL_CHANNEL_FREQ', 1_000_000, 250_000_000)
-            # >
-
-            case (key, minimum, maximum):
-
-                items += [(key, SystemDatabaseMinMax(
-                    minimum = minimum,
-                    maximum = maximum,
-                ))]
-
-
-
-            # Unsupported constant.
-
-            case unknown:
-
-                raise ValueError(
-                    f'Database constant entry is '
-                    f'in an unknown format: {repr(unknown)}.'
-                )
 
 
 
@@ -155,88 +110,19 @@ for mcu in dict.fromkeys(
 
         for register, *field_tree in register_tree:
 
-            for location in field_tree:
+            for field, key, *value in field_tree:
 
-                match location:
+                if value:
+                    value, = value
+                else:
+                    value = (False, True)
 
-
-
-                    # The location entry's value is assume to be 1 bit.
-                    # e.g:
-                    # >
-                    # >    ('PWR',
-                    # >        ('SR1',
-                    # >            ('ACTVOS', 'CURRENT_ACTIVE_VOS'),
-                    # >        ),
-                    # >    )
-                    # >
-
-                    case (field, key):
-
-                        items += [(key, SystemDatabaseOptions(
-                            peripheral = peripheral,
-                            register   = register,
-                            field      = field,
-                            options    = (False, True),
-                        ))]
-
-
-
-                    # The location entry's list of valid values are given.
-                    # e.g:
-                    # >
-                    # >    ('IWDG',
-                    # >        ('KR',
-                    # >            ('KEY', 'IWDG_KEY', (
-                    # >                '0xAAAA',
-                    # >                '0x5555',
-                    # >                '0xCCCC',
-                    # >            )),
-                    # >        ),
-                    # >    )
-                    # >
-
-                    case (field, key, options):
-
-                        items += [(key, SystemDatabaseOptions(
-                            peripheral = peripheral,
-                            register   = register,
-                            field      = field,
-                            options    = options,
-                        ))]
-
-
-
-                    # The location entry's value is an inclusive min-max range.
-                    # e.g:
-                    # >
-                    # >    ('SysTick',
-                    # >        ('LOAD',
-                    # >            ('RELOAD', 'SYSTICK_RELOAD', 1, (1 << 24) - 1),
-                    # >        ),
-                    # >    )
-                    # >
-
-                    case (field, key, minimum, maximum):
-
-                        items += [(key, SystemDatabaseMinMax(
-                            peripheral  = peripheral,
-                            register    = register,
-                            field       = field,
-                            minimum     = minimum,
-                            maximum     = maximum,
-                        ))]
-
-
-
-                    # Unsupported location format.
-
-                    case unknown:
-
-                        raise ValueError(
-                            f'Database location entry is '
-                            f'in an unknown format: {repr(unknown)}.'
-                        )
+                items += [(key, SystemDatabaseOptions(
+                    peripheral = peripheral,
+                    register   = register,
+                    field      = field,
+                    options    = value, # TODO Rename `options` to `value`.
+                ))]
 
 
 

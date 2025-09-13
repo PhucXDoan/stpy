@@ -232,11 +232,11 @@
         # TODO We're assuming a high internal voltage and wide range.
         #
 
-        ('PLL_CHANNEL_FREQ',   1_000_000, 250_000_000),
-        ('PLL_VCO_FREQ'    , 128_000_000, 560_000_000),
-        ('CPU_FREQ'        ,           0, 250_000_000),
-        ('AXI_AHB_FREQ'    ,           0, 250_000_000),
-        ('APB_FREQ'        ,           0, 250_000_000),
+        ('PLL_CHANNEL_FREQ', RealMinMax(  1_000_000, 250_000_000)),
+        ('PLL_VCO_FREQ'    , RealMinMax(128_000_000, 560_000_000)),
+        ('CPU_FREQ'        , RealMinMax(          0, 250_000_000)),
+        ('AXI_AHB_FREQ'    , RealMinMax(          0, 250_000_000)),
+        ('APB_FREQ'        , RealMinMax(          0, 250_000_000)),
 
     ),
     (
@@ -246,11 +246,11 @@
         ('SysTick',
 
             ('LOAD',
-                ('RELOAD', 'SYSTICK_RELOAD', 1, (1 << 24) - 1),
+                ('RELOAD', 'SYSTICK_RELOAD', IntMinMax(1, (1 << 24) - 1)),
             ),
 
             ('VAL',
-                ('CURRENT', 'SYSTICK_COUNTER', 0, (1 << 32) - 1),
+                ('CURRENT', 'SYSTICK_COUNTER', IntMinMax(0, (1 << 32) - 1)),
             ),
 
             ('CTRL',
@@ -271,7 +271,7 @@
                     '0b01',
                     '0b10',
                 )),
-                ('LATENCY', 'FLASH_LATENCY', 0b0000, 0b1111),
+                ('LATENCY', 'FLASH_LATENCY', IntMinMax(0b0000, 0b1111)),
             ),
 
         ),
@@ -365,7 +365,7 @@
                     (f'PLL{unit}REN', f'PLL{unit}R_ENABLE'),
                     (f'PLL{unit}QEN', f'PLL{unit}Q_ENABLE'),
                     (f'PLL{unit}PEN', f'PLL{unit}P_ENABLE'),
-                    (f'PLL{unit}M'  , f'PLL{unit}_PREDIVIDER', 1, 63),
+                    (f'PLL{unit}M'  , f'PLL{unit}_PREDIVIDER', IntMinMax(1, 63)),
                     (f'PLL{unit}SRC', f'PLL{unit}_KERNEL_SOURCE', {
                         None     : '0b00',
                         'HSI_CK' : '0b01',
@@ -384,10 +384,10 @@
 
             *(
                 (f'PLL{unit}DIVR',
-                    (f'PLL{unit}R', f'PLL{unit}R_DIVIDER'  , 1, 128),
-                    (f'PLL{unit}Q', f'PLL{unit}Q_DIVIDER'  , 1, 128),
-                    (f'PLL{unit}P', f'PLL{unit}P_DIVIDER'  , 1, 128),
-                    (f'PLL{unit}N', f'PLL{unit}_MULTIPLIER', 4, 512),
+                    (f'PLL{unit}R', f'PLL{unit}R_DIVIDER'  , IntMinMax(1, 128)),
+                    (f'PLL{unit}Q', f'PLL{unit}Q_DIVIDER'  , IntMinMax(1, 128)),
+                    (f'PLL{unit}P', f'PLL{unit}P_DIVIDER'  , IntMinMax(1, 128)),
+                    (f'PLL{unit}N', f'PLL{unit}_MULTIPLIER', IntMinMax(4, 512)),
                 )
                 for unit in (1, 2, 3)
             ),
@@ -543,7 +543,7 @@
 
         ('USART',
             ('BRR',
-                ('BRR', 'UXART_BAUD_DIVIDER', 1, 1 << 16),
+                ('BRR', 'UXART_BAUD_DIVIDER', IntMinMax(1, 1 << 16)),
             ),
         ),
 
@@ -551,9 +551,9 @@
 
         ('I2C',
             ('TIMINGR',
-                ('PRESC', 'I2C_PRESC', 0, 15 ),
-                ('SCLH' , 'I2C_SCLH' , 0, 255),
-                ('SCLL' , 'I2C_SCLL' , 0, 255),
+                ('PRESC', 'I2C_PRESC', IntMinMax(0, 15 )),
+                ('SCLH' , 'I2C_SCLH' , IntMinMax(0, 255)),
+                ('SCLL' , 'I2C_SCLL' , IntMinMax(0, 255)),
             ),
         ),
 
@@ -563,8 +563,8 @@
         *(
             (f'TIM{unit}',
                 ('PSC',
-                    ('PSC', f'TIM{unit}_DIVIDER'   , 1, 1 << 16),
-                    ('ARR', f'TIM{unit}_MODULATION', 1, 1 << (32 if unit in (2, 5) else 16)),
+                    ('PSC', f'TIM{unit}_DIVIDER'   , IntMinMax(1, 1 << 16)),
+                    ('ARR', f'TIM{unit}_MODULATION', IntMinMax(1, 1 << (32 if unit in (2, 5) else 16))),
                 ),
             )
             for unit in (1, 2, 3, 4, 5, 6, 7, 8, 12, 15)
