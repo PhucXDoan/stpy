@@ -6,58 +6,122 @@ from ..pxd.log       import log, ANSI
 
 
 ################################################################################
-#
-# Helper class for keeping track of values calculated in the clock-tree.
-#
 
 
 
-class ClockTreeBook:
-
-    def __init__(self, target):
-
-        self.target     = target
-        self.dictionary = {
-            None : 0, # No clock source, zero frequency.
-        }
+class SystemBlueprint:
 
 
 
-    def __setitem__(self, key, value):
-
-        # Prevent overwriting keys in the clock-tree book.
-
-        if key in self.dictionary:
-            raise RuntimeError(
-                f'Key {repr(key)} is already defined in the '
-                f'clock-tree book for target {repr(self.target.name)}.'
-            )
-
-        self.dictionary[key] = value
-
-        return value
+    def __init__(blueprint, target):
 
 
+
+        # Bucket key-value pairs are immutable after they are written
+        # except for whenever we are brute-forcing for new key-value pairs,
+        # but once the brute-forcing is over, these new key-value pairs
+        # will then also become immutable.
+
+        class SystemBlueprintBucket:
+
+            def __init__(bucket):
+                bucket.dictionary = {}
+                bucket.draft      = {}
+
+            def __setitem__(bucket, key, value):
+
+                if key in bucket.dictionary:
+                    raise RuntimeError(
+                        f'Key {repr(key)} is already defined in the '
+                        f'blueprint for target {repr(target.name)}.'
+                    )
+
+                if blueprint.bruteforcing:
+                    bucket.draft[key] = value
+                else:
+                    bucket.dictionary[key] = value
+
+
+
+        blueprint.target       = target
+        blueprint.bruteforcing = False
+        blueprint.interim      = SystemBlueprintBucket()
+        blueprint.settings     = SystemBlueprintBucket()
+
+
+
+    # All buckets must have disjoint dictionaries, so
+    # here we'll automatically get the value from the
+    # corresponding dictionary.
 
     def __getitem__(self, key):
 
-        # Ensure the key into the clock-tree book exists.
+        dictionaries = (
+            self.interim.draft,
+            self.interim.dictionary,
+            self.settings.draft,
+            self.settings.dictionary
+        )
 
-        if key not in self.dictionary:
-            raise RuntimeError(
-                f'No key {repr(key)} '
-                f'found in the clock-tree book '
-                f'for target {repr(self.target.name)}; '
-                f'closest matches are: '
-                f'{get_similars(key, self.dictionary.keys())}.'
-            )
+        values = [
+            dictionary[key]
+            for dictionary in dictionaries
+            if key in dictionary
+        ]
 
-        return self.dictionary[key]
+        match values:
+
+            case []:
+                raise RuntimeError(
+                    f'No key {repr(key)} in blueprint '
+                    f'for target {repr(self.target.name)}; '
+                    f'closest matches are: '
+                    f'{get_similars(
+                        key,
+                        (
+                            key
+                            for dictionary in dictionaries
+                            for key in dictionary.keys()
+                        )
+                    )}.'
+                )
+
+            case [value]:
+                return value
+
+            case _:
+                assert False, 'Buckets are expected to be disjoint.'
 
 
+
+    # Allows for easy print-debugging.
+    # TODO Improve.
 
     def __str__(self):
-        return stringify_table(self.dictionary.items())
+        return stringify_table((*self.interim.items(), *self.settings.items()))
+
+
+
+    # We can enter a state of brute-forcing where we will be
+    # creating key-value pairs, but they won't be finalized
+    # until the end of the brute-forcing (if successful at all).
+    # TODO Ensure function names are good.
+
+    def brute(self, function):
+
+        self.bruteforcing = True
+        success           = function()
+        self.bruteforcing = False
+
+        if not success:
+            raise RuntimeError(
+                f'Failed to brute-force {repr(function.__name__)} '
+                f'for target {repr(self.target.name)}.'
+            )
+
+        for bucket in (self.interim, self.settings):
+            bucket.dictionary |= bucket.draft
+            bucket.draft       = {}
 
 
 
@@ -124,17 +188,19 @@ class ClockTreeSchemaWrapper:
 
 def system_parameterize(target):
 
-    database = system_database[target.mcu]
-    book     = ClockTreeBook(target)
-    schema   = ClockTreeSchemaWrapper(target)
-    planner  = SystemPlanner(target)
+    database  = system_database[target.mcu]
+    schema    = ClockTreeSchemaWrapper(target)
+    blueprint = SystemBlueprint(target)
+
+
+    blueprint.interim[None] = 0
 
 
 
     ################################################################################
     #
     # Some clock frequencies are dictated by the schema,
-    # so we can just immediately add them to the book.
+    # so we can just immediately add them to the blueprint.
     # We'll check later on to make sure that the
     # frequencies are actually solvable.
     #
@@ -179,7 +245,7 @@ def system_parameterize(target):
 
 
     for key in keys:
-        book[key] = schema[key]
+        blueprint.interim[key] = schema[key]
 
 
 
@@ -201,22 +267,22 @@ def system_parameterize(target):
         case 'STM32H7S3L8H6':
 
             # @/pg 211/tbl 29/`H7S3rm`.
-            planner['FLASH_LATENCY']           = '0x7'
-            planner['FLASH_PROGRAMMING_DELAY'] = '0b11'
+            blueprint.settings['FLASH_LATENCY']           = '0x7'
+            blueprint.settings['FLASH_PROGRAMMING_DELAY'] = '0b11'
 
             # @/pg 327/sec 6.8.6/`H7S3rm`.
-            planner['INTERNAL_VOLTAGE_SCALING'] = 'high'
+            blueprint.settings['INTERNAL_VOLTAGE_SCALING'] = 'high'
 
 
 
         case 'STM32H533RET6':
 
             # @/pg 252/tbl 45/`H533rm`.
-            planner['FLASH_LATENCY']           = 5
-            planner['FLASH_PROGRAMMING_DELAY'] = '0b10'
+            blueprint.settings['FLASH_LATENCY']           = 5
+            blueprint.settings['FLASH_PROGRAMMING_DELAY'] = '0b10'
 
             # @/pg 438/sec 10.11.4/`H533rm`.
-            planner['INTERNAL_VOLTAGE_SCALING'] = 'VOS0'
+            blueprint.settings['INTERNAL_VOLTAGE_SCALING'] = 'VOS0'
 
 
 
@@ -242,11 +308,11 @@ def system_parameterize(target):
         # @/pg 286/tbl 44/`H7S3rm`.
         case 'STM32H7S3L8H6':
 
-            planner['SMPS_OUTPUT_LEVEL']       = None
-            planner['SMPS_FORCED_ON']          = None
-            planner['SMPS_ENABLE']             = False
-            planner['LDO_ENABLE']              = True
-            planner['POWER_MANAGEMENT_BYPASS'] = False
+            blueprint.settings['SMPS_OUTPUT_LEVEL']       = None
+            blueprint.settings['SMPS_FORCED_ON']          = None
+            blueprint.settings['SMPS_ENABLE']             = False
+            blueprint.settings['LDO_ENABLE']              = True
+            blueprint.settings['POWER_MANAGEMENT_BYPASS'] = False
 
 
 
@@ -254,8 +320,8 @@ def system_parameterize(target):
         # Note that the SMPS is not available. @/pg 402/sec 10.2/`H533rm`.
         case 'STM32H533RET6':
 
-            planner['LDO_ENABLE']              = True
-            planner['POWER_MANAGEMENT_BYPASS'] = False
+            blueprint.settings['LDO_ENABLE']              = True
+            blueprint.settings['POWER_MANAGEMENT_BYPASS'] = False
 
 
 
@@ -284,8 +350,8 @@ def system_parameterize(target):
     # @/pg 458/sec 11.4.2/`H533rm`.
     # TODO Handle other frequencies.
 
-    planner['HSI_ENABLE'] = schema['HSI_ENABLE']
-    book['HSI_CK']        = hsi_default_frequency if planner['HSI_ENABLE'] else 0
+    blueprint.settings['HSI_ENABLE'] = schema['HSI_ENABLE']
+    blueprint.interim['HSI_CK']        = hsi_default_frequency if blueprint['HSI_ENABLE'] else 0
 
 
 
@@ -293,8 +359,8 @@ def system_parameterize(target):
     # @/pg 363/sec 7.5.2/`H7S3rm`.
     # @/pg 460/sec 11.4.4/`H533rm`.
 
-    planner['HSI48_ENABLE'] = schema['HSI48_ENABLE']
-    book['HSI48_CK']        = 48_000_000 if planner['HSI48_ENABLE'] else 0
+    blueprint.settings['HSI48_ENABLE'] = schema['HSI48_ENABLE']
+    blueprint.interim['HSI48_CK']        = 48_000_000 if blueprint['HSI48_ENABLE'] else 0
 
 
 
@@ -302,15 +368,15 @@ def system_parameterize(target):
     # @/pg 362/sec 7.5.2/`H7S3rm`.
     # @/pg 459/sec 11.4.3/`H533rm`.
 
-    planner['CSI_ENABLE'] = schema['CSI_ENABLE']
-    book['CSI_CK']        = 4_000_000 if planner['CSI_ENABLE'] else 0
+    blueprint.settings['CSI_ENABLE'] = schema['CSI_ENABLE']
+    blueprint.interim['CSI_CK']        = 4_000_000 if blueprint['CSI_ENABLE'] else 0
 
 
 
     # TODO Not implemented yet.
 
-    book['HSE_CK'] = 0
-    book['LSE_CK'] = 0
+    blueprint.interim['HSE_CK'] = 0
+    blueprint.interim['LSE_CK'] = 0
 
 
 
@@ -322,8 +388,8 @@ def system_parameterize(target):
 
 
 
-    planner['PERIPHERAL_CLOCK_OPTION'] = schema['PERIPHERAL_CLOCK_OPTION']
-    book['PER_CK']                     = book[schema['PERIPHERAL_CLOCK_OPTION']]
+    blueprint.settings['PERIPHERAL_CLOCK_OPTION'] = schema['PERIPHERAL_CLOCK_OPTION']
+    blueprint.interim['PER_CK']                     = blueprint[schema['PERIPHERAL_CLOCK_OPTION']]
 
 
 
@@ -364,31 +430,31 @@ def system_parameterize(target):
 
     def each_vco_frequency(unit, kernel_frequency):
 
-        for planner[f'PLL{unit}_PREDIVIDER'] in database[f'PLL{unit}_PREDIVIDER']:
+        for blueprint.settings[f'PLL{unit}_PREDIVIDER'] in database[f'PLL{unit}_PREDIVIDER']:
 
 
 
             # Determine the range of the PLL input frequency.
             # TODO Simplify.
 
-            reference_frequency = kernel_frequency / planner[f'PLL{unit}_PREDIVIDER']
+            reference_frequency = kernel_frequency / blueprint[f'PLL{unit}_PREDIVIDER']
 
-            planner[f'PLL{unit}_INPUT_RANGE'] = next((
+            blueprint.settings[f'PLL{unit}_INPUT_RANGE'] = next((
                 (lower, upper)
                 for lower, upper in database[f'PLL{unit}_INPUT_RANGE'].options
                 if lower <= reference_frequency < upper
             ), None)
 
-            if planner[f'PLL{unit}_INPUT_RANGE'] is None:
+            if blueprint[f'PLL{unit}_INPUT_RANGE'] is None:
                 continue
 
 
 
             # Try every available multiplier that the PLL can handle.
 
-            for planner[f'PLL{unit}_MULTIPLIER'] in database[f'PLL{unit}_MULTIPLIER']:
+            for blueprint.settings[f'PLL{unit}_MULTIPLIER'] in database[f'PLL{unit}_MULTIPLIER']:
 
-                vco_frequency = reference_frequency * planner[f'PLL{unit}_MULTIPLIER']
+                vco_frequency = reference_frequency * blueprint[f'PLL{unit}_MULTIPLIER']
 
                 if vco_frequency not in database['PLL_VCO_FREQ']:
                     continue
@@ -435,7 +501,7 @@ def system_parameterize(target):
 
         # Got the channel divider!
 
-        planner[f'PLL{unit}_{channel}_DIVIDER'] = needed_divider
+        blueprint.settings[f'PLL{unit}_{channel}_DIVIDER'] = needed_divider
 
         return True
 
@@ -451,22 +517,22 @@ def system_parameterize(target):
 
         # TODO Unnecessary.
 
-        planner[f'PLL{unit}_PREDIVIDER' ] = None
-        planner[f'PLL{unit}_INPUT_RANGE'] = None
-        planner[f'PLL{unit}_MULTIPLIER' ] = None
+        blueprint.settings[f'PLL{unit}_PREDIVIDER' ] = None
+        blueprint.settings[f'PLL{unit}_INPUT_RANGE'] = None
+        blueprint.settings[f'PLL{unit}_MULTIPLIER' ] = None
         for channel in mk_dict(database['PLLS'])[unit]:
-            planner[f'PLL{unit}_{channel}_DIVIDER'] = None
+            blueprint.settings[f'PLL{unit}_{channel}_DIVIDER'] = None
 
 
 
         # See if the PLL unit is even used.
 
-        planner[f'PLL{unit}_ENABLE'] = not all(
+        blueprint.settings[f'PLL{unit}_ENABLE'] = not all(
             schema[f'PLL{unit}_{channel}_CK'] is None
             for channel in mk_dict(database['PLLS'])[unit]
         )
 
-        if not planner[f'PLL{unit}_ENABLE']:
+        if not blueprint[f'PLL{unit}_ENABLE']:
             return True
 
 
@@ -501,9 +567,9 @@ def system_parameterize(target):
 
             case 'STM32H7S3L8H6':
 
-                for planner['PLL_KERNEL_SOURCE'] in database['PLL_KERNEL_SOURCE']:
+                for blueprint.settings['PLL_KERNEL_SOURCE'] in database['PLL_KERNEL_SOURCE']:
 
-                    kernel_frequency     = book[planner['PLL_KERNEL_SOURCE']]
+                    kernel_frequency     = blueprint[blueprint['PLL_KERNEL_SOURCE']]
                     every_unit_satisfied = all(
                         parameterize_unit(units, kernel_frequency)
                         for units, channels in database['PLLS']
@@ -520,8 +586,8 @@ def system_parameterize(target):
 
                 every_unit_satisfied = all(
                     any(
-                        parameterize_unit(unit, book[planner[f'PLL{unit}_KERNEL_SOURCE']])
-                        for planner[f'PLL{unit}_KERNEL_SOURCE'] in database[f'PLL{unit}_KERNEL_SOURCE']
+                        parameterize_unit(unit, blueprint[blueprint[f'PLL{unit}_KERNEL_SOURCE']])
+                        for blueprint.settings[f'PLL{unit}_KERNEL_SOURCE'] in database[f'PLL{unit}_KERNEL_SOURCE']
                     )
                     for unit, channels in database['PLLS']
                 )
@@ -540,7 +606,7 @@ def system_parameterize(target):
 
 
 
-    planner.brute(parameterize_units)
+    blueprint.brute(parameterize_units)
 
 
 
@@ -553,27 +619,27 @@ def system_parameterize(target):
 
 
 
-    if book['CPU_CK'] not in database['CPU_FREQ']:
+    if blueprint['CPU_CK'] not in database['CPU_FREQ']:
         raise ValueError(
             f'CPU_CK is out of range: '
-            f'{book['CPU_CK'] :_}Hz.'
+            f'{blueprint['CPU_CK'] :_}Hz.'
         )
 
     for unit in database['APBS']:
-        if book[f'APB{unit}_CK'] not in database['APB_FREQ']:
+        if blueprint[f'APB{unit}_CK'] not in database['APB_FREQ']:
             raise ValueError(
                 f'APB{unit}_CK is out of range: '
-                f'{book[f'APB{unit}_CK'] :_}Hz.'
+                f'{blueprint[f'APB{unit}_CK'] :_}Hz.'
             )
 
     match target.mcu:
 
         case 'STM32H7S3L8H6':
 
-            if book['AXI_AHB_CK'] not in database['AXI_AHB_FREQ']:
+            if blueprint['AXI_AHB_CK'] not in database['AXI_AHB_FREQ']:
                 raise ValueError(
                     f'AXI_AHB_CK is out-of-range: '
-                    f'{book['AXI_AHB_CK'] :_}Hz.'
+                    f'{blueprint['AXI_AHB_CK'] :_}Hz.'
                 )
 
 
@@ -586,10 +652,10 @@ def system_parameterize(target):
 
     def parameterize_apb(unit):
 
-        needed_divider                = book['AXI_AHB_CK'] / book[f'APB{unit}_CK']
-        planner[f'APB{unit}_DIVIDER'] = database[f'APB{unit}_DIVIDER'].options.get(needed_divider, None)
+        needed_divider                = blueprint['AXI_AHB_CK'] / blueprint[f'APB{unit}_CK']
+        blueprint.settings[f'APB{unit}_DIVIDER'] = database[f'APB{unit}_DIVIDER'].options.get(needed_divider, None)
 
-        return planner[f'APB{unit}_DIVIDER'] is not None
+        return blueprint[f'APB{unit}_DIVIDER'] is not None
 
 
 
@@ -601,16 +667,16 @@ def system_parameterize(target):
 
     def parameterize_scgu():
 
-        for planner['SCGU_KERNEL_SOURCE'] in database['SCGU_KERNEL_SOURCE']:
+        for blueprint.settings['SCGU_KERNEL_SOURCE'] in database['SCGU_KERNEL_SOURCE']:
 
 
 
             # CPU.
 
-            needed_cpu_divider     = book[planner['SCGU_KERNEL_SOURCE']] / book['CPU_CK']
-            planner['CPU_DIVIDER'] = database['CPU_DIVIDER'].options.get(needed_cpu_divider, None)
+            needed_cpu_divider     = blueprint[blueprint['SCGU_KERNEL_SOURCE']] / blueprint['CPU_CK']
+            blueprint.settings['CPU_DIVIDER'] = database['CPU_DIVIDER'].options.get(needed_cpu_divider, None)
 
-            if planner['CPU_DIVIDER'] is None:
+            if blueprint['CPU_DIVIDER'] is None:
                 continue
 
 
@@ -621,17 +687,17 @@ def system_parameterize(target):
 
                 case 'STM32H7S3L8H6':
 
-                    needed_axi_ahb_divider     = book['CPU_CK'] / book['AXI_AHB_CK']
-                    planner['AXI_AHB_DIVIDER'] = database['AXI_AHB_DIVIDER'].options.get(needed_axi_ahb_divider, None)
+                    needed_axi_ahb_divider     = blueprint['CPU_CK'] / blueprint['AXI_AHB_CK']
+                    blueprint.settings['AXI_AHB_DIVIDER'] = database['AXI_AHB_DIVIDER'].options.get(needed_axi_ahb_divider, None)
 
-                    if planner['AXI_AHB_DIVIDER'] is None:
+                    if blueprint['AXI_AHB_DIVIDER'] is None:
                         continue
 
 
 
                 case 'STM32H533RET6':
 
-                    book['AXI_AHB_CK'] = book['CPU_CK']
+                    blueprint.interim['AXI_AHB_CK'] = blueprint['CPU_CK']
 
 
 
@@ -661,7 +727,7 @@ def system_parameterize(target):
 
 
 
-    planner.brute(parameterize_scgu)
+    blueprint.brute(parameterize_scgu)
 
 
 
@@ -697,16 +763,16 @@ def system_parameterize(target):
 
         # See if SysTick is even used.
 
-        planner['SYSTICK_ENABLE'] = book['SYSTICK_CK'] is not None
+        blueprint.settings['SYSTICK_ENABLE'] = blueprint['SYSTICK_CK'] is not None
 
-        if not planner['SYSTICK_ENABLE']:
+        if not blueprint['SYSTICK_ENABLE']:
             return True
 
 
 
         # Try different clock sources.
 
-        for planner['SYSTICK_USE_CPU_CK'] in database['SYSTICK_USE_CPU_CK']:
+        for blueprint.settings['SYSTICK_USE_CPU_CK'] in database['SYSTICK_USE_CPU_CK']:
 
 
 
@@ -714,10 +780,10 @@ def system_parameterize(target):
             # @/pg 621/sec B3.3.3/`Armv7-M`.
             # @/pg 1859/sec D1.2.238/`Armv8-M`.
 
-            if planner['SYSTICK_USE_CPU_CK']:
+            if blueprint['SYSTICK_USE_CPU_CK']:
 
                 kernel_frequencies = [
-                    book['CPU_CK']
+                    blueprint['CPU_CK']
                 ]
 
 
@@ -732,7 +798,7 @@ def system_parameterize(target):
                     case 'STM32H7S3L8H6':
 
                         kernel_frequencies = [
-                            book['CPU_CK'] / 8
+                            blueprint['CPU_CK'] / 8
                         ]
 
 
@@ -752,16 +818,16 @@ def system_parameterize(target):
 
             # Try out the different kernel frequencies and see what sticks.
 
-            for book['SYSTICK_KERNEL_FREQ'] in kernel_frequencies:
+            for blueprint.interim['SYSTICK_KERNEL_FREQ'] in kernel_frequencies:
 
-                planner['SYSTICK_RELOAD'] = book['SYSTICK_KERNEL_FREQ'] / book['SYSTICK_CK'] - 1
+                blueprint.settings['SYSTICK_RELOAD'] = blueprint['SYSTICK_KERNEL_FREQ'] / blueprint['SYSTICK_CK'] - 1
 
-                if not planner['SYSTICK_RELOAD'].is_integer():
+                if not blueprint['SYSTICK_RELOAD'].is_integer():
                     continue
 
-                planner['SYSTICK_RELOAD'] = int(planner['SYSTICK_RELOAD'])
+                blueprint.settings['SYSTICK_RELOAD'] = int(blueprint['SYSTICK_RELOAD'])
 
-                if planner['SYSTICK_RELOAD'] not in database['SYSTICK_RELOAD']:
+                if blueprint['SYSTICK_RELOAD'] not in database['SYSTICK_RELOAD']:
                     continue
 
                 return True
@@ -774,7 +840,7 @@ def system_parameterize(target):
 
 
 
-    planner.brute(parameterize)
+    blueprint.brute(parameterize)
 
 
 
@@ -831,7 +897,7 @@ def system_parameterize(target):
 
             # We found the desired divider!
 
-            planner[f'{peripheral}{unit}_BAUD_DIVIDER'] = needed_divider
+            blueprint.settings[f'{peripheral}{unit}_BAUD_DIVIDER'] = needed_divider
 
             return True
 
@@ -847,9 +913,9 @@ def system_parameterize(target):
 
             # TODO Unnecessary.
 
-            planner[f'UXART_{instances}_KERNEL_SOURCE'] = None
+            blueprint.settings[f'UXART_{instances}_KERNEL_SOURCE'] = None
             for instance in instances:
-                planner[f'{instance[0]}{instance[1]}_BAUD_DIVIDER'] = None
+                blueprint.settings[f'{instance[0]}{instance[1]}_BAUD_DIVIDER'] = None
 
 
 
@@ -868,9 +934,9 @@ def system_parameterize(target):
             # Try every available clock source for this
             # set of instances and see what sticks.
 
-            for planner[f'UXART_{instances}_KERNEL_SOURCE'] in database[f'UXART_{instances}_KERNEL_SOURCE']:
+            for blueprint.settings[f'UXART_{instances}_KERNEL_SOURCE'] in database[f'UXART_{instances}_KERNEL_SOURCE']:
 
-                kernel_frequency         = book[planner[f'UXART_{instances}_KERNEL_SOURCE']]
+                kernel_frequency         = blueprint[blueprint[f'UXART_{instances}_KERNEL_SOURCE']]
                 every_instance_satisfied = all(
                     parameterize_instance(kernel_frequency, instance)
                     for instance in instances
@@ -887,7 +953,7 @@ def system_parameterize(target):
 
 
 
-        planner.brute(parameterize_instances)
+        blueprint.brute(parameterize_instances)
 
 
 
@@ -913,7 +979,7 @@ def system_parameterize(target):
 
             if needed_baud is None:
 
-                planner[f'I2C{unit}_KERNEL_SOURCE'] = None
+                blueprint.settings[f'I2C{unit}_KERNEL_SOURCE'] = None
 
                 return True
 
@@ -928,7 +994,7 @@ def system_parameterize(target):
 
             for kernel_source in database[f'I2C{unit}_KERNEL_SOURCE']:
 
-                kernel_frequency = book[kernel_source] or 0
+                kernel_frequency = blueprint[kernel_source] or 0
 
                 for presc in database['I2C_PRESC']:
 
@@ -957,9 +1023,9 @@ def system_parameterize(target):
 
                     if best_baud_error is None or actual_baud_error < best_baud_error:
                         best_baud_error                     = actual_baud_error
-                        planner[f'I2C{unit}_KERNEL_SOURCE'] = kernel_source
-                        planner[f'I2C{unit}_PRESC'        ] = presc
-                        planner[f'I2C{unit}_SCL'          ] = scl
+                        blueprint.settings[f'I2C{unit}_KERNEL_SOURCE'] = kernel_source
+                        blueprint.settings[f'I2C{unit}_PRESC'        ] = presc
+                        blueprint.settings[f'I2C{unit}_SCL'          ] = scl
 
 
 
@@ -969,7 +1035,7 @@ def system_parameterize(target):
 
 
 
-        planner.brute(parameterize)
+        blueprint.brute(parameterize)
 
 
 
@@ -1020,11 +1086,11 @@ def system_parameterize(target):
                     (True , '0b110') : 1 / 2,
                     (True , '0b111') : 1 / 4,
                 }[(
-                    planner['GLOBAL_TIMER_PRESCALER'],
-                    planner[f'APB{apb}_DIVIDER'])
+                    blueprint['GLOBAL_TIMER_PRESCALER'],
+                    blueprint[f'APB{apb}_DIVIDER'])
                 ]
 
-                kernel_frequency = book[f'AXI_AHB_CK'] * multiplier
+                kernel_frequency = blueprint[f'AXI_AHB_CK'] * multiplier
 
 
 
@@ -1035,9 +1101,9 @@ def system_parameterize(target):
         # Find the pair of divider and modulation values to
         # get an output frequency that's within tolerance.
 
-        for planner[f'TIM{unit}_DIVIDER'] in database[f'TIM{unit}_DIVIDER']:
+        for blueprint.settings[f'TIM{unit}_DIVIDER'] in database[f'TIM{unit}_DIVIDER']:
 
-            counter_frequency = kernel_frequency / planner[f'TIM{unit}_DIVIDER']
+            counter_frequency = kernel_frequency / blueprint[f'TIM{unit}_DIVIDER']
 
 
 
@@ -1047,19 +1113,19 @@ def system_parameterize(target):
             # for the rate, anyways we might as well
             # round up to 1.
 
-            planner[f'TIM{unit}_MODULATION'] = round(counter_frequency / needed_rate)
+            blueprint.settings[f'TIM{unit}_MODULATION'] = round(counter_frequency / needed_rate)
 
-            if planner[f'TIM{unit}_MODULATION'] == 0:
-                planner[f'TIM{unit}_MODULATION'] = 1
+            if blueprint[f'TIM{unit}_MODULATION'] == 0:
+                blueprint.settings[f'TIM{unit}_MODULATION'] = 1
 
-            if planner[f'TIM{unit}_MODULATION'] not in database[f'TIM{unit}_MODULATION']:
+            if blueprint[f'TIM{unit}_MODULATION'] not in database[f'TIM{unit}_MODULATION']:
                 continue
 
 
 
             # See if things are within tolerance.
 
-            actual_rate  = counter_frequency / planner[f'TIM{unit}_MODULATION']
+            actual_rate  = counter_frequency / blueprint[f'TIM{unit}_MODULATION']
             actual_error = abs(1 - actual_rate / needed_rate)
 
             if actual_error <= 0.001: # TODO Ad-hoc.
@@ -1086,12 +1152,12 @@ def system_parameterize(target):
 
 
         if not units_to_be_parameterized:
-            planner['GLOBAL_TIMER_PRESCALER'] = None
+            blueprint.settings['GLOBAL_TIMER_PRESCALER'] = None
             return True
 
 
 
-        for planner['GLOBAL_TIMER_PRESCALER'] in database['GLOBAL_TIMER_PRESCALER']:
+        for blueprint.settings['GLOBAL_TIMER_PRESCALER'] in database['GLOBAL_TIMER_PRESCALER']:
 
             every_unit_satisfied = all(
                 parameterize_unit(unit)
@@ -1110,7 +1176,7 @@ def system_parameterize(target):
 
 
     if 'TIMERS' in database:
-        planner.brute(parameterize_units)
+        blueprint.brute(parameterize_units)
 
 
 
@@ -1123,9 +1189,11 @@ def system_parameterize(target):
 
     schema.done()
 
-    planner.done_parameterize()
+    planner = SystemPlanner(target)
 
-    return planner, book.dictionary
+    planner.dictionary = blueprint.settings.dictionary
+
+    return planner, blueprint.interim.dictionary
 
 
 

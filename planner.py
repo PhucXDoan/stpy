@@ -100,27 +100,6 @@ class SystemPlanner:
 
 
 
-    # We can enter a state of brute-forcing where we will be
-    # creating key-value pairs, but they won't be finalized until
-    # the end of the brute-forcing, if successful at all.
-
-    def brute(self, function):
-
-        self.draft = {}
-
-        success = function()
-
-        if not success:
-            raise RuntimeError(
-                f'Could not brute-force configurations '
-                f'that satisfies the system parameterization.'
-            )
-
-        self.dictionary |= self.draft
-        self.draft       = None
-
-
-
     # Create a peripheral-register-field-value tuple,
     # typically for register reads and writes.
 
