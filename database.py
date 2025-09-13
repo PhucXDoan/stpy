@@ -1,4 +1,4 @@
-import types, pathlib, re, collections
+import pathlib, collections
 
 
 
@@ -47,25 +47,26 @@ for mcu in dict.fromkeys( # TODO Cleaner way to determine the MCUs?
 
 
 
-    # Load and evaluate the Python expression.
+    # Parse the database file.
 
-    database_file_path = pathlib.Path(__file__).parent.joinpath(f'mcu/{mcu}.py')
-
-
-    constants, location_tree = eval(database_file_path.read_text(), { 'RealMinMax' : RealMinMax, 'IntMinMax' : IntMinMax }, {})
-    items                    = []
-    locations                = []
-
-
-
-    # Parse the constants.
-
-    items += constants
-
+    locationless_properties, location_tree = eval(
+        pathlib.Path(__file__)
+            .parent
+            .joinpath(f'mcu/{mcu}.py')
+            .read_text(),
+        {
+            'RealMinMax' : RealMinMax,
+            'IntMinMax'  : IntMinMax,
+        },
+        {},
+    )
 
 
 
-    # Parse the locations.
+    # Organize the entries' values and locations.
+
+    properties = list(locationless_properties)
+    locations  = []
 
     for peripheral, *register_tree in location_tree:
 
@@ -73,22 +74,37 @@ for mcu in dict.fromkeys( # TODO Cleaner way to determine the MCUs?
 
             for field, key, *value in field_tree:
 
+
+
+                # If a value field is not explicitly given,
+                # we assume it's a single-bit field.
+                # e.g:
+                # >
+                # >    ('RCC',
+                # >        ('CR',
+                # >            ('HSION', 'HSI_ENABLE'),
+                # >        ),
+                # >    ),
+                # >
+
                 if value:
                     value, = value
                 else:
                     value = (False, True)
 
-                locations += [(key, (peripheral, register, field))]
-                items += [(key, value)]
+
+
+                properties += [(key, value)]
+                locations  += [(key, (peripheral, register, field))]
 
 
 
-    # TODO Should we allow for redundant locations?
+    # Sanity checks.
 
     if duplicate_keys := [
         key
         for key, count in collections.Counter(
-            key for key, entry in items
+            key for key, value in properties
         ).items()
         if count >= 2
     ]:
@@ -100,10 +116,8 @@ for mcu in dict.fromkeys( # TODO Cleaner way to determine the MCUs?
             f'entry with the key {repr(duplicate_key)}.'
         )
 
-
-
-    system_properties[mcu] = dict(items)
-    system_locations[mcu] = dict(locations)
+    system_properties[mcu] = dict(properties)
+    system_locations [mcu] = dict(locations )
 
 
 
