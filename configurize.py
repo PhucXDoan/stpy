@@ -49,7 +49,7 @@ INTERRUPTS_THAT_MUST_BE_DEFINED = (
 
 def system_configurize(Meta, target, planner):
 
-    database = system_properties[target.mcu]
+    properties = system_properties[target.mcu]
 
     def put_title(title = None):
 
@@ -78,9 +78,9 @@ def system_configurize(Meta, target, planner):
 
 
     for key, value in planner.dictionary.items():
-        if key in database and isinstance(database[key], dict):
-            if planner.dictionary[key] in database[key]:
-                planner.dictionary[key] = database[key][planner.dictionary[key]]
+        if key in properties and isinstance(properties[key], dict):
+            if planner.dictionary[key] in properties[key]:
+                planner.dictionary[key] = properties[key][planner.dictionary[key]]
 
 
 
@@ -93,24 +93,15 @@ def system_configurize(Meta, target, planner):
     # to be used by the target eists.
 
     for interrupt, niceness in target.interrupts:
-        if interrupt not in database['INTERRUPTS']:
+        if interrupt not in properties['INTERRUPTS']:
 
             raise ValueError(
                 f'For target {repr(target.name)}, '
                 f'no such interrupt {repr(interrupt)} '
                 f'exists on {repr(target.mcu)}; '
                 f'did you mean any of the following? : '
-                f'{difflib.get_close_matches(interrupt, database['INTERRUPTS'].keys(), n = 5, cutoff = 0)}'
+                f'{difflib.get_close_matches(interrupt, properties['INTERRUPTS'].keys(), n = 5, cutoff = 0)}'
             )
-
-
-    ################################################################################
-
-
-
-    # The database is how we will figure out which register to write and where.
-
-    database = database
 
 
 
@@ -181,7 +172,7 @@ def system_configurize(Meta, target, planner):
             f'GPIO{gpio.port}',
             'OSPEEDR',
             f'OSPEED{gpio.number}',
-            database['GPIO_SPEED'][gpio.speed]
+            properties['GPIO_SPEED'][gpio.speed]
         )
         for gpio in gpios
         if gpio.pin   is not None
@@ -197,7 +188,7 @@ def system_configurize(Meta, target, planner):
             f'GPIO{gpio.port}',
             'PUPDR',
             f'PUPD{gpio.number}',
-            database['GPIO_PULL'][gpio.pull]
+            properties['GPIO_PULL'][gpio.pull]
         )
         for gpio in gpios
         if gpio.pin  is not None
@@ -229,7 +220,7 @@ def system_configurize(Meta, target, planner):
             f'GPIO{gpio.port}',
             'MODER',
             f'MODE{gpio.number}',
-            database['GPIO_MODE'][gpio.mode]
+            properties['GPIO_MODE'][gpio.mode]
         )
         for gpio in gpios
         if gpio.pin  is not None
@@ -250,7 +241,7 @@ def system_configurize(Meta, target, planner):
 
     for routine in OrderedSet((
         *INTERRUPTS_THAT_MUST_BE_DEFINED,
-        *database['INTERRUPTS']
+        *properties['INTERRUPTS']
     )):
 
 
@@ -299,7 +290,7 @@ def system_configurize(Meta, target, planner):
 
         # Set the Arm-specific interrupts' priorities.
 
-        if database['INTERRUPTS'].index(interrupt) <= 14:
+        if properties['INTERRUPTS'].index(interrupt) <= 14:
 
             assert interrupt in (
                 'MemoryManagement',
@@ -500,7 +491,7 @@ def system_configurize(Meta, target, planner):
 
         # Configure each PLL.
 
-        for unit, channels in database['PLLS']:
+        for unit, channels in properties['PLLS']:
 
 
 
@@ -558,14 +549,14 @@ def system_configurize(Meta, target, planner):
 
     CMSIS_SET(
         planner.tuple(f'PLL{unit}_ENABLE')
-        for unit, channels in database['PLLS']
+        for unit, channels in properties['PLLS']
     )
 
 
 
     # Ensure each enabled PLL unit has stabilized.
 
-    for unit, channels in database['PLLS']:
+    for unit, channels in properties['PLLS']:
 
         pllx_enable = planner[f'PLL{unit}_ENABLE']
 
@@ -592,7 +583,7 @@ def system_configurize(Meta, target, planner):
                 planner.tuple('AXI_AHB_DIVIDER'),
                 *(
                     planner.tuple(f'APB{unit}_DIVIDER')
-                    for unit in database['APBS']
+                    for unit in properties['APBS']
                 ),
             )
 
@@ -601,7 +592,7 @@ def system_configurize(Meta, target, planner):
                 planner.tuple('CPU_DIVIDER'),
                 *(
                     planner.tuple(f'APB{unit}_DIVIDER')
-                    for unit in database['APBS']
+                    for unit in properties['APBS']
                 ),
             )
 
@@ -647,7 +638,7 @@ def system_configurize(Meta, target, planner):
 
 
 
-    for instances in database.get('UXARTS', ()):
+    for instances in properties.get('UXARTS', ()):
 
         if planner[f'UXART_{instances}_KERNEL_SOURCE'] is None:
             continue
@@ -683,7 +674,7 @@ def system_configurize(Meta, target, planner):
 
 
 
-    for unit in database.get('I2CS', ()):
+    for unit in properties.get('I2CS', ()):
 
         if planner[f'I2C{unit}_KERNEL_SOURCE'] is None:
             continue
@@ -706,7 +697,7 @@ def system_configurize(Meta, target, planner):
 
         Meta.define(f'GLOBAL_TIMER_PRESCALER_init', planner['GLOBAL_TIMER_PRESCALER'])
 
-        for unit in database.get('TIMERS', ()):
+        for unit in properties.get('TIMERS', ()):
 
             if planner.dictionary.get(f'TIM{unit}_DIVIDER', None) is not None:
                 Meta.define(f'TIM{unit}_DIVIDER_init', f'({planner[f'TIM{unit}_DIVIDER']} - 1)')

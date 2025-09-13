@@ -188,9 +188,9 @@ class ClockTreeSchemaWrapper:
 
 def system_parameterize(target):
 
-    database  = system_properties[target.mcu]
-    schema    = ClockTreeSchemaWrapper(target)
-    blueprint = SystemBlueprint(target)
+    properties = system_properties[target.mcu]
+    schema     = ClockTreeSchemaWrapper(target)
+    blueprint  = SystemBlueprint(target)
 
 
     blueprint.interim[None] = 0
@@ -231,14 +231,14 @@ def system_parameterize(target):
 
     keys += [
         f'APB{unit}_CK'
-        for unit in database['APBS']
+        for unit in properties['APBS']
     ]
 
 
 
     keys += [
         f'PLL{unit}_{channel}_CK'
-        for unit, channels in database['PLLS']
+        for unit, channels in properties['PLLS']
         for channel in channels
     ]
 
@@ -336,7 +336,7 @@ def system_parameterize(target):
 
 
 
-    # TODO Put in database.
+    # TODO Put in properties.
 
     hsi_default_frequency = {
         'STM32H7S3L8H6' : 64_000_000,
@@ -405,7 +405,7 @@ def system_parameterize(target):
 
 
 
-    for unit, channels in database['PLLS']:
+    for unit, channels in properties['PLLS']:
 
         for channel in channels:
 
@@ -414,7 +414,7 @@ def system_parameterize(target):
             if goal_frequency is None:
                 continue
 
-            if goal_frequency not in database['PLL_CHANNEL_FREQ']:
+            if goal_frequency not in properties['PLL_CHANNEL_FREQ']:
                 raise ValueError(
                     f'PLL{unit}_{channel}_CK frequency is '
                     f'out of range: {goal_frequency :_}Hz.'
@@ -430,7 +430,7 @@ def system_parameterize(target):
 
     def each_vco_frequency(unit, kernel_frequency):
 
-        for blueprint.settings[f'PLL{unit}_PREDIVIDER'] in database[f'PLL{unit}_PREDIVIDER']:
+        for blueprint.settings[f'PLL{unit}_PREDIVIDER'] in properties[f'PLL{unit}_PREDIVIDER']:
 
 
 
@@ -441,7 +441,7 @@ def system_parameterize(target):
 
             blueprint.settings[f'PLL{unit}_INPUT_RANGE'] = next((
                 (lower, upper)
-                for lower, upper in database[f'PLL{unit}_INPUT_RANGE']
+                for lower, upper in properties[f'PLL{unit}_INPUT_RANGE']
                 if lower <= reference_frequency < upper
             ), None)
 
@@ -452,11 +452,11 @@ def system_parameterize(target):
 
             # Try every available multiplier that the PLL can handle.
 
-            for blueprint.settings[f'PLL{unit}_MULTIPLIER'] in database[f'PLL{unit}_MULTIPLIER']:
+            for blueprint.settings[f'PLL{unit}_MULTIPLIER'] in properties[f'PLL{unit}_MULTIPLIER']:
 
                 vco_frequency = reference_frequency * blueprint[f'PLL{unit}_MULTIPLIER']
 
-                if vco_frequency not in database['PLL_VCO_FREQ']:
+                if vco_frequency not in properties['PLL_VCO_FREQ']:
                     continue
 
                 yield vco_frequency
@@ -494,7 +494,7 @@ def system_parameterize(target):
 
             needed_divider = int(needed_divider)
 
-            if needed_divider not in database[f'PLL{unit}{channel}_DIVIDER']:
+            if needed_divider not in properties[f'PLL{unit}{channel}_DIVIDER']:
                 return False
 
 
@@ -520,7 +520,7 @@ def system_parameterize(target):
         blueprint.settings[f'PLL{unit}_PREDIVIDER' ] = None
         blueprint.settings[f'PLL{unit}_INPUT_RANGE'] = None
         blueprint.settings[f'PLL{unit}_MULTIPLIER' ] = None
-        for channel in mk_dict(database['PLLS'])[unit]:
+        for channel in mk_dict(properties['PLLS'])[unit]:
             blueprint.settings[f'PLL{unit}_{channel}_DIVIDER'] = None
 
 
@@ -529,7 +529,7 @@ def system_parameterize(target):
 
         blueprint.settings[f'PLL{unit}_ENABLE'] = not all(
             schema[f'PLL{unit}_{channel}_CK'] is None
-            for channel in mk_dict(database['PLLS'])[unit]
+            for channel in mk_dict(properties['PLLS'])[unit]
         )
 
         if not blueprint[f'PLL{unit}_ENABLE']:
@@ -543,7 +543,7 @@ def system_parameterize(target):
 
             every_channel_satisfied = all(
                 parameterize_channel(unit, vco_frequency, channel)
-                for channel in mk_dict(database['PLLS'])[unit]
+                for channel in mk_dict(properties['PLLS'])[unit]
             )
 
             if every_channel_satisfied:
@@ -567,12 +567,12 @@ def system_parameterize(target):
 
             case 'STM32H7S3L8H6':
 
-                for blueprint.settings['PLL_KERNEL_SOURCE'] in database['PLL_KERNEL_SOURCE']:
+                for blueprint.settings['PLL_KERNEL_SOURCE'] in properties['PLL_KERNEL_SOURCE']:
 
                     kernel_frequency     = blueprint[blueprint['PLL_KERNEL_SOURCE']]
                     every_unit_satisfied = all(
                         parameterize_unit(units, kernel_frequency)
-                        for units, channels in database['PLLS']
+                        for units, channels in properties['PLLS']
                     )
 
                     if every_unit_satisfied:
@@ -587,9 +587,9 @@ def system_parameterize(target):
                 every_unit_satisfied = all(
                     any(
                         parameterize_unit(unit, blueprint[blueprint[f'PLL{unit}_KERNEL_SOURCE']])
-                        for blueprint.settings[f'PLL{unit}_KERNEL_SOURCE'] in database[f'PLL{unit}_KERNEL_SOURCE']
+                        for blueprint.settings[f'PLL{unit}_KERNEL_SOURCE'] in properties[f'PLL{unit}_KERNEL_SOURCE']
                     )
-                    for unit, channels in database['PLLS']
+                    for unit, channels in properties['PLLS']
                 )
 
                 return every_unit_satisfied
@@ -619,14 +619,14 @@ def system_parameterize(target):
 
 
 
-    if blueprint['CPU_CK'] not in database['CPU_FREQ']:
+    if blueprint['CPU_CK'] not in properties['CPU_FREQ']:
         raise ValueError(
             f'CPU_CK is out of range: '
             f'{blueprint['CPU_CK'] :_}Hz.'
         )
 
-    for unit in database['APBS']:
-        if blueprint[f'APB{unit}_CK'] not in database['APB_FREQ']:
+    for unit in properties['APBS']:
+        if blueprint[f'APB{unit}_CK'] not in properties['APB_FREQ']:
             raise ValueError(
                 f'APB{unit}_CK is out of range: '
                 f'{blueprint[f'APB{unit}_CK'] :_}Hz.'
@@ -636,7 +636,7 @@ def system_parameterize(target):
 
         case 'STM32H7S3L8H6':
 
-            if blueprint['AXI_AHB_CK'] not in database['AXI_AHB_FREQ']:
+            if blueprint['AXI_AHB_CK'] not in properties['AXI_AHB_FREQ']:
                 raise ValueError(
                     f'AXI_AHB_CK is out-of-range: '
                     f'{blueprint['AXI_AHB_CK'] :_}Hz.'
@@ -653,7 +653,7 @@ def system_parameterize(target):
     def parameterize_apb(unit):
 
         needed_divider                = blueprint['AXI_AHB_CK'] / blueprint[f'APB{unit}_CK']
-        blueprint.settings[f'APB{unit}_DIVIDER'] = database[f'APB{unit}_DIVIDER'].get(needed_divider, None)
+        blueprint.settings[f'APB{unit}_DIVIDER'] = properties[f'APB{unit}_DIVIDER'].get(needed_divider, None)
 
         return blueprint[f'APB{unit}_DIVIDER'] is not None
 
@@ -667,14 +667,14 @@ def system_parameterize(target):
 
     def parameterize_scgu():
 
-        for blueprint.settings['SCGU_KERNEL_SOURCE'] in database['SCGU_KERNEL_SOURCE']:
+        for blueprint.settings['SCGU_KERNEL_SOURCE'] in properties['SCGU_KERNEL_SOURCE']:
 
 
 
             # CPU.
 
             needed_cpu_divider     = blueprint[blueprint['SCGU_KERNEL_SOURCE']] / blueprint['CPU_CK']
-            blueprint.settings['CPU_DIVIDER'] = database['CPU_DIVIDER'].get(needed_cpu_divider, None)
+            blueprint.settings['CPU_DIVIDER'] = properties['CPU_DIVIDER'].get(needed_cpu_divider, None)
 
             if blueprint['CPU_DIVIDER'] is None:
                 continue
@@ -688,7 +688,7 @@ def system_parameterize(target):
                 case 'STM32H7S3L8H6':
 
                     needed_axi_ahb_divider     = blueprint['CPU_CK'] / blueprint['AXI_AHB_CK']
-                    blueprint.settings['AXI_AHB_DIVIDER'] = database['AXI_AHB_DIVIDER'].get(needed_axi_ahb_divider, None)
+                    blueprint.settings['AXI_AHB_DIVIDER'] = properties['AXI_AHB_DIVIDER'].get(needed_axi_ahb_divider, None)
 
                     if blueprint['AXI_AHB_DIVIDER'] is None:
                         continue
@@ -709,7 +709,7 @@ def system_parameterize(target):
 
             every_apb_satisfied = all(
                 parameterize_apb(unit)
-                for unit in database['APBS']
+                for unit in properties['APBS']
             )
 
             if not every_apb_satisfied:
@@ -772,7 +772,7 @@ def system_parameterize(target):
 
         # Try different clock sources.
 
-        for blueprint.settings['SYSTICK_USE_CPU_CK'] in database['SYSTICK_USE_CPU_CK']:
+        for blueprint.settings['SYSTICK_USE_CPU_CK'] in properties['SYSTICK_USE_CPU_CK']:
 
 
 
@@ -827,7 +827,7 @@ def system_parameterize(target):
 
                 blueprint.settings['SYSTICK_RELOAD'] = int(blueprint['SYSTICK_RELOAD'])
 
-                if blueprint['SYSTICK_RELOAD'] not in database['SYSTICK_RELOAD']:
+                if blueprint['SYSTICK_RELOAD'] not in properties['SYSTICK_RELOAD']:
                     continue
 
                 return True
@@ -858,7 +858,7 @@ def system_parameterize(target):
     # baud-rate divider, but nonetheless, we must process each set
     # of connected UXART peripherals as a whole.
 
-    for instances in database.get('UXARTS', ()):
+    for instances in properties.get('UXARTS', ()):
 
 
 
@@ -890,7 +890,7 @@ def system_parameterize(target):
 
             needed_divider = int(needed_divider)
 
-            if needed_divider not in database['UXART_BAUD_DIVIDER']:
+            if needed_divider not in properties['UXART_BAUD_DIVIDER']:
                 return False
 
 
@@ -934,7 +934,7 @@ def system_parameterize(target):
             # Try every available clock source for this
             # set of instances and see what sticks.
 
-            for blueprint.settings[f'UXART_{instances}_KERNEL_SOURCE'] in database[f'UXART_{instances}_KERNEL_SOURCE']:
+            for blueprint.settings[f'UXART_{instances}_KERNEL_SOURCE'] in properties[f'UXART_{instances}_KERNEL_SOURCE']:
 
                 kernel_frequency         = blueprint[blueprint[f'UXART_{instances}_KERNEL_SOURCE']]
                 every_instance_satisfied = all(
@@ -965,7 +965,7 @@ def system_parameterize(target):
 
 
 
-    for unit in database.get('I2CS', ()):
+    for unit in properties.get('I2CS', ()):
 
 
 
@@ -992,11 +992,11 @@ def system_parameterize(target):
 
             best_baud_error = None
 
-            for kernel_source in database[f'I2C{unit}_KERNEL_SOURCE']:
+            for kernel_source in properties[f'I2C{unit}_KERNEL_SOURCE']:
 
                 kernel_frequency = blueprint[kernel_source] or 0
 
-                for presc in database['I2C_PRESC']:
+                for presc in properties['I2C_PRESC']:
 
 
 
@@ -1004,10 +1004,10 @@ def system_parameterize(target):
 
                     scl = round(kernel_frequency / (presc + 1) / needed_baud / 2)
 
-                    if scl not in database['I2C_SCLH']:
+                    if scl not in properties['I2C_SCLH']:
                         continue
 
-                    if scl not in database['I2C_SCLL']:
+                    if scl not in properties['I2C_SCLL']:
                         continue
 
 
@@ -1101,7 +1101,7 @@ def system_parameterize(target):
         # Find the pair of divider and modulation values to
         # get an output frequency that's within tolerance.
 
-        for blueprint.settings[f'TIM{unit}_DIVIDER'] in database[f'TIM{unit}_DIVIDER']:
+        for blueprint.settings[f'TIM{unit}_DIVIDER'] in properties[f'TIM{unit}_DIVIDER']:
 
             counter_frequency = kernel_frequency / blueprint[f'TIM{unit}_DIVIDER']
 
@@ -1118,7 +1118,7 @@ def system_parameterize(target):
             if blueprint[f'TIM{unit}_MODULATION'] == 0:
                 blueprint.settings[f'TIM{unit}_MODULATION'] = 1
 
-            if blueprint[f'TIM{unit}_MODULATION'] not in database[f'TIM{unit}_MODULATION']:
+            if blueprint[f'TIM{unit}_MODULATION'] not in properties[f'TIM{unit}_MODULATION']:
                 continue
 
 
@@ -1145,7 +1145,7 @@ def system_parameterize(target):
 
         units_to_be_parameterized = [
             unit
-            for unit in database['TIMERS']
+            for unit in properties['TIMERS']
             if schema[f'TIM{unit}_RATE'] is not None
         ]
 
@@ -1157,7 +1157,7 @@ def system_parameterize(target):
 
 
 
-        for blueprint.settings['GLOBAL_TIMER_PRESCALER'] in database['GLOBAL_TIMER_PRESCALER']:
+        for blueprint.settings['GLOBAL_TIMER_PRESCALER'] in properties['GLOBAL_TIMER_PRESCALER']:
 
             every_unit_satisfied = all(
                 parameterize_unit(unit)
@@ -1175,7 +1175,7 @@ def system_parameterize(target):
 
 
 
-    if 'TIMERS' in database:
+    if 'TIMERS' in properties:
         blueprint.brute(parameterize_units)
 
 
