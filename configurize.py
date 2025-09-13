@@ -1,5 +1,5 @@
 import collections, builtins, difflib
-from ..stpy.database import system_database, SystemDatabaseOptions
+from ..stpy.database import system_database, system_locations
 from ..stpy.gpio     import process_all_gpios
 from ..stpy.helpers  import get_helpers
 from ..pxd.utils     import OrderedSet
@@ -78,7 +78,7 @@ def system_configurize(Meta, target, planner):
 
 
     for key, value in planner.dictionary.items():
-        if key in database and isinstance(database[key], SystemDatabaseOptions) and isinstance(database[key].options, dict):
+        if key in database and isinstance(database[key], dict):
             if planner.dictionary[key] in database[key]:
                 planner.dictionary[key] = database[key][planner.dictionary[key]]
 
@@ -142,12 +142,7 @@ def system_configurize(Meta, target, planner):
     # Enable GPIO ports that have defined pins.
 
     CMSIS_SET(
-        (
-            database[f'GPIO{port}_ENABLE'].peripheral,
-            database[f'GPIO{port}_ENABLE'].register,
-            database[f'GPIO{port}_ENABLE'].field,
-            True
-        )
+        (*system_locations[target.mcu][f'GPIO{port}_ENABLE'], True)
         for port in sorted(OrderedSet(
             gpio.port
             for gpio in gpios
@@ -186,7 +181,7 @@ def system_configurize(Meta, target, planner):
             f'GPIO{gpio.port}',
             'OSPEEDR',
             f'OSPEED{gpio.number}',
-            database['GPIO_SPEED'].options[gpio.speed]
+            database['GPIO_SPEED'][gpio.speed]
         )
         for gpio in gpios
         if gpio.pin   is not None

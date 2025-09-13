@@ -3,45 +3,7 @@ import types, pathlib, re, collections
 
 
 ################################################################################
-#
-# For database entries with a list of valid values given explicitly.
-# e.g:
-# >
-# >    ('IWDG',
-# >        ('KR',
-# >            ('KEY', 'IWDG_KEY', (
-# >                '0xAAAA',
-# >                '0x5555',
-# >                '0xCCCC',
-# >            )),
-# >        ),
-# >    )
-# >
-#
 
-
-
-class SystemDatabaseOptions(types.SimpleNamespace):
-
-
-
-    # Allow for easy iteration over the possible options.
-
-    def __iter__(self):
-        return iter(self.options)
-
-    def __contains__(self, value): # TODO Not necessary.
-        return value in self.options
-
-
-    # Index into the option table.
-
-    def __getitem__(self, key):
-        return self.options[key]
-
-
-
-################################################################################
 
 
 class RealMinMax:
@@ -70,15 +32,13 @@ class IntMinMax:
 
 
 ################################################################################
-#
-# Parse each MCU's database expression.
-#
 
 
 
-system_database = {}
+system_locations = {}
+system_database  = {}
 
-for mcu in dict.fromkeys(
+for mcu in dict.fromkeys( # TODO Cleaner way to determine the MCUs?
     item.stem
     for item in pathlib.Path(__file__).parent.joinpath('mcu').iterdir()
     if item.is_file()
@@ -94,6 +54,7 @@ for mcu in dict.fromkeys(
 
     constants, location_tree = eval(database_file_path.read_text(), { 'RealMinMax' : RealMinMax, 'IntMinMax' : IntMinMax }, {})
     items                    = []
+    locations                = []
 
 
 
@@ -117,12 +78,8 @@ for mcu in dict.fromkeys(
                 else:
                     value = (False, True)
 
-                items += [(key, SystemDatabaseOptions(
-                    peripheral = peripheral,
-                    register   = register,
-                    field      = field,
-                    options    = value, # TODO Rename `options` to `value`.
-                ))]
+                locations += [(key, (peripheral, register, field))]
+                items += [(key, value)]
 
 
 
@@ -146,6 +103,7 @@ for mcu in dict.fromkeys(
 
 
     system_database[mcu] = dict(items)
+    system_locations[mcu] = dict(locations)
 
 
 

@@ -441,7 +441,7 @@ def system_parameterize(target):
 
             blueprint.settings[f'PLL{unit}_INPUT_RANGE'] = next((
                 (lower, upper)
-                for lower, upper in database[f'PLL{unit}_INPUT_RANGE'].options
+                for lower, upper in database[f'PLL{unit}_INPUT_RANGE']
                 if lower <= reference_frequency < upper
             ), None)
 
@@ -653,7 +653,7 @@ def system_parameterize(target):
     def parameterize_apb(unit):
 
         needed_divider                = blueprint['AXI_AHB_CK'] / blueprint[f'APB{unit}_CK']
-        blueprint.settings[f'APB{unit}_DIVIDER'] = database[f'APB{unit}_DIVIDER'].options.get(needed_divider, None)
+        blueprint.settings[f'APB{unit}_DIVIDER'] = database[f'APB{unit}_DIVIDER'].get(needed_divider, None)
 
         return blueprint[f'APB{unit}_DIVIDER'] is not None
 
@@ -674,7 +674,7 @@ def system_parameterize(target):
             # CPU.
 
             needed_cpu_divider     = blueprint[blueprint['SCGU_KERNEL_SOURCE']] / blueprint['CPU_CK']
-            blueprint.settings['CPU_DIVIDER'] = database['CPU_DIVIDER'].options.get(needed_cpu_divider, None)
+            blueprint.settings['CPU_DIVIDER'] = database['CPU_DIVIDER'].get(needed_cpu_divider, None)
 
             if blueprint['CPU_DIVIDER'] is None:
                 continue
@@ -688,7 +688,7 @@ def system_parameterize(target):
                 case 'STM32H7S3L8H6':
 
                     needed_axi_ahb_divider     = blueprint['CPU_CK'] / blueprint['AXI_AHB_CK']
-                    blueprint.settings['AXI_AHB_DIVIDER'] = database['AXI_AHB_DIVIDER'].options.get(needed_axi_ahb_divider, None)
+                    blueprint.settings['AXI_AHB_DIVIDER'] = database['AXI_AHB_DIVIDER'].get(needed_axi_ahb_divider, None)
 
                     if blueprint['AXI_AHB_DIVIDER'] is None:
                         continue

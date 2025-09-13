@@ -1,4 +1,4 @@
-from ..stpy.database import system_database
+from ..stpy.database import system_database, system_locations
 from ..pxd.log       import log, ANSI
 from ..pxd.utils     import justify
 
@@ -108,9 +108,7 @@ class SystemPlanner:
         if value is ...:
             value = self[key]
 
-        entry = system_database[self.target.mcu][key]
-
-        return (entry.peripheral, entry.register, entry.field, value)
+        return (*system_locations[self.target.mcu][key], value)
 
 
 
