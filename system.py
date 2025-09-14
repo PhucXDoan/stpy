@@ -1,6 +1,7 @@
 from ..stpy.database     import system_properties
 from ..stpy.parameterize import system_parameterize
 from ..stpy.configurize  import system_configurize
+from ..stpy.planner      import SystemPlanner
 from ..pxd.utils         import justify
 
 
@@ -34,7 +35,10 @@ def do(Meta, target):
     # Figure out how to configure the MCU
     # based on the target's constraints.
 
-    planner, book = system_parameterize(target)
+    blueprint = system_parameterize(target)
+    planner = SystemPlanner(target)
+
+    planner.dictionary = target.clock_tree | blueprint.settings.dictionary
 
 
 
@@ -56,7 +60,7 @@ def do(Meta, target):
             ('<', f'CLOCK_TREE_FREQUENCY_OF_{name}'),
             ('>', f'{frequency :,}'.replace(',', "'")),
         )
-        for name, frequency in book.items()
+        for name, frequency in blueprint.interim.dictionary.items()
         if name      is not None
         if frequency is not None
     ):
