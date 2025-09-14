@@ -77,14 +77,6 @@ def system_configurize(Meta, target, planner):
 
 
 
-    for key, value in planner.dictionary.items():
-        if key in properties and isinstance(properties[key], dict):
-            if planner.dictionary[key] in properties[key]:
-                planner.dictionary[key] = properties[key][planner.dictionary[key]]
-
-
-
-
     ################################################################################
 
     # TODO Placement?

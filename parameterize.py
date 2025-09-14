@@ -1181,6 +1181,17 @@ def system_parameterize(target):
 
 
     ################################################################################
+
+
+
+    for key, value in blueprint.settings.dictionary.items():
+        if key in properties and isinstance(properties[key], dict):
+            if blueprint.settings.dictionary[key] in properties[key]:
+                blueprint.settings.dictionary[key] = properties[key][blueprint.settings.dictionary[key]]
+
+
+
+    ################################################################################
     #
     # Parameterization done!
     #
