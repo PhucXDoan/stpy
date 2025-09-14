@@ -1,4 +1,4 @@
-import collections
+import collections, difflib
 from ..stpy.database import system_properties
 
 
@@ -11,111 +11,52 @@ class Blueprint:
 
 
 
-    def __init__(blueprint, target):
+    # The blueprint will keep track of values that'll be calculated
+    # and determined during the parameterization process.
+
+    def __init__(self, target):
+
+        self.target     = target
+        self.dictionary = {
+            key : ('clock-tree-unused', value)
+            for key, value in target.clock_tree.items()
+        }
 
 
 
-        # Bucket key-value pairs are immutable after they are written
-        # except for whenever we are brute-forcing for new key-value pairs,
-        # but once the brute-forcing is over, these new key-value pairs
-        # will then also become immutable.
+    # Keys can be added to the blueprint with an associated category.
 
-        class Bucket:
+    def __setitem__(self, category_key, value):
+        category, key        = category_key
+        self.dictionary[key] = (category, value)
 
-            def __init__(bucket):
-                bucket.dictionary = {}
-                bucket.draft      = {}
 
-            def __setitem__(bucket, key, value):
 
-                if key in bucket.dictionary:
-                    raise RuntimeError(
-                        f'Key {repr(key)} is already defined in the '
-                        f'blueprint for target {repr(target.name)}.'
+    # Indexing into the blueprint can be done just with the key.
+    # Thus, the categories' set of keys are disjoint with each other.
+
+    def __call__(self, key):
+
+        if key not in self.dictionary:
+            raise RuntimeError(
+                f'No key {repr(key)} in blueprint '
+                f'for target {repr(self.target.name)}; '
+                f'closest matches are: {
+                    difflib.get_close_matches(
+                        str(key),
+                        map(str, self.dictionary.keys()),
+                        n      = 3,
+                        cutoff = 0
                     )
-
-                if blueprint.bruteforcing:
-                    bucket.draft[key] = value
-                else:
-                    bucket.dictionary[key] = value
-
-
-
-        blueprint.target           = target
-        blueprint.bruteforcing     = False
-        blueprint.interim          = Bucket()
-        blueprint.settings         = Bucket()
-        blueprint.schema_keys_used = []
-
-
-
-    # All buckets must have disjoint dictionaries, so
-    # here we'll automatically get the value from the
-    # corresponding dictionary.
-
-    def __getitem__(self, key):
-
-        dictionaries = (
-            self.target.clock_tree,
-            self.interim.draft,
-            self.interim.dictionary,
-            self.settings.draft,
-            self.settings.dictionary
-        )
-
-        def get_similars(given, options): # TODO Copy-pasta.
-
-            import difflib
-
-            return difflib.get_close_matches(
-                given if given is not None else 'None',
-                [option if option is not None else 'None' for option in options],
-                n      = 3,
-                cutoff = 0
+                }.'
             )
 
-        match [
-            (dictionary, dictionary[key])
-            for dictionary in dictionaries
-            if key in dictionary
-        ]:
+        category, value = self.dictionary[key]
 
-            case []:
-                raise RuntimeError(
-                    f'No key {repr(key)} in blueprint '
-                    f'for target {repr(self.target.name)}; '
-                    f'closest matches are: '
-                    f'{get_similars(
-                        key,
-                        (
-                            key
-                            for dictionary in dictionaries
-                            for key in dictionary.keys()
-                        )
-                    )}.'
-                )
+        if category == 'clock-tree-unused':
+            self.dictionary[key] = ('clock-tree-used', value)
 
-            case [(dictionary, value)]:
-
-                if dictionary is self.target.clock_tree:
-                    if key not in self.schema_keys_used:
-                        self.schema_keys_used += [key]
-
-                return value
-
-            case _:
-
-                duplicates = [
-                    key
-                    for key, count in collections.Counter(
-                        key
-                        for dictionary in dictionaries
-                        for key in dictionary.keys()
-                    ).items()
-                    if count >= 2
-                ]
-
-                assert False, f'Buckets are expected to be disjoint; there are overlaps: {repr(duplicates)}.'
+        return value
 
 
 
@@ -127,28 +68,24 @@ class Blueprint:
         from ..pxd.utils import justify
 
         return '\n' + '\n'.join(
-            '| {} | {} |'.format(*justs)
+            '| {} | {} | {} |'.format(*justs)
             for justs in justify(
                 (
                     ('<', key),
-                    ('>', f'{value :,}' if isinstance(value, (int, float)) else repr(value)),
+                    ('<', category),
+                    ('>', value),
                 )
-                for key, value in (*self.interim.dictionary.items(), *self.settings.dictionary.items())
+                for key, (category, value) in self.dictionary.items()
             )
         ) + '\n'
 
 
 
-    # We can enter a state of brute-forcing where we will be
-    # creating key-value pairs, but they won't be finalized
-    # until the end of the brute-forcing (if successful at all).
-    # TODO Ensure function names are good.
+    # Provide a way to perform brute-forcing conveniently.
 
     def brute(self, function):
 
-        self.bruteforcing = True
-        success           = function()
-        self.bruteforcing = False
+        success = function()
 
         if not success:
             raise RuntimeError(
@@ -156,24 +93,24 @@ class Blueprint:
                 f'for target {repr(self.target.name)}.'
             )
 
-        for bucket in (self.interim, self.settings):
-            bucket.dictionary |= bucket.draft
-            bucket.draft       = {}
 
 
+    # Provide diagnostics.
 
     def done(self):
 
         if unused_keys := [
             key
-            for key in self.target.clock_tree
-            if key not in self.schema_keys_used
+            for key, (category, value) in self.dictionary.items()
+            if category == 'clock-tree-unused'
         ]:
 
+            # TODO Remove?
             from ..pxd.log import log, ANSI
 
             log(ANSI(
-                f'[WARNING] There are leftover {self.target.mcu} options: {unused_keys}.',
+                f'[WARNING] There are unused clock-tree options '
+                f'for target {repr(self.target.name)}: {unused_keys}.',
                 'fg_yellow'
             ))
 
@@ -190,7 +127,7 @@ def system_parameterize(target):
 
 
 
-    blueprint.interim[None] = 0 # No clock source, no frequency.
+    blueprint['frequency', None] = 0 # No clock source, no frequency.
 
 
 
@@ -215,9 +152,9 @@ def system_parameterize(target):
         # @/pg 327/sec 6.8.6/`H7S3rm`.
 
         case 'STM32H7S3L8H6':
-            blueprint.settings['FLASH_LATENCY'           ] = '0x7'
-            blueprint.settings['FLASH_PROGRAMMING_DELAY' ] = '0b11'
-            blueprint.settings['INTERNAL_VOLTAGE_SCALING'] = 'high'
+            blueprint['settings', 'FLASH_LATENCY'           ] = '0x7'
+            blueprint['settings', 'FLASH_PROGRAMMING_DELAY' ] = '0b11'
+            blueprint['settings', 'INTERNAL_VOLTAGE_SCALING'] = 'high'
 
 
 
@@ -225,9 +162,9 @@ def system_parameterize(target):
         # @/pg 438/sec 10.11.4/`H533rm`.
 
         case 'STM32H533RET6':
-            blueprint.settings['FLASH_LATENCY'           ] = 5
-            blueprint.settings['FLASH_PROGRAMMING_DELAY' ] = '0b10'
-            blueprint.settings['INTERNAL_VOLTAGE_SCALING'] = 'VOS0'
+            blueprint['settings', 'FLASH_LATENCY'           ] = 5
+            blueprint['settings', 'FLASH_PROGRAMMING_DELAY' ] = '0b10'
+            blueprint['settings', 'INTERNAL_VOLTAGE_SCALING'] = 'VOS0'
 
 
 
@@ -255,11 +192,11 @@ def system_parameterize(target):
         # @/pg 286/tbl 44/`H7S3rm`.
 
         case 'STM32H7S3L8H6':
-            blueprint.settings['SMPS_OUTPUT_LEVEL'      ] = None
-            blueprint.settings['SMPS_FORCED_ON'         ] = None
-            blueprint.settings['SMPS_ENABLE'            ] = False
-            blueprint.settings['LDO_ENABLE'             ] = True
-            blueprint.settings['POWER_MANAGEMENT_BYPASS'] = False
+            blueprint['settings', 'SMPS_OUTPUT_LEVEL'      ] = None
+            blueprint['settings', 'SMPS_FORCED_ON'         ] = None
+            blueprint['settings', 'SMPS_ENABLE'            ] = False
+            blueprint['settings', 'LDO_ENABLE'             ] = True
+            blueprint['settings', 'POWER_MANAGEMENT_BYPASS'] = False
 
 
 
@@ -267,8 +204,8 @@ def system_parameterize(target):
         # Note that the SMPS is not available. @/pg 402/sec 10.2/`H533rm`.
 
         case 'STM32H533RET6':
-            blueprint.settings['LDO_ENABLE'             ] = True
-            blueprint.settings['POWER_MANAGEMENT_BYPASS'] = False
+            blueprint['settings', 'LDO_ENABLE'             ] = True
+            blueprint['settings', 'POWER_MANAGEMENT_BYPASS'] = False
 
 
 
@@ -286,9 +223,9 @@ def system_parameterize(target):
 
 
 
-    blueprint.interim['HSI_CK'] = (
+    blueprint['frequency', 'HSI_CK'] = (
         properties['HSI_DEFAULT_FREQUENCY']
-        if blueprint['HSI_ENABLE']
+        if blueprint('HSI_ENABLE')
         else 0
     )
 
@@ -303,9 +240,9 @@ def system_parameterize(target):
 
 
 
-    blueprint.interim['HSI48_CK'] = (
+    blueprint['frequency', 'HSI48_CK'] = (
         48_000_000
-        if blueprint['HSI48_ENABLE']
+        if blueprint('HSI48_ENABLE')
         else 0
     )
 
@@ -320,9 +257,9 @@ def system_parameterize(target):
 
 
 
-    blueprint.interim['CSI_CK'] = (
+    blueprint['frequency', 'CSI_CK'] = (
         4_000_000
-        if blueprint['CSI_ENABLE']
+        if blueprint('CSI_ENABLE')
         else 0
     )
 
@@ -335,8 +272,8 @@ def system_parameterize(target):
 
 
 
-    blueprint.interim['HSE_CK'] = 0
-    blueprint.interim['LSE_CK'] = 0
+    blueprint['frequency', 'HSE_CK'] = 0
+    blueprint['frequency', 'LSE_CK'] = 0
 
 
 
@@ -348,7 +285,7 @@ def system_parameterize(target):
 
 
 
-    blueprint.interim['PER_CK'] = blueprint[blueprint['PERIPHERAL_CLOCK_OPTION']]
+    blueprint['frequency', 'PER_CK'] = blueprint(blueprint('PERIPHERAL_CLOCK_OPTION'))
 
 
 
@@ -370,7 +307,7 @@ def system_parameterize(target):
 
         for channel in channels:
 
-            goal_frequency = blueprint[f'PLL{unit}_{channel}_CK']
+            goal_frequency = blueprint(f'PLL{unit}_{channel}_CK')
 
             if goal_frequency is None:
                 continue
@@ -391,13 +328,13 @@ def system_parameterize(target):
 
     def each_vco_frequency(unit, kernel_frequency):
 
-        for blueprint.settings[f'PLL{unit}_PREDIVIDER'] in properties[f'PLL{unit}_PREDIVIDER']:
+        for blueprint['settings', f'PLL{unit}_PREDIVIDER'] in properties[f'PLL{unit}_PREDIVIDER']:
 
 
 
             # Determine the range of the PLL input frequency.
 
-            reference_frequency = kernel_frequency / blueprint[f'PLL{unit}_PREDIVIDER']
+            reference_frequency = kernel_frequency / blueprint(f'PLL{unit}_PREDIVIDER')
 
             for lower, upper in properties[f'PLL{unit}_INPUT_RANGE']:
                 if lower <= reference_frequency < upper:
@@ -405,15 +342,15 @@ def system_parameterize(target):
             else:
                 continue
 
-            blueprint.settings[f'PLL{unit}_INPUT_RANGE'] = (lower, upper)
+            blueprint['settings', f'PLL{unit}_INPUT_RANGE'] = (lower, upper)
 
 
 
             # Try every available multiplier that the PLL can handle.
 
-            for blueprint.settings[f'PLL{unit}_MULTIPLIER'] in properties[f'PLL{unit}_MULTIPLIER']:
+            for blueprint['settings', f'PLL{unit}_MULTIPLIER'] in properties[f'PLL{unit}_MULTIPLIER']:
 
-                vco_frequency = reference_frequency * blueprint[f'PLL{unit}_MULTIPLIER']
+                vco_frequency = reference_frequency * blueprint(f'PLL{unit}_MULTIPLIER')
 
                 if vco_frequency not in properties['PLL_VCO_FREQ']:
                     continue
@@ -434,7 +371,7 @@ def system_parameterize(target):
 
         # See if the PLL channel is even used.
 
-        goal_frequency = blueprint[f'PLL{unit}_{channel}_CK']
+        goal_frequency = blueprint(f'PLL{unit}_{channel}_CK')
 
         if goal_frequency is None:
             return True
@@ -448,7 +385,7 @@ def system_parameterize(target):
         if needed_divider not in properties[f'PLL{unit}{channel}_DIVIDER']:
             return False
 
-        blueprint.settings[f'PLL{unit}_{channel}_DIVIDER'] = needed_divider
+        blueprint['settings', f'PLL{unit}_{channel}_DIVIDER'] = needed_divider
 
         return True
 
@@ -468,22 +405,22 @@ def system_parameterize(target):
 
         # TODO Unnecessary.
 
-        blueprint.settings[f'PLL{unit}_PREDIVIDER' ] = None
-        blueprint.settings[f'PLL{unit}_INPUT_RANGE'] = None
-        blueprint.settings[f'PLL{unit}_MULTIPLIER' ] = None
+        blueprint['settings', f'PLL{unit}_PREDIVIDER' ] = None
+        blueprint['settings', f'PLL{unit}_INPUT_RANGE'] = None
+        blueprint['settings', f'PLL{unit}_MULTIPLIER' ] = None
         for channel in dict(properties['PLLS'])[unit]:
-            blueprint.settings[f'PLL{unit}_{channel}_DIVIDER'] = None
+            blueprint['settings', f'PLL{unit}_{channel}_DIVIDER'] = None
 
 
 
         # See if the PLL unit is even used.
 
-        blueprint.settings[f'PLL{unit}_ENABLE'] = any(
-            blueprint[f'PLL{unit}_{channel}_CK'] is not None
+        blueprint['settings', f'PLL{unit}_ENABLE'] = any(
+            blueprint(f'PLL{unit}_{channel}_CK') is not None
             for channel in channels
         )
 
-        if not blueprint[f'PLL{unit}_ENABLE']:
+        if not blueprint(f'PLL{unit}_ENABLE'):
             return True
 
 
@@ -521,10 +458,10 @@ def system_parameterize(target):
 
                 return any(
                     all(
-                        parameterize_pll(unit, blueprint[blueprint['PLL_KERNEL_SOURCE']])
+                        parameterize_pll(unit, blueprint(blueprint('PLL_KERNEL_SOURCE')))
                         for unit, channels in properties['PLLS']
                     )
-                    for blueprint.settings['PLL_KERNEL_SOURCE'] in properties['PLL_KERNEL_SOURCE']
+                    for blueprint['settings', 'PLL_KERNEL_SOURCE'] in properties['PLL_KERNEL_SOURCE']
                 )
 
 
@@ -535,8 +472,8 @@ def system_parameterize(target):
 
                 return all(
                     any(
-                        parameterize_pll(unit, blueprint[blueprint[f'PLL{unit}_KERNEL_SOURCE']])
-                        for blueprint.settings[f'PLL{unit}_KERNEL_SOURCE'] in properties[f'PLL{unit}_KERNEL_SOURCE']
+                        parameterize_pll(unit, blueprint(blueprint(f'PLL{unit}_KERNEL_SOURCE')))
+                        for blueprint['settings', f'PLL{unit}_KERNEL_SOURCE'] in properties[f'PLL{unit}_KERNEL_SOURCE']
                     )
                     for unit, channels in properties['PLLS']
                 )
@@ -558,27 +495,27 @@ def system_parameterize(target):
 
     # TODO Better way to do asserts?
 
-    if blueprint['CPU_CK'] not in properties['CPU_FREQ']:
+    if blueprint('CPU_CK') not in properties['CPU_FREQ']:
         raise ValueError(
             f'CPU_CK is out of range: '
-            f'{blueprint['CPU_CK'] :_}Hz.'
+            f'{blueprint('CPU_CK') :_}Hz.'
         )
 
     for unit in properties['APBS']:
-        if blueprint[f'APB{unit}_CK'] not in properties['APB_FREQ']:
+        if blueprint(f'APB{unit}_CK') not in properties['APB_FREQ']:
             raise ValueError(
                 f'APB{unit}_CK is out of range: '
-                f'{blueprint[f'APB{unit}_CK'] :_}Hz.'
+                f'{blueprint(f'APB{unit}_CK') :_}Hz.'
             )
 
     match target.mcu:
 
         case 'STM32H7S3L8H6':
 
-            if blueprint['AXI_AHB_CK'] not in properties['AXI_AHB_FREQ']:
+            if blueprint('AXI_AHB_CK') not in properties['AXI_AHB_FREQ']:
                 raise ValueError(
                     f'AXI_AHB_CK is out-of-range: '
-                    f'{blueprint['AXI_AHB_CK'] :_}Hz.'
+                    f'{blueprint('AXI_AHB_CK') :_}Hz.'
                 )
 
 
@@ -592,15 +529,15 @@ def system_parameterize(target):
     @blueprint.brute
     def parameterize_scgu():
 
-        for blueprint.settings['SCGU_KERNEL_SOURCE'] in properties['SCGU_KERNEL_SOURCE']:
+        for blueprint['settings', 'SCGU_KERNEL_SOURCE'] in properties['SCGU_KERNEL_SOURCE']:
 
 
 
             # CPU.
 
-            blueprint.settings['CPU_DIVIDER'] = blueprint[blueprint['SCGU_KERNEL_SOURCE']] / blueprint['CPU_CK']
+            blueprint['settings', 'CPU_DIVIDER'] = blueprint(blueprint('SCGU_KERNEL_SOURCE')) / blueprint('CPU_CK')
 
-            if blueprint['CPU_DIVIDER'] not in properties['CPU_DIVIDER']:
+            if blueprint('CPU_DIVIDER') not in properties['CPU_DIVIDER']:
                 continue
 
 
@@ -615,9 +552,9 @@ def system_parameterize(target):
 
                 case 'STM32H7S3L8H6':
 
-                    blueprint.settings['AXI_AHB_DIVIDER'] = blueprint['CPU_CK'] / blueprint['AXI_AHB_CK']
+                    blueprint['settings', 'AXI_AHB_DIVIDER'] = blueprint('CPU_CK') / blueprint('AXI_AHB_CK')
 
-                    if blueprint['AXI_AHB_DIVIDER'] not in properties['AXI_AHB_DIVIDER']:
+                    if blueprint('AXI_AHB_DIVIDER') not in properties['AXI_AHB_DIVIDER']:
                         continue
 
 
@@ -626,7 +563,7 @@ def system_parameterize(target):
 
                 case 'STM32H533RET6':
 
-                    blueprint.interim['AXI_AHB_CK'] = blueprint['CPU_CK']
+                    blueprint['frequency', 'AXI_AHB_CK'] = blueprint('CPU_CK')
 
 
 
@@ -637,8 +574,8 @@ def system_parameterize(target):
             # Each APB bus.
 
             def parameterize_apb(unit):
-                blueprint.settings[f'APB{unit}_DIVIDER'] = blueprint['AXI_AHB_CK'] / blueprint[f'APB{unit}_CK']
-                return blueprint[f'APB{unit}_DIVIDER'] in properties[f'APB{unit}_DIVIDER']
+                blueprint['settings', f'APB{unit}_DIVIDER'] = blueprint('AXI_AHB_CK') / blueprint(f'APB{unit}_CK')
+                return blueprint(f'APB{unit}_DIVIDER') in properties[f'APB{unit}_DIVIDER']
 
             every_apb_satisfied = all(
                 parameterize_apb(unit)
@@ -666,7 +603,7 @@ def system_parameterize(target):
 
     # TODO Better way to do asserts?
 
-    if blueprint['SYSTICK_CK'] is not None and target.use_freertos:
+    if blueprint('SYSTICK_CK') is not None and target.use_freertos:
         raise ValueError(
             f'FreeRTOS already uses SysTick for the time-base; '
             f'so for target {repr(target.name)}, '
@@ -689,16 +626,16 @@ def system_parameterize(target):
 
         # See if SysTick is even used.
 
-        blueprint.settings['SYSTICK_ENABLE'] = blueprint['SYSTICK_CK'] is not None
+        blueprint['settings', 'SYSTICK_ENABLE'] = blueprint('SYSTICK_CK') is not None
 
-        if not blueprint['SYSTICK_ENABLE']:
+        if not blueprint('SYSTICK_ENABLE'):
             return True
 
 
 
         # Try different clock sources.
 
-        for blueprint.settings['SYSTICK_USE_CPU_CK'] in properties['SYSTICK_USE_CPU_CK']:
+        for blueprint['settings', 'SYSTICK_USE_CPU_CK'] in properties['SYSTICK_USE_CPU_CK']:
 
 
 
@@ -706,10 +643,10 @@ def system_parameterize(target):
             # @/pg 621/sec B3.3.3/`Armv7-M`.
             # @/pg 1859/sec D1.2.238/`Armv8-M`.
 
-            if blueprint['SYSTICK_USE_CPU_CK']:
+            if blueprint('SYSTICK_USE_CPU_CK'):
 
                 kernel_frequencies = [
-                    blueprint['CPU_CK']
+                    blueprint('CPU_CK')
                 ]
 
 
@@ -727,7 +664,7 @@ def system_parameterize(target):
                     case 'STM32H7S3L8H6':
 
                         kernel_frequencies = [
-                            blueprint['CPU_CK'] / 8
+                            blueprint('CPU_CK') / 8
                         ]
 
 
@@ -748,11 +685,11 @@ def system_parameterize(target):
 
             # Try out the different kernel frequencies and see what sticks.
 
-            for blueprint.interim['SYSTICK_KERNEL_FREQ'] in kernel_frequencies:
+            for blueprint['frequency', 'SYSTICK_KERNEL_FREQ'] in kernel_frequencies:
 
-                blueprint.settings['SYSTICK_RELOAD'] = blueprint['SYSTICK_KERNEL_FREQ'] / blueprint['SYSTICK_CK'] - 1
+                blueprint['settings', 'SYSTICK_RELOAD'] = blueprint('SYSTICK_KERNEL_FREQ') / blueprint('SYSTICK_CK') - 1
 
-                if blueprint['SYSTICK_RELOAD'] in properties['SYSTICK_RELOAD']:
+                if blueprint('SYSTICK_RELOAD') in properties['SYSTICK_RELOAD']:
                     return True
 
 
@@ -789,7 +726,7 @@ def system_parameterize(target):
 
             # See if this instance is even needed.
 
-            needed_baud = blueprint[f'{peripheral}{unit}_BAUD']
+            needed_baud = blueprint(f'{peripheral}{unit}_BAUD')
 
             if needed_baud is None:
                 return True
@@ -812,7 +749,7 @@ def system_parameterize(target):
 
             # We found the desired divider!
 
-            blueprint.settings[f'{peripheral}{unit}_BAUD_DIVIDER'] = needed_divider
+            blueprint['settings', f'{peripheral}{unit}_BAUD_DIVIDER'] = needed_divider
 
             return True
 
@@ -831,16 +768,16 @@ def system_parameterize(target):
 
             # TODO Unnecessary.
 
-            blueprint.settings[f'UXART_{instances}_KERNEL_SOURCE'] = None
+            blueprint['settings', f'UXART_{instances}_KERNEL_SOURCE'] = None
             for instance in instances:
-                blueprint.settings[f'{instance[0]}{instance[1]}_BAUD_DIVIDER'] = None
+                blueprint['settings', f'{instance[0]}{instance[1]}_BAUD_DIVIDER'] = None
 
 
 
             # Check if any of the instances are even used.
 
             using_instances = any(
-                blueprint[f'{peripheral}{unit}_BAUD'] is not None
+                blueprint(f'{peripheral}{unit}_BAUD') is not None
                 for peripheral, unit in instances
             )
 
@@ -852,10 +789,10 @@ def system_parameterize(target):
             # Try every available clock source for this
             # set of instances and see what sticks.
 
-            for blueprint.settings[f'UXART_{instances}_KERNEL_SOURCE'] in properties[f'UXART_{instances}_KERNEL_SOURCE']:
+            for blueprint['settings', f'UXART_{instances}_KERNEL_SOURCE'] in properties[f'UXART_{instances}_KERNEL_SOURCE']:
 
                 every_instance_satisfied = all(
-                    parameterize_uxart(instance, blueprint[blueprint[f'UXART_{instances}_KERNEL_SOURCE']])
+                    parameterize_uxart(instance, blueprint(blueprint(f'UXART_{instances}_KERNEL_SOURCE')))
                     for instance in instances
                 )
 
@@ -883,13 +820,13 @@ def system_parameterize(target):
 
             # TODO Unnecessary.
 
-            blueprint.settings[f'I2C{unit}_KERNEL_SOURCE'] = None
+            blueprint['settings', f'I2C{unit}_KERNEL_SOURCE'] = None
 
 
 
             # See if the unit is even used.
 
-            needed_baud = blueprint[f'I2C{unit}_BAUD']
+            needed_baud = blueprint(f'I2C{unit}_BAUD')
 
             if needed_baud is None:
                 return True
@@ -905,7 +842,7 @@ def system_parameterize(target):
 
             for kernel_source in properties[f'I2C{unit}_KERNEL_SOURCE']:
 
-                kernel_frequency = blueprint[kernel_source] or 0
+                kernel_frequency = blueprint(kernel_source) or 0
 
                 for presc in properties['I2C_PRESC']:
 
@@ -935,9 +872,9 @@ def system_parameterize(target):
                     if best_baud_error is None or actual_baud_error < best_baud_error:
 
                         best_baud_error                                = actual_baud_error
-                        blueprint.settings[f'I2C{unit}_KERNEL_SOURCE'] = kernel_source
-                        blueprint.settings[f'I2C{unit}_PRESC'        ] = presc
-                        blueprint.settings[f'I2C{unit}_SCL'          ] = scl
+                        blueprint['settings', f'I2C{unit}_KERNEL_SOURCE'] = kernel_source
+                        blueprint['settings', f'I2C{unit}_PRESC'        ] = presc
+                        blueprint['settings', f'I2C{unit}_SCL'          ] = scl
 
 
 
@@ -956,7 +893,7 @@ def system_parameterize(target):
 
     def parameterize_timer(unit):
 
-        needed_rate = blueprint[f'TIM{unit}_RATE']
+        needed_rate = blueprint(f'TIM{unit}_RATE')
 
 
 
@@ -969,10 +906,10 @@ def system_parameterize(target):
             case 'STM32H533RET6':
 
                 apb         = properties['APB_PERIPHERALS'][f'TIM{unit}']
-                apb_divider = blueprint[f'APB{apb}_DIVIDER']
-                multiplier  = properties['GLOBAL_TIMER_PRESCALER_MULTIPLIER_TABLE'][(blueprint['GLOBAL_TIMER_PRESCALER'], apb_divider)]
+                apb_divider = blueprint(f'APB{apb}_DIVIDER')
+                multiplier  = properties['GLOBAL_TIMER_PRESCALER_MULTIPLIER_TABLE'][(blueprint('GLOBAL_TIMER_PRESCALER'), apb_divider)]
 
-                kernel_frequency = blueprint[f'AXI_AHB_CK'] * multiplier
+                kernel_frequency = blueprint(f'AXI_AHB_CK') * multiplier
 
 
 
@@ -983,15 +920,15 @@ def system_parameterize(target):
         # Find the pair of divider and modulation values to
         # get an output frequency that's within tolerance.
 
-        for blueprint.settings[f'TIM{unit}_DIVIDER'] in properties[f'TIM{unit}_DIVIDER']:
+        for blueprint['settings', f'TIM{unit}_DIVIDER'] in properties[f'TIM{unit}_DIVIDER']:
 
-            counter_frequency = kernel_frequency / blueprint[f'TIM{unit}_DIVIDER']
+            counter_frequency = kernel_frequency / blueprint(f'TIM{unit}_DIVIDER')
 
 
 
             # Determine the modulation value.
 
-            blueprint.settings[f'TIM{unit}_MODULATION'] = (
+            blueprint['settings', f'TIM{unit}_MODULATION'] = (
                 min(
                     max(
                         round(counter_frequency / needed_rate),
@@ -1005,7 +942,7 @@ def system_parameterize(target):
 
             # See if things are within tolerance.
 
-            actual_rate  = counter_frequency / blueprint[f'TIM{unit}_MODULATION']
+            actual_rate  = counter_frequency / blueprint(f'TIM{unit}_MODULATION')
             actual_error = abs(1 - actual_rate / needed_rate)
 
             if actual_error <= 0.001: # TODO Ad-hoc.
@@ -1025,13 +962,13 @@ def system_parameterize(target):
         used_units = [
             unit
             for unit in properties.get('TIMERS', ())
-            if blueprint[f'TIM{unit}_RATE'] is not None
+            if blueprint(f'TIM{unit}_RATE') is not None
         ]
 
         if not used_units:
             return True
 
-        for blueprint.settings['GLOBAL_TIMER_PRESCALER'] in properties['GLOBAL_TIMER_PRESCALER']:
+        for blueprint['settings', 'GLOBAL_TIMER_PRESCALER'] in properties['GLOBAL_TIMER_PRESCALER']:
 
             every_unit_satisfied = all(
                 parameterize_timer(unit)
@@ -1047,19 +984,14 @@ def system_parameterize(target):
 
 
 
-    for key, value in target.clock_tree.items():
+    for key, (category, value) in blueprint.dictionary.items():
         if key in properties and isinstance(properties[key], dict):
-            if target.clock_tree[key] in properties[key]:
-                blueprint.settings.dictionary[key] = properties[key][target.clock_tree[key]]
+            if value in properties[key]:
+                blueprint.dictionary[key] = (category, properties[key][value])
 
-    for key, value in blueprint.settings.dictionary.items():
-        if key in properties and isinstance(properties[key], dict):
-            if blueprint.settings.dictionary[key] in properties[key]:
-                blueprint.settings.dictionary[key] = properties[key][blueprint.settings.dictionary[key]]
-
-    for key, value in blueprint.settings.dictionary.items():
+    for key, (category, value) in blueprint.dictionary.items():
         if isinstance(value, float) and value.is_integer():
-            blueprint.settings.dictionary[key] = int(value)
+            blueprint.dictionary[key] = (category, int(value))
 
 
 

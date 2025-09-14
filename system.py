@@ -38,7 +38,10 @@ def do(Meta, target):
     blueprint = system_parameterize(target)
     planner = SystemPlanner(target)
 
-    planner.dictionary = target.clock_tree | blueprint.settings.dictionary
+    planner.dictionary = {
+        key : value
+        for key, (kind, value) in blueprint.dictionary.items()
+    }
 
 
 
@@ -57,12 +60,12 @@ def do(Meta, target):
 
     for macro, expansion in justify(
         (
-            ('<', f'CLOCK_TREE_FREQUENCY_OF_{name}'),
-            ('>', f'{frequency :,}'.replace(',', "'")),
+            ('<', f'CLOCK_TREE_FREQUENCY_OF_{key}'),
+            ('>', value),
         )
-        for name, frequency in blueprint.interim.dictionary.items()
-        if name      is not None
-        if frequency is not None
+        for key, (kind, value) in blueprint.dictionary.items()
+        if key   is not None
+        if value is not None
     ):
         Meta.define(macro, f'({expansion})')
 
