@@ -1,5 +1,6 @@
 (
     (
+
         ################################################################################
         #
         # Peripheral counts.
@@ -198,6 +199,8 @@
             'FDCAN2_IT1',
         )),
 
+
+
         ################################################################################
         #
         # Common values.
@@ -223,6 +226,8 @@
             'DOWN' : '0b10',
         }),
 
+
+
         ################################################################################
         #
         # Frequency limits.
@@ -232,12 +237,15 @@
         # TODO 600MHz only when ECC is disabled.
         #
 
-        ('SDMMC_KERNEL_FREQ', RealMinMax(0          , 200_000_000)),
-        ('CPU_FREQ'         , RealMinMax(0          , 600_000_000)),
-        ('AXI_AHB_FREQ'     , RealMinMax(0          , 300_000_000)),
-        ('APB_FREQ'         , RealMinMax(0          , 150_000_000)),
-        ('PLL_CHANNEL_FREQ' , RealMinMax(1_500_000  , 600_000_000)),
-        ('PLL_VCO_FREQ'     , RealMinMax(192_000_000, 836_000_000)),
+        ('SDMMC_KERNEL_FREQ'    , RealMinMax(0          , 200_000_000)),
+        ('CPU_FREQ'             , RealMinMax(0          , 600_000_000)),
+        ('AXI_AHB_FREQ'         , RealMinMax(0          , 300_000_000)),
+        ('APB_FREQ'             , RealMinMax(0          , 150_000_000)),
+        ('PLL_CHANNEL_FREQ'     , RealMinMax(1_500_000  , 600_000_000)),
+        ('PLL_VCO_FREQ'         , RealMinMax(192_000_000, 836_000_000)),
+        ('HSI_DEFAULT_FREQUENCY', 64_000_000                          ),
+
+
 
     ),
     (

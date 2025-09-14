@@ -200,6 +200,7 @@
         )),
 
 
+
         ################################################################################
         #
         # Common values.
@@ -225,6 +226,8 @@
             'DOWN' : '0b10',
         }),
 
+
+
         ################################################################################
         #
         # Frequency limits.
@@ -232,11 +235,14 @@
         # TODO We're assuming a high internal voltage and wide range.
         #
 
-        ('PLL_CHANNEL_FREQ', RealMinMax(  1_000_000, 250_000_000)),
-        ('PLL_VCO_FREQ'    , RealMinMax(128_000_000, 560_000_000)),
-        ('CPU_FREQ'        , RealMinMax(          0, 250_000_000)),
-        ('AXI_AHB_FREQ'    , RealMinMax(          0, 250_000_000)),
-        ('APB_FREQ'        , RealMinMax(          0, 250_000_000)),
+        ('PLL_CHANNEL_FREQ'     , RealMinMax(  1_000_000, 250_000_000)),
+        ('PLL_VCO_FREQ'         , RealMinMax(128_000_000, 560_000_000)),
+        ('CPU_FREQ'             , RealMinMax(          0, 250_000_000)),
+        ('AXI_AHB_FREQ'         , RealMinMax(          0, 250_000_000)),
+        ('APB_FREQ'             , RealMinMax(          0, 250_000_000)),
+        ('HSI_DEFAULT_FREQUENCY', 32_000_000                          ),
+
+
 
     ),
     (
