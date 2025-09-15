@@ -727,7 +727,8 @@ class new_Parameterization:
             if value.get('value', ...) is ...:
                 continue
 
-            if isinstance(self.database[key]['constraint'], dict):
+            if isinstance(self.database[key]['constraint'], dict) and 'remapped' not in value:
+                value['remapped'] = True
                 value['value'] = self.database[key]['constraint'][value['value']]
 
             if value.get('value', ...) is ...:

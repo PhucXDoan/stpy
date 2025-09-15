@@ -80,5 +80,12 @@ for mcu in sorted(dict.fromkeys(
         if 'value' in value:
             new_system_database[mcu][key]['value'] = value.pop('value')
 
+        if 'pseudokeys' in value:
+
+            pseudokeys = value.pop('pseudokeys')
+
+            for pseudokey in pseudokeys:
+                new_system_database[mcu][pseudokey] = new_system_database[mcu][key]
+
         if value:
             raise ValueError(f'Leftover schema entry properties: {repr(value)}.')

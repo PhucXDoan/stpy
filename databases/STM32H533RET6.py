@@ -707,21 +707,13 @@ SCHEMA = {
             'location'   : ('RCC', 'CCIPR1', field),
             'constraint' : kernel_source,
             'value'      : ...,
+            'pseudokeys' : [
+                f'{peripheral}{unit}_KERNEL_SOURCE'
+                for peripheral, unit in instances
+            ],
         }
         for field_instances, kernel_source in UXART_KERNEL_SOURCE_TABLE
         for field, instances in field_instances
-    },
-
-    # TODO Subkey?
-    **{
-        f'{peripheral}{unit}_KERNEL_SOURCE' : {
-            'location'   : ('RCC', 'CCIPR1', field),
-            'constraint' : kernel_source,
-            'value'      : ...,
-        }
-        for field_instances, kernel_source in UXART_KERNEL_SOURCE_TABLE
-        for field, instances in field_instances
-        for peripheral, unit in instances
     },
 
     **{
