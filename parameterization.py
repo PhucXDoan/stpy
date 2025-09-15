@@ -9,26 +9,6 @@ class Parameterization:
 
     ################################################################################
     #
-    # We'll keep track of values that'll be calculated and
-    # configurations determined during the parameterization process.
-    #
-
-
-
-    def __init__(self, target):
-
-        self.target     = target
-        self.dictionary = {
-            key : ('clock-tree-unused', value)
-            for key, value in target.clock_tree.items()
-        }
-
-        self.parameterize()
-
-
-
-    ################################################################################
-    #
     # Keys can be inserted with an associated category.
     #
 
@@ -105,99 +85,42 @@ class Parameterization:
 
     ################################################################################
     #
-    # Provide a way to perform brute-forcing conveniently.
-    #
-
-
-
-    def brute(self, function):
-
-        success = function()
-
-        if not success:
-            raise RuntimeError(
-                f'Failed to brute-force {repr(function.__name__)} '
-                f'for target {repr(self.target.name)}.'
-            )
-
-
-
-    ################################################################################
-    #
-    # Some stuff to be done after parameterization.
-    #
-
-
-
-    def done(self):
-
-
-
-        # See if any clock-tree options were left unused.
-
-        if unused_keys := [
-            key
-            for key, (category, value) in self.dictionary.items()
-            if category == 'clock-tree-unused'
-        ]:
-
-            # TODO Remove?
-            from ..pxd.log import log, ANSI
-
-            log(ANSI(
-                f'[WARNING] There are unused clock-tree options '
-                f'for target {repr(self.target.name)}: {unused_keys}.',
-                'fg_yellow'
-            ))
-
-
-
-        # Remap values that were keys of a dictionary
-        # to the respective value within that dictionary.
-
-        for key, (category, value) in self.dictionary.items():
-
-            if key not in system_properties[self.target.mcu]:
-                continue
-
-            if not isinstance(system_properties[self.target.mcu][key], dict):
-                continue
-
-            if value not in system_properties[self.target.mcu][key]:
-                continue
-
-            self.dictionary[key] = (category, system_properties[self.target.mcu][key][value])
-
-
-
-        # We convert whole number floats to integers so
-        # that if the value is stringified, it won't be
-        # like '3.0' where C would see it as a double literal.
-
-        for key, (category, value) in self.dictionary.items():
-
-            if isinstance(value, float) and value.is_integer():
-
-                self.dictionary[key] = (category, int(value))
-
-
-
-    ################################################################################
-    #
     # The algorithm to brute-force the MCU's clock-tree.
     #
 
 
 
-    def parameterize(self):
+    def __init__(self, target):
 
 
 
-        properties = system_properties[self.target.mcu]
+        self.target     = target
+        self.dictionary = {
+            key : ('clock-tree-unused', value)
+            for key, value in target.clock_tree.items()
+        }
+
+        properties = system_properties[target.mcu]
 
 
 
-        self['frequency', 0] = 0 # Zero frequency maps to zero frequency!
+        # Zero frequency maps to zero frequency!
+
+        self['frequency', 0] = 0
+
+
+
+        # Provide a way to perform brute-forcing conveniently.
+
+        def brute(function):
+
+            success = function()
+
+            if not success:
+                raise RuntimeError(
+                    f'Failed to brute-force {repr(function.__name__)} '
+                    f'for target {repr(target.name)}.'
+                )
 
 
 
@@ -214,7 +137,7 @@ class Parameterization:
 
 
 
-        match self.target.mcu:
+        match target.mcu:
 
 
 
@@ -254,7 +177,7 @@ class Parameterization:
 
 
 
-        match self.target.mcu:
+        match target.mcu:
 
 
 
@@ -515,10 +438,10 @@ class Parameterization:
 
 
 
-        @self.brute
+        @brute
         def parameterize_plls():
 
-            match self.target.mcu:
+            match target.mcu:
 
 
 
@@ -578,7 +501,7 @@ class Parameterization:
                     f'{self(f'APB{unit}_CK') :_}Hz.'
                 )
 
-        match self.target.mcu:
+        match target.mcu:
 
             case 'STM32H7S3L8H6':
 
@@ -596,7 +519,7 @@ class Parameterization:
 
 
 
-        @self.brute
+        @brute
         def parameterize_scgu():
 
             for self['settings', 'SCGU_KERNEL_SOURCE'] in properties['SCGU_KERNEL_SOURCE']:
@@ -614,7 +537,7 @@ class Parameterization:
 
                 # AXI/AHB busses.
 
-                match self.target.mcu:
+                match target.mcu:
 
 
 
@@ -673,10 +596,10 @@ class Parameterization:
 
         # TODO Better way to do asserts?
 
-        if self('SYSTICK_CK') is not None and self.target.use_freertos:
+        if self('SYSTICK_CK') is not None and target.use_freertos:
             raise ValueError(
                 f'FreeRTOS already uses SysTick for the time-base; '
-                f'so for target {repr(self.target.name)}, '
+                f'so for target {repr(target.name)}, '
                 f'either remove "SYSTICK_CK" from the clock-tree '
                 f'configuration or disable FreeRTOS.'
             )
@@ -689,7 +612,7 @@ class Parameterization:
 
 
 
-        @self.brute
+        @brute
         def parameterize_systick():
 
 
@@ -725,7 +648,7 @@ class Parameterization:
 
                 else:
 
-                    match self.target.mcu:
+                    match target.mcu:
 
 
 
@@ -831,7 +754,7 @@ class Parameterization:
 
 
 
-            @self.brute
+            @brute
             def parameterize_uxarts():
 
 
@@ -883,7 +806,7 @@ class Parameterization:
 
 
 
-            @self.brute
+            @brute
             def parameterize():
 
 
@@ -969,7 +892,7 @@ class Parameterization:
 
             # Determine the kernel frequency.
 
-            match self.target.mcu:
+            match target.mcu:
 
 
 
@@ -1026,7 +949,7 @@ class Parameterization:
 
 
 
-        @self.brute
+        @brute
         def parameterize_timers():
 
             used_units = [
@@ -1051,7 +974,59 @@ class Parameterization:
 
 
         ################################################################################
+        #
+        # See if any clock-tree options were left unused.
+        #
 
 
 
-        self.done()
+        if unused_keys := [
+            key
+            for key, (category, value) in self.dictionary.items()
+            if category == 'clock-tree-unused'
+        ]:
+
+            # TODO Remove?
+            from ..pxd.log import log, ANSI
+
+            log(ANSI(
+                f'[WARNING] There are unused clock-tree options '
+                f'for target {repr(target.name)}: {unused_keys}.',
+                'fg_yellow'
+            ))
+
+
+
+        ################################################################################
+        #
+        # Remap values that were keys of a dictionary
+        # to the respective value within that dictionary.
+        #
+
+        for key, (category, value) in self.dictionary.items():
+
+            if key not in system_properties[target.mcu]:
+                continue
+
+            if not isinstance(system_properties[target.mcu][key], dict):
+                continue
+
+            if value not in system_properties[target.mcu][key]:
+                continue
+
+            self.dictionary[key] = (category, system_properties[target.mcu][key][value])
+
+
+
+        ################################################################################
+        #
+        # We convert whole number floats to integers so
+        # that if the value is stringified, it won't be
+        # like '3.0' where C would see it as a double literal.
+        #
+
+        for key, (category, value) in self.dictionary.items():
+
+            if isinstance(value, float) and value.is_integer():
+
+                self.dictionary[key] = (category, int(value))
