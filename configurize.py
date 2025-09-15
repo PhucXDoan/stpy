@@ -107,9 +107,9 @@ def system_configurize(Meta, new_parameterization):
     parameterization = Parameterization(new_parameterization.target)
 
     parameterization.dictionary = {
-        key : ('setting', value['value'])
+        key : ('setting', value.value)
         for key, value in new_parameterization.database.items()
-        if 'value' in value
+        if hasattr(value, 'value')
     }
 
     target = parameterization.target

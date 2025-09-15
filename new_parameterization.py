@@ -1,19 +1,19 @@
 import copy
-from ..stpy.new_database import new_system_database
+from ..stpy.new_database import system_database
 
 class new_Parameterization:
 
 
     def __setitem__(self, key, value):
 
-        assert 'value' in self.database[key]
+        assert hasattr(self.database[key], 'value')
 
-        self.database[key]['value'] = value
+        self.database[key].value = value
 
 
     def __setitem__(self, key, value):
 
-        self.database[key]['value'] = value
+        self.database[key].value = value
 
 
     def __call__(self, key, *default):
@@ -22,13 +22,13 @@ class new_Parameterization:
             default, = default
             return default
 
-        return self.database[key]['value']
+        return self.database[key].value
 
 
     def __init__(self, target):
 
         self.target   = target
-        self.database = copy.deepcopy(new_system_database[self.target.mcu])
+        self.database = copy.deepcopy(system_database[self.target.mcu])
 
         for key, value in target.clock_tree.items():
 
@@ -50,12 +50,12 @@ class new_Parameterization:
                 )
 
         def each(key):
-            for self[key] in self.database[key]['constraint']:
+            for self[key] in self.database[key].constraint:
                 yield self(key)
 
 
         def satisfied(key, value):
-            if value in self.database[key]['constraint']:
+            if value in self.database[key].constraint:
                 self[key] = value
                 return True
             else:
@@ -599,10 +599,10 @@ class new_Parameterization:
 
                         scl = round(kernel_frequency / (presc + 1) / needed_baud / 2)
 
-                        if scl not in self.database[f'I2C{unit}_SCLH']['constraint']:
+                        if scl not in self.database[f'I2C{unit}_SCLH'].constraint:
                             continue
 
-                        if scl not in self.database[f'I2C{unit}_SCLL']['constraint']:
+                        if scl not in self.database[f'I2C{unit}_SCLL'].constraint:
                             continue
 
 
@@ -730,14 +730,14 @@ class new_Parameterization:
 
         for key, value in self.database.items():
 
-            if value.get('value', ...) is ...:
+            if not hasattr(value, 'value') or value.value is ...:
                 continue
 
-            if isinstance(self.database[key]['constraint'], dict) and 'remapped' not in value:
-                value['remapped'] = True
-                value['value'] = self.database[key]['constraint'][value['value']]
+            if isinstance(self.database[key].constraint, dict) and 'remapped' not in value.__dict__:
+                value.remapped = True
+                value.value = self.database[key].constraint[value.value]
 
-            if value.get('value', ...) is ...:
+            if not hasattr(value, 'value') or value.value is ...:
                 continue
 
-            print(f'{key :<40} | {str(value['category']) :<12} | {value.get('value', '')}')
+            print(f'{key :<40} | {str(value.category) :<12} | {value.value if hasattr(value, 'value') else ''}')

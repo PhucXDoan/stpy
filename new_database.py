@@ -1,4 +1,8 @@
-import pathlib
+import pathlib, types
+
+
+
+################################################################################
 
 
 
@@ -27,65 +31,101 @@ class IntMinMax:
 
 
 
-new_system_database = {}
+################################################################################
 
-for mcu in sorted(dict.fromkeys(
+
+
+MCUS = sorted(dict.fromkeys(
     item.stem
     for item in pathlib.Path(__file__).parent.joinpath('databases').iterdir()
     if item.is_file()
     if item.stem.isidentifier()
-)):
+    if item.stem.startswith('STM32')
+))
 
-    new_system_database[mcu] = {}
 
-    # Parse the database file.
 
-    globals = {
+################################################################################
+
+
+
+system_database = {
+    mcu : {}
+    for mcu in MCUS
+}
+
+for mcu in MCUS:
+
+
+
+    # Execute the database script.
+
+    database_globals = {
         'RealMinMax' : RealMinMax,
         'IntMinMax'  : IntMinMax,
     }
 
-    original_keys = list(globals.keys())
+    initial_globals = list(database_globals.keys())
 
     exec(
         pathlib.Path(__file__)
             .parent
             .joinpath(f'databases/{mcu}.py')
             .read_text(),
-        globals,
+        database_globals,
         {},
     )
 
-    for key in globals.keys():
 
-        if key in ('__builtins__', 'SCHEMA', *original_keys):
+
+    # Any newly declared globals will be added to the schema as a constant.
+
+    for key in database_globals.keys():
+
+        if key in ('__builtins__', 'SCHEMA', *initial_globals):
             continue
 
-        new_system_database[mcu][key] = {
-            'category'   : 'constant',
-            'location'   : None,
-            'constraint' : None,
-            'value'      : globals[key],
+        database_globals['SCHEMA'][key] = {
+            'category' : 'constant',
+            'value'    : database_globals[key],
         }
 
 
-    for key, value in globals['SCHEMA'].items():
 
-        new_system_database[mcu][key] = {
-            'category'   : value.pop('category'  , None),
-            'location'   : value.pop('location'  , None),
-            'constraint' : value.pop('constraint', None),
-        }
+    # Process each entry of the database schema.
 
-        if 'value' in value:
-            new_system_database[mcu][key]['value'] = value.pop('value')
+    for key, entry in database_globals['SCHEMA'].items():
 
-        if 'pseudokeys' in value:
 
-            pseudokeys = value.pop('pseudokeys')
 
-            for pseudokey in pseudokeys:
-                new_system_database[mcu][pseudokey] = new_system_database[mcu][key]
+        # Common fields all database entries have.
 
-        if value:
-            raise ValueError(f'Leftover schema entry properties: {repr(value)}.')
+        system_database[mcu][key] = types.SimpleNamespace(
+            category   = entry.pop('category'  , None),
+            location   = entry.pop('location'  , None),
+            constraint = entry.pop('constraint', None),
+        )
+
+
+
+        # Some database entries can be assigned a value for parameterization.
+
+        if 'value' in entry:
+            system_database[mcu][key].value = entry.pop('value')
+
+
+
+        # It's useful to have the same entry go by multiple keys.
+
+        for pseudokey in entry.pop('pseudokeys', ()):
+
+            system_database[mcu][pseudokey] = system_database[mcu][key]
+
+
+
+        # Ensure everything has been accounted for.
+
+        if entry:
+            raise ValueError(
+                f'Leftover schema entry properties: {repr(entry)}.'
+            )

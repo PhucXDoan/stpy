@@ -1,5 +1,5 @@
 from ..stpy.database             import system_properties
-from ..stpy.new_database         import new_system_database
+from ..stpy.new_database         import system_database
 from ..stpy.new_parameterization import new_Parameterization
 from ..stpy.configurize          import system_configurize
 from ..pxd.utils                 import justify
@@ -55,11 +55,11 @@ def do(Meta, target):
     for macro, expansion in justify(
         (
             ('<', f'CLOCK_TREE_FREQUENCY_OF_{key}'),
-            ('>', f'{value['value'] :,}'.replace(',', "'")),
+            ('>', f'{value.value :,}'.replace(',', "'")),
         )
         for key, value in new_parameterization.database.items()
-        if value['category'] == 'frequency'
-        if value['value'] is not ...
+        if value.category == 'frequency'
+        if value.value is not ...
     ):
         Meta.define(macro, f'({expansion})')
 
