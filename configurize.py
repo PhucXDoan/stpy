@@ -12,6 +12,73 @@ from ..pxd.log       import log, ANSI
 
 
 
+
+class Parameterization:
+
+
+
+    ################################################################################
+    #
+    # Keys can be inserted with an associated category.
+    #
+
+
+
+    def __setitem__(self, category_key, value):
+        category, key        = category_key
+        self.dictionary[key] = (category, value)
+
+
+
+    ################################################################################
+    #
+    # Indexing can be done with just the key. Thus, the
+    # categories' set of keys are disjoint with each other.
+    #
+
+
+
+    def __call__(self, key, default = ...):
+
+        if key not in self.dictionary:
+
+            if default is not ...:
+                return default
+
+            raise RuntimeError(
+                f'No key {repr(key)} was found in the '
+                f'parameterization of target {repr(self.target.name)}; '
+                f'closest matches are: {
+                    difflib.get_close_matches(
+                        str(key),
+                        map(str, self.dictionary.keys()),
+                        n      = 3,
+                        cutoff = 0
+                    )
+                }.'
+            )
+
+        category, value = self.dictionary[key]
+
+        if category == 'clock-tree-unused':
+            self.dictionary[key] = ('clock-tree-used', value)
+
+        return value
+
+
+
+    def __init__(self, target):
+
+
+
+        self.target     = target
+        self.dictionary = {
+            key : ('clock-tree-unused', value)
+            for key, value in target.clock_tree.items()
+        }
+
+        properties = system_properties[target.mcu]
+
 ################################################################################
 
 
@@ -35,7 +102,15 @@ INTERRUPTS_THAT_MUST_BE_DEFINED = (
 
 
 
-def system_configurize(Meta, parameterization):
+def system_configurize(Meta, new_parameterization):
+
+    parameterization = Parameterization(new_parameterization.target)
+
+    parameterization.dictionary = {
+        key : ('setting', value['value'])
+        for key, value in new_parameterization.database.items()
+        if 'value' in value
+    }
 
     target = parameterization.target
     planner = SystemPlanner(target)
