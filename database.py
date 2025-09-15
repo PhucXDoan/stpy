@@ -38,12 +38,12 @@ class IntMinMax:
 system_locations  = {}
 system_properties = {}
 
-for mcu in dict.fromkeys( # TODO Cleaner way to determine the MCUs?
+for mcu in sorted(dict.fromkeys( # TODO Cleaner way to determine the MCUs?
     item.stem
     for item in pathlib.Path(__file__).parent.joinpath('mcu').iterdir()
     if item.is_file()
     if item.stem.isidentifier()
-):
+)):
 
 
 
