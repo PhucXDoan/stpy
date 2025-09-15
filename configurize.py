@@ -361,7 +361,7 @@ def system_configurize(Meta, parameterization):
         if value is ...:
             value = parameterization(key)
 
-        if value is None:
+        if value is ...:
             return None
 
         value = formatting.format(c_repr(value))
@@ -604,6 +604,9 @@ def system_configurize(Meta, parameterization):
             if parameterization(f'PLL{unit}{channel}_DIVIDER', None) is None:
                 continue
 
+            if parameterization.dictionary[f'PLL{unit}{channel}_DIVIDER'][1] is ...:
+                continue
+
             sets += [
                 tuplize(f'PLL{unit}{channel}_DIVIDER', formatting = '{} - 1'),
                 tuplize(f'PLL{unit}{channel}_ENABLE', True),
@@ -618,6 +621,7 @@ def system_configurize(Meta, parameterization):
     cmsis_set(
         tuplize(f'PLL{unit}_ENABLE')
         for unit, channels in properties['PLLS']
+        if parameterization.dictionary[f'PLL{unit}_ENABLE'][1] is not ...
     )
 
 
@@ -627,6 +631,9 @@ def system_configurize(Meta, parameterization):
     for unit, channels in properties['PLLS']:
 
         if not parameterization(f'PLL{unit}_ENABLE'):
+            continue
+
+        if parameterization.dictionary[f'PLL{unit}_ENABLE'][1] is ...:
             continue
 
         cmsis_spinlock(tuplize(f'PLL{unit}_READY', True))
@@ -731,7 +738,8 @@ def system_configurize(Meta, parameterization):
 
         define_if_exist(f'I2C{unit}_KERNEL_SOURCE')
         define_if_exist(f'I2C{unit}_PRESC'        )
-        define_if_exist(f'I2C{unit}_SCL'          )
+        define_if_exist(f'I2C{unit}_SCLH'         )
+        define_if_exist(f'I2C{unit}_SCLL'         )
 
 
 
