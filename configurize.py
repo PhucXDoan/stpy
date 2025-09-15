@@ -3,7 +3,7 @@ from ..stpy.database import system_properties, system_locations
 from ..stpy.gpio     import process_all_gpios
 from ..stpy.helpers  import get_helpers
 from ..stpy.planner  import SystemPlanner
-from ..pxd.utils     import OrderedSet
+from ..pxd.utils     import OrderedSet, c_repr
 from ..pxd.log       import log, ANSI
 
 
@@ -480,6 +480,15 @@ def system_configurize(Meta, parameterization):
             flush_title()
             Meta.define(name, formatter(value))
 
+    def define_if_exist(key, formatting = '{}', *, macro = ...):
+
+        if macro is ...:
+            macro = f'{key}_init'
+
+        if (value := parameterization(key, None)) is not None:
+            flush_title()
+            Meta.define(macro, formatting.format(c_repr(value)))
+
     def mk_tuple(key, formatter = ...):
 
         if formatter is ...:
@@ -491,6 +500,33 @@ def system_configurize(Meta, parameterization):
             return None
 
         value = formatter(value)
+
+        return (*system_locations[target.mcu][key], value)
+
+
+    def tuplize(key, value = ..., formatting = '{}'):
+
+        if value is ...:
+            value = parameterization(key)
+
+        assert value is not None
+
+        if value is None:
+            return None
+
+        value = formatting.format(c_repr(value))
+
+        return (*system_locations[target.mcu][key], value)
+
+    def tuplize_if_not_none(key, value = ..., formatting = '{}'):
+
+        if value is ...:
+            value = parameterization(key)
+
+        if value is None:
+            return None
+
+        value = formatting.format(c_repr(value))
 
         return (*system_locations[target.mcu][key], value)
 
@@ -538,37 +574,40 @@ def system_configurize(Meta, parameterization):
         # Set the clock source for this PLL unit.
 
         if target.mcu == 'STM32H533RET6':
-            sets += [mk_tuple(f'PLL{unit}_KERNEL_SOURCE')]
+            sets += [tuplize_if_not_none(f'PLL{unit}_KERNEL_SOURCE')]
 
 
 
         # Set the PLL's predividers.
 
-        sets += [mk_tuple(f'PLL{unit}_PREDIVIDER')]
+        sets += [tuplize_if_not_none(f'PLL{unit}_PREDIVIDER')]
 
 
 
         # Set each PLL unit's expected input frequency range.
 
 
-        sets += [mk_tuple(f'PLL{unit}_INPUT_RANGE')]
+        sets += [tuplize_if_not_none(f'PLL{unit}_INPUT_RANGE')]
 
 
 
         # Set each PLL unit's multipler.
 
-        sets += [mk_tuple(f'PLL{unit}_MULTIPLIER', lambda value: f'{value} - 1')]
+        sets += [tuplize_if_not_none(f'PLL{unit}_MULTIPLIER', formatting = '{} - 1')]
 
 
 
         # Set each PLL unit's output divider and enable the channel.
 
         for channel in channels:
-            if parameterization(f'PLL{unit}{channel}_DIVIDER') is not None:
-                sets += [
-                    mk_tuple(f'PLL{unit}{channel}_DIVIDER', lambda value: f'{value} - 1'),
-                    planner.tuple(f'PLL{unit}{channel}_ENABLE', True),
-                ]
+
+            if parameterization(f'PLL{unit}{channel}_DIVIDER') is None:
+                continue
+
+            sets += [
+                tuplize(f'PLL{unit}{channel}_DIVIDER', formatting = '{} - 1'),
+                tuplize(f'PLL{unit}{channel}_ENABLE', True),
+            ]
 
     cmsis_set(*sets)
 
@@ -576,8 +615,8 @@ def system_configurize(Meta, parameterization):
 
     # Enable each PLL unit that is to be used.
 
-    CMSIS_SET(
-        mk_tuple(f'PLL{unit}_ENABLE')
+    cmsis_set(
+        tuplize(f'PLL{unit}_ENABLE')
         for unit, channels in properties['PLLS']
     )
 
@@ -587,10 +626,10 @@ def system_configurize(Meta, parameterization):
 
     for unit, channels in properties['PLLS']:
 
-        pllx_enable = planner[f'PLL{unit}_ENABLE']
+        if not planner[f'PLL{unit}_ENABLE']:
+            continue
 
-        if pllx_enable:
-            CMSIS_SPINLOCK(planner.tuple(f'PLL{unit}_READY', True))
+        cmsis_spinlock(tuplize(f'PLL{unit}_READY', True))
 
 
 
@@ -608,19 +647,19 @@ def system_configurize(Meta, parameterization):
 
         case 'STM32H7S3L8H6':
             cmsis_set(
-                mk_tuple('CPU_DIVIDER'),
-                mk_tuple('AXI_AHB_DIVIDER'),
+                tuplize('CPU_DIVIDER'),
+                tuplize('AXI_AHB_DIVIDER'),
                 *(
-                    mk_tuple(f'APB{unit}_DIVIDER')
+                    tuplize(f'APB{unit}_DIVIDER')
                     for unit in properties['APBS']
                 ),
             )
 
         case 'STM32H533RET6':
             cmsis_set(
-                mk_tuple('CPU_DIVIDER'),
+                tuplize('CPU_DIVIDER'),
                 *(
-                    mk_tuple(f'APB{unit}_DIVIDER')
+                    tuplize(f'APB{unit}_DIVIDER')
                     for unit in properties['APBS']
                 ),
             )
@@ -631,14 +670,14 @@ def system_configurize(Meta, parameterization):
 
     # Now switch system clock to the desired source.
 
-    cmsis_set(mk_tuple('SCGU_KERNEL_SOURCE'))
+    cmsis_set(tuplize('SCGU_KERNEL_SOURCE'))
 
 
 
     # Wait until the desired source has been selected.
 
     cmsis_spinlock(
-        planner.tuple('EFFECTIVE_SCGU_KERNEL_SOURCE', planner['SCGU_KERNEL_SOURCE'])
+        tuplize('EFFECTIVE_SCGU_KERNEL_SOURCE', parameterization('SCGU_KERNEL_SOURCE'))
     )
 
 
@@ -654,11 +693,11 @@ def system_configurize(Meta, parameterization):
     if planner['SYSTICK_ENABLE']:
 
         cmsis_set(
-            mk_tuple('SYSTICK_RELOAD'                              ), # Modulation of the counter.
-            mk_tuple('SYSTICK_USE_CPU_CK'                          ), # Use CPU clock or the vendor-provided one.
-            mk_tuple('SYSTICK_COUNTER'         , lambda value: 0   ), # SYST_CVR value is UNKNOWN on reset.
-            mk_tuple('SYSTICK_INTERRUPT_ENABLE', lambda value: True), # Enable SysTick interrupt, triggered at every overflow.
-            mk_tuple('SYSTICK_ENABLE'                              ), # Enable SysTick counter.
+            tuplize('SYSTICK_RELOAD'                ), # Modulation of the counter.
+            tuplize('SYSTICK_USE_CPU_CK'            ), # Use CPU clock or the vendor-provided one.
+            tuplize('SYSTICK_COUNTER'         , 0   ), # SYST_CVR value is UNKNOWN on reset.
+            tuplize('SYSTICK_INTERRUPT_ENABLE', True), # Enable SysTick interrupt, triggered at every overflow.
+            tuplize('SYSTICK_ENABLE'                ), # Enable SysTick counter.
         )
 
 
@@ -669,13 +708,16 @@ def system_configurize(Meta, parameterization):
 
     for instances in properties.get('UXARTS', ()):
 
-        TITLE = ' / '.join(f'{peripheral}{number}' for peripheral, number in instances)
+        TITLE = ' / '.join(f'{peripheral}{unit}' for peripheral, unit in instances)
 
         for peripheral, unit in instances:
-            define(f'UXART_{instances}_KERNEL_SOURCE', name = f'{peripheral}{unit}_KERNEL_SOURCE_init')
+            define_if_exist(
+                f'UXART_{instances}_KERNEL_SOURCE',
+                macro = f'{peripheral}{unit}_KERNEL_SOURCE_init'
+            )
 
         for peripheral, unit in instances:
-            define(f'{peripheral}{unit}_BAUD_DIVIDER')
+            define_if_exist(f'{peripheral}{unit}_BAUD_DIVIDER')
 
 
 
@@ -687,9 +729,9 @@ def system_configurize(Meta, parameterization):
 
         TITLE = f'I2C{unit}'
 
-        define(f'I2C{unit}_KERNEL_SOURCE')
-        define(f'I2C{unit}_PRESC')
-        define(f'I2C{unit}_SCL')
+        define_if_exist(f'I2C{unit}_KERNEL_SOURCE')
+        define_if_exist(f'I2C{unit}_PRESC'        )
+        define_if_exist(f'I2C{unit}_SCL'          )
 
 
 
@@ -699,32 +741,17 @@ def system_configurize(Meta, parameterization):
 
     TITLE = 'Timers'
 
-    define(f'GLOBAL_TIMER_PRESCALER')
+    define_if_exist(f'GLOBAL_TIMER_PRESCALER')
 
     for unit in properties.get('TIMERS', ()):
 
-        define(f'TIM{unit}_DIVIDER'   , lambda value: f'({value} - 1)')
-        define(f'TIM{unit}_MODULATION', lambda value: f'({value} - 1)')
+        define_if_exist(f'TIM{unit}_DIVIDER'   , '({} - 1)')
+        define_if_exist(f'TIM{unit}_MODULATION', '({} - 1)')
 
 
 
     ################################################################################
 
 
+
     planner.done_configurize()
-
-
-
-################################################################################
-
-
-
-# TODO Stale.
-# In this meta-directive, we take the configuration
-# values from `system_parameterize` and generate
-# code to set the registers in the right order.
-#
-# Order matters because some clock sources depend
-# on other clock sources, so we have to respect that.
-#
-# More details at @/`About Parameterization`.

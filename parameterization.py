@@ -759,14 +759,6 @@ class Parameterization:
 
 
 
-                # TODO Unnecessary.
-
-                self['settings', f'UXART_{instances}_KERNEL_SOURCE'] = None
-                for instance in instances:
-                    self['settings', f'{instance[0]}{instance[1]}_BAUD_DIVIDER'] = None
-
-
-
                 # Check if any of the instances are even used.
 
                 using_instances = any(
@@ -808,12 +800,6 @@ class Parameterization:
 
             @brute
             def parameterize():
-
-
-
-                # TODO Unnecessary.
-
-                self['settings', f'I2C{unit}_KERNEL_SOURCE'] = None
 
 
 
@@ -864,7 +850,7 @@ class Parameterization:
 
                         if best_baud_error is None or actual_baud_error < best_baud_error:
 
-                            best_baud_error                                = actual_baud_error
+                            best_baud_error                              = actual_baud_error
                             self['settings', f'I2C{unit}_KERNEL_SOURCE'] = kernel_source
                             self['settings', f'I2C{unit}_PRESC'        ] = presc
                             self['settings', f'I2C{unit}_SCL'          ] = scl
