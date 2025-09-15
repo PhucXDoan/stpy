@@ -28,8 +28,8 @@ def get_similars(given, options): # TODO Copy-pasta.
     import difflib
 
     return difflib.get_close_matches(
-        given if given is not None else 'None',
-        [option if option is not None else 'None' for option in options],
+        str(given),
+        [str(option) for option in options],
         n      = 3,
         cutoff = 0
     )
