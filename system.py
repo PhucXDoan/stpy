@@ -61,10 +61,11 @@ def do(Meta, target):
     for macro, expansion in justify(
         (
             ('<', f'CLOCK_TREE_FREQUENCY_OF_{key}'),
-            ('>', value),
+            ('>', f'{value :,}'.replace(',', "'")),
         )
         for key, (kind, value) in parameterization.dictionary.items()
-        if key   is not None
+        if key != 0
+        if kind == 'frequency'
         if value is not None
     ):
         Meta.define(macro, f'({expansion})')

@@ -1003,6 +1003,8 @@ class Parameterization:
         # to the respective value within that dictionary.
         #
 
+
+
         for key, (category, value) in self.dictionary.items():
 
             if key not in system_properties[target.mcu]:
@@ -1025,8 +1027,38 @@ class Parameterization:
         # like '3.0' where C would see it as a double literal.
         #
 
+
+
         for key, (category, value) in self.dictionary.items():
 
             if isinstance(value, float) and value.is_integer():
 
                 self.dictionary[key] = (category, int(value))
+
+
+
+        ################################################################################
+        #
+        # Some clock-tree options are clock-tree frequency values,
+        # so we move them to the frequency category so they can be exported.
+        #
+
+
+
+        for key in (
+            'CPU_CK',
+            'AXI_AHB_CK',
+            *(
+                f'PLL{unit}{channel}_CK'
+                for unit, channels in properties['PLLS']
+                for channel in channels
+            ),
+            *(
+                f'APB{unit}_CK'
+                for unit in properties['APBS']
+            ),
+        ):
+
+            if key in self.dictionary:
+
+                self.dictionary[key] = ('frequency', self.dictionary[key][1])
