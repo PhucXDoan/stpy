@@ -356,10 +356,10 @@
                 ('TIMPRE', 'GLOBAL_TIMER_PRESCALER'),
                 *(
                     (field, tag, {
-                        'HSI_CK'    : '0b000',
-                        'CSI_CK'    : '0b001',
-                        'HSE_CK'    : '0b010',
-                        'PLL1_P_CK' : '0b011',
+                        'HSI_CK'   : '0b000',
+                        'CSI_CK'   : '0b001',
+                        'HSE_CK'   : '0b010',
+                        'PLL1P_CK' : '0b011',
                     })
                     for field, tag in (
                         ('SWS', 'EFFECTIVE_SCGU_KERNEL_SOURCE'),
@@ -416,9 +416,9 @@
 
             *(
                 (f'PLL{unit}DIVR',
-                    (f'PLL{unit}R', f'PLL{unit}R_DIVIDER'  , IntMinMax(1, 128)),
-                    (f'PLL{unit}Q', f'PLL{unit}Q_DIVIDER'  , IntMinMax(1, 128)),
-                    (f'PLL{unit}P', f'PLL{unit}P_DIVIDER'  , IntMinMax(1, 128)),
+                    (f'PLL{unit}R', f'PLL{unit}R_DIVIDER'   , IntMinMax(1, 128)),
+                    (f'PLL{unit}Q', f'PLL{unit}Q_DIVIDER'   , IntMinMax(1, 128)),
+                    (f'PLL{unit}P', f'PLL{unit}P_DIVIDER'   , IntMinMax(1, 128)),
                     (f'PLL{unit}N', f'PLL{unit}_MULTIPLIER', IntMinMax(4, 512)),
                 )
                 for unit in (1, 2, 3)
@@ -448,13 +448,13 @@
                                 ('USART2SEL' , (('USART', 2 ),)),
                             ),
                             {
-                                'APB1_CK'    : '0b000',
-                                'PLL2_Q_CK'  : '0b001',
-                                'PLL3_Q_CK'  : '0b010',
-                                'HSI_CK'     : '0b011',
-                                'CSI_CK'     : '0b100',
-                                'LSE_CK'     : '0b101',
-                                # TODO How to handle? None         : '0b110',
+                                'APB1_CK'  : '0b000',
+                                'PLL2Q_CK' : '0b001',
+                                'PLL3Q_CK' : '0b010',
+                                'HSI_CK'   : '0b011',
+                                'CSI_CK'   : '0b100',
+                                'LSE_CK'   : '0b101',
+                                None       : '0b110',
                             },
                         ),
                         (
@@ -463,12 +463,12 @@
                             ),
                             {
                                 'RCC_PCLK2' : '0b000',
-                                'PLL2_Q_CK' : '0b001',
-                                'PLL3_Q_CK' : '0b010',
+                                'PLL2Q_CK'  : '0b001',
+                                'PLL3Q_CK'  : '0b010',
                                 'HSI_CK'    : '0b011',
                                 'CSI_CK'    : '0b100',
                                 'LSE_CK'    : '0b101',
-                                # TODO How to handle? None        : '0b110',
+                                None        : '0b110',
                             },
                         ),
                     )
@@ -476,7 +476,7 @@
                 ),
             ),
 
-            ('CCIPR1', # TODO Redundancy.
+            ('CCIPR1',
                 *(
                     (field, f'{peripheral}{unit}_KERNEL_SOURCE', clock_source)
                     for field_instances, clock_source in
@@ -494,13 +494,13 @@
                                 ('USART2SEL' , (('USART', 2 ),)),
                             ),
                             {
-                                'APB1_CK'    : '0b000',
-                                'PLL2_Q_CK'  : '0b001',
-                                'PLL3_Q_CK'  : '0b010',
-                                'HSI_CK'     : '0b011',
-                                'CSI_CK'     : '0b100',
-                                'LSE_CK'     : '0b101',
-                                # TODO How to handle? None         : '0b110',
+                                'APB1_CK'  : '0b000',
+                                'PLL2Q_CK' : '0b001',
+                                'PLL3Q_CK' : '0b010',
+                                'HSI_CK'   : '0b011',
+                                'CSI_CK'   : '0b100',
+                                'LSE_CK'   : '0b101',
+                                None       : '0b110',
                             },
                         ),
                         (
@@ -508,13 +508,13 @@
                                 ('USART1SEL', (('USART', 1),)),
                             ),
                             {
-                                'RCC_PCLK2'  : '0b000',
-                                'PLL2_Q_CK'  : '0b001',
-                                'PLL3_Q_CK'  : '0b010',
-                                'HSI_CK'     : '0b011',
-                                'CSI_CK'     : '0b100',
-                                'LSE_CK'     : '0b101',
-                                # TODO How to handle? None         : '0b110',
+                                'RCC_PCLK2' : '0b000',
+                                'PLL2Q_CK'  : '0b001',
+                                'PLL3Q_CK'  : '0b010',
+                                'HSI_CK'    : '0b011',
+                                'CSI_CK'    : '0b100',
+                                'LSE_CK'    : '0b101',
+                                None        : '0b110',
                             },
                         ),
                     )
@@ -525,22 +525,22 @@
 
             ('CCIPR4',
                 ('I2C3SEL', 'I2C3_KERNEL_SOURCE', {
-                    'APB3_CK'   : '0b00',
-                    'PLL3_R_CK' : '0b01',
-                    'HSI_CK'    : '0b10',
-                    'CSI_CK'    : '0b11',
+                    'APB3_CK'  : '0b00',
+                    'PLL3R_CK' : '0b01',
+                    'HSI_CK'   : '0b10',
+                    'CSI_CK'   : '0b11',
                 }),
                 ('I2C2SEL', 'I2C2_KERNEL_SOURCE', {
-                    'APB1_CK'   : '0b00',
-                    'PLL3_R_CK' : '0b01',
-                    'HSI_CK'    : '0b10',
-                    'CSI_CK'    : '0b11',
+                    'APB1_CK'  : '0b00',
+                    'PLL3R_CK' : '0b01',
+                    'HSI_CK'   : '0b10',
+                    'CSI_CK'   : '0b11',
                 }),
                 ('I2C1SEL', 'I2C1_KERNEL_SOURCE', {
-                    'APB1_CK'   : '0b00',
-                    'PLL3_R_CK' : '0b01',
-                    'HSI_CK'    : '0b10',
-                    'CSI_CK'    : '0b11',
+                    'APB1_CK'  : '0b00',
+                    'PLL3R_CK' : '0b01',
+                    'HSI_CK'   : '0b10',
+                    'CSI_CK'   : '0b11',
                 }),
             ),
 
@@ -549,7 +549,7 @@
                     'HSI_CK' : '0b00',
                     'CSI_CK' : '0b01',
                     'HSE_CK' : '0b10',
-                    # TODO How to handle? None     : '0b11',
+                    None     : '0b11',
                 }),
             ),
 

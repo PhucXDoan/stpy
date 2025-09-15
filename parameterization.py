@@ -358,14 +358,14 @@ class Parameterization:
 
             for channel in channels:
 
-                goal_frequency = self(f'PLL{unit}_{channel}_CK')
+                goal_frequency = self(f'PLL{unit}{channel}_CK')
 
                 if goal_frequency is None:
                     continue
 
                 if goal_frequency not in properties['PLL_CHANNEL_FREQ']:
                     raise ValueError(
-                        f'PLL{unit}_{channel}_CK frequency is '
+                        f'PLL{unit}{channel}_CK frequency is '
                         f'out of range: {goal_frequency :_}Hz.'
                     )
 
@@ -422,7 +422,7 @@ class Parameterization:
 
             # See if the PLL channel is even used.
 
-            goal_frequency = self(f'PLL{unit}_{channel}_CK')
+            goal_frequency = self(f'PLL{unit}{channel}_CK')
 
             if goal_frequency is None:
                 return True
@@ -436,7 +436,7 @@ class Parameterization:
             if needed_divider not in properties[f'PLL{unit}{channel}_DIVIDER']:
                 return False
 
-            self['settings', f'PLL{unit}_{channel}_DIVIDER'] = needed_divider
+            self['settings', f'PLL{unit}{channel}_DIVIDER'] = needed_divider
 
             return True
 
@@ -460,14 +460,14 @@ class Parameterization:
             self['settings', f'PLL{unit}_INPUT_RANGE'] = None
             self['settings', f'PLL{unit}_MULTIPLIER' ] = None
             for channel in dict(properties['PLLS'])[unit]:
-                self['settings', f'PLL{unit}_{channel}_DIVIDER'] = None
+                self['settings', f'PLL{unit}{channel}_DIVIDER'] = None
 
 
 
             # See if the PLL unit is even used.
 
             self['settings', f'PLL{unit}_ENABLE'] = any(
-                self(f'PLL{unit}_{channel}_CK') is not None
+                self(f'PLL{unit}{channel}_CK') is not None
                 for channel in channels
             )
 

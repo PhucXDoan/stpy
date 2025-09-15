@@ -330,10 +330,10 @@
             ('CFGR',
                 *(
                     (field, tag, {
-                        'HSI_CK'    : '0b000',
-                        'CSI_CK'    : '0b001',
-                        'HSE_CK'    : '0b010',
-                        'PLL1_P_CK' : '0b011',
+                        'HSI_CK'   : '0b000',
+                        'CSI_CK'   : '0b001',
+                        'HSE_CK'   : '0b010',
+                        'PLL1P_CK' : '0b011',
                     })
                     for field, tag in (
                         ('SWS', 'EFFECTIVE_SCGU_KERNEL_SOURCE'),
@@ -417,10 +417,10 @@
                 ('DIVM2' , 'PLL2_PREDIVIDER'  , IntMinMax(1, 63)),
                 ('DIVM3' , 'PLL3_PREDIVIDER'  , IntMinMax(1, 63)),
                 ('PLLSRC', 'PLL_KERNEL_SOURCE', {
-                    'HSI_CK'  : '0b00',
-                    'CSI_CK'  : '0b01',
-                    'HSE_CK'  : '0b10',
-                    # TODO How to handle? None      : '0b11',
+                    'HSI_CK' : '0b00',
+                    'CSI_CK' : '0b01',
+                    'HSE_CK' : '0b10',
+                    None     : '0b11',
                 }),
             ),
 
@@ -445,37 +445,37 @@
 
             ('CCIPR1',
                 ('CKPERSEL', 'PERIPHERAL_CLOCK_OPTION', {
-                    'HSI_CK'  : '0b00',
-                    'CSI_CK'  : '0b01',
-                    'HSE_CK'  : '0b10',
-                    # TODO How to handle? None      : '0b11',
+                    'HSI_CK' : '0b00',
+                    'CSI_CK' : '0b01',
+                    'HSE_CK' : '0b10',
+                    None     : '0b11',
                 }),
                 ('SDMMC12SEL', 'SDMMC_KERNEL_SOURCE', {
-                    'PLL2_S_CK' : '0b0',
-                    'PLL2_T_CK' : '0b1',
+                    'PLL2S_CK' : '0b0',
+                    'PLL2T_CK' : '0b1',
                 }),
             ),
 
             ('CCIPR2',
                 ('UART234578SEL', f'UXART_{(('USART', 2), ('USART', 3), ('UART', 4), ('UART', 5), ('UART', 7), ('UART', 8))}_KERNEL_SOURCE', {
-                    'APB2_CK'   : '0b000',
-                    'PLL2_Q_CK' : '0b001',
-                    'PLL3_Q_CK' : '0b010',
-                    'HSI_CK'    : '0b011',
-                    'CSI_CK'    : '0b100',
-                    'LSE_CK'    : '0b101',
+                    'APB2_CK'  : '0b000',
+                    'PLL2Q_CK' : '0b001',
+                    'PLL3Q_CK' : '0b010',
+                    'HSI_CK'   : '0b011',
+                    'CSI_CK'   : '0b100',
+                    'LSE_CK'   : '0b101',
                 }),
             ),
 
-            ('CCIPR2', # TODO Should we allow for redundant locations?
+            ('CCIPR2',
                 *(
                     ('UART234578SEL', f'{peripheral}{unit}_KERNEL_SOURCE', {
-                        'APB2_CK'   : '0b000',
-                        'PLL2_Q_CK' : '0b001',
-                        'PLL3_Q_CK' : '0b010',
-                        'HSI_CK'    : '0b011',
-                        'CSI_CK'    : '0b100',
-                        'LSE_CK'    : '0b101',
+                        'APB2_CK'  : '0b000',
+                        'PLL2Q_CK' : '0b001',
+                        'PLL3Q_CK' : '0b010',
+                        'HSI_CK'   : '0b011',
+                        'CSI_CK'   : '0b100',
+                        'LSE_CK'   : '0b101',
                     })
                     for peripheral, unit in (('USART', 2), ('USART', 3), ('UART', 4), ('UART', 5), ('UART', 7), ('UART', 8))
                 ),

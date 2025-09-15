@@ -525,7 +525,7 @@ def system_configurize(Meta, target, planner):
 
             for channel in channels:
 
-                divider = planner[f'PLL{unit}_{channel}_DIVIDER']
+                divider = planner[f'PLL{unit}{channel}_DIVIDER']
 
                 if divider is None:
                     continue
