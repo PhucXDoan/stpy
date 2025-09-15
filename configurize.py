@@ -463,83 +463,121 @@ def system_configurize(Meta, parameterization):
 
 
 
-    put_title('PLLs')
+    TITLE = None
+
+    def flush_title():
+        nonlocal TITLE
+        if TITLE is not None:
+            put_title(TITLE)
+            TITLE = None
+
+    def define(key, formatter = lambda value: value, *, name = ...):
+
+        if name is ...:
+            name = f'{key}_init'
+
+        if (value := parameterization(key, None)) is not None:
+            flush_title()
+            Meta.define(name, formatter(value))
+
+    def mk_tuple(key, formatter = ...):
+
+        if formatter is ...:
+            formatter = lambda value: value
+
+        value = parameterization(key, None)
+
+        if value is None:
+            return None
+
+        value = formatter(value)
+
+        return (*system_locations[target.mcu][key], value)
+
+
+    def cmsis_set(*entries):
+        entries = [entry for entry in entries if entry is not None]
+        if entries:
+            flush_title()
+            CMSIS_SET(*entries)
+
+    def cmsis_spinlock(*entries):
+        entries = [entry for entry in entries if entry is not None]
+        if entries:
+            flush_title()
+            CMSIS_SPINLOCK(*entries)
+
+
+    ################################################################################
+
+
+
+    TITLE = 'PLLs'
 
 
 
     # Set up the PLL registers.
 
-    with CMSIS_SET as sets:
+    sets = []
 
 
 
-        # Set the clock source shared for all PLLs.
+    # Set the clock source shared for all PLLs.
 
-        if target.mcu == 'STM32H7S3L8H6':
-            sets += [planner.tuple('PLL_KERNEL_SOURCE')]
-
-
-
-        # Configure each PLL.
-
-        for unit, channels in properties['PLLS']:
+    if target.mcu == 'STM32H7S3L8H6':
+        sets += [mk_tuple('PLL_KERNEL_SOURCE')]
 
 
 
-            # Set the clock source for this PLL unit.
+    # Configure each PLL.
 
-            if target.mcu == 'STM32H533RET6':
-                sets += [planner.tuple(f'PLL{unit}_KERNEL_SOURCE')]
-
-
-
-            # Set the PLL's predividers.
-
-            predivider = planner[f'PLL{unit}_PREDIVIDER']
-
-            if predivider is not None:
-                sets += [planner.tuple(f'PLL{unit}_PREDIVIDER')]
+    for unit, channels in properties['PLLS']:
 
 
 
-            # Set each PLL unit's expected input frequency range.
+        # Set the clock source for this PLL unit.
 
-            input_range = planner[f'PLL{unit}_INPUT_RANGE']
-
-            if input_range is not None:
-                sets += [planner.tuple(f'PLL{unit}_INPUT_RANGE')]
+        if target.mcu == 'STM32H533RET6':
+            sets += [mk_tuple(f'PLL{unit}_KERNEL_SOURCE')]
 
 
 
-            # Set each PLL unit's multipler.
+        # Set the PLL's predividers.
 
-            multiplier = planner[f'PLL{unit}_MULTIPLIER']
-
-            if multiplier is not None:
-                sets += [planner.tuple(f'PLL{unit}_MULTIPLIER', f'{multiplier} - 1')]
+        sets += [mk_tuple(f'PLL{unit}_PREDIVIDER')]
 
 
 
-            # Set each PLL unit's output divider and enable the channel.
+        # Set each PLL unit's expected input frequency range.
 
-            for channel in channels:
 
-                divider = planner[f'PLL{unit}{channel}_DIVIDER']
+        sets += [mk_tuple(f'PLL{unit}_INPUT_RANGE')]
 
-                if divider is None:
-                    continue
 
+
+        # Set each PLL unit's multipler.
+
+        sets += [mk_tuple(f'PLL{unit}_MULTIPLIER', lambda value: f'{value} - 1')]
+
+
+
+        # Set each PLL unit's output divider and enable the channel.
+
+        for channel in channels:
+            if parameterization(f'PLL{unit}{channel}_DIVIDER') is not None:
                 sets += [
-                    planner.tuple(f'PLL{unit}{channel}_DIVIDER', f'{divider} - 1'),
-                    planner.tuple(f'PLL{unit}{channel}_ENABLE' , True            ),
+                    mk_tuple(f'PLL{unit}{channel}_DIVIDER', lambda value: f'{value} - 1'),
+                    planner.tuple(f'PLL{unit}{channel}_ENABLE', True),
                 ]
+
+    cmsis_set(*sets)
 
 
 
     # Enable each PLL unit that is to be used.
 
     CMSIS_SET(
-        planner.tuple(f'PLL{unit}_ENABLE')
+        mk_tuple(f'PLL{unit}_ENABLE')
         for unit, channels in properties['PLLS']
     )
 
@@ -560,7 +598,7 @@ def system_configurize(Meta, parameterization):
 
 
 
-    put_title('System Clock Generation Unit')
+    TITLE = 'System Clock Generation Unit'
 
 
 
@@ -569,20 +607,20 @@ def system_configurize(Meta, parameterization):
     match target.mcu:
 
         case 'STM32H7S3L8H6':
-            CMSIS_SET(
-                planner.tuple('CPU_DIVIDER'),
-                planner.tuple('AXI_AHB_DIVIDER'),
+            cmsis_set(
+                mk_tuple('CPU_DIVIDER'),
+                mk_tuple('AXI_AHB_DIVIDER'),
                 *(
-                    planner.tuple(f'APB{unit}_DIVIDER')
+                    mk_tuple(f'APB{unit}_DIVIDER')
                     for unit in properties['APBS']
                 ),
             )
 
         case 'STM32H533RET6':
-            CMSIS_SET(
-                planner.tuple('CPU_DIVIDER'),
+            cmsis_set(
+                mk_tuple('CPU_DIVIDER'),
                 *(
-                    planner.tuple(f'APB{unit}_DIVIDER')
+                    mk_tuple(f'APB{unit}_DIVIDER')
                     for unit in properties['APBS']
                 ),
             )
@@ -593,13 +631,13 @@ def system_configurize(Meta, parameterization):
 
     # Now switch system clock to the desired source.
 
-    CMSIS_SET(planner.tuple('SCGU_KERNEL_SOURCE'))
+    cmsis_set(mk_tuple('SCGU_KERNEL_SOURCE'))
 
 
 
     # Wait until the desired source has been selected.
 
-    CMSIS_SPINLOCK(
+    cmsis_spinlock(
         planner.tuple('EFFECTIVE_SCGU_KERNEL_SOURCE', planner['SCGU_KERNEL_SOURCE'])
     )
 
@@ -608,57 +646,19 @@ def system_configurize(Meta, parameterization):
     ################################################################################
 
 
-
-    TITLE = None
-
-    def flush_title():
-        nonlocal TITLE
-        if TITLE is not None:
-            put_title(TITLE)
-            TITLE = None
-
-    def define(key, formatter = lambda value: value, *, name = ...):
-
-        if name is ...:
-            name = f'{key}_init'
-
-        if (value := parameterization(key, None)) is not None:
-            flush_title()
-            Meta.define(name, formatter(value))
-
-    def mk_tuple(key, value = ...):
-
-        if value is ...:
-            value = parameterization(key, None)
-            if value is None:
-                return None
-
-        return (*system_locations[target.mcu][key], value)
-
-
-    def cmsis_set(*entries):
-        entries = [entry for entry in entries if entry is not None]
-        if entries:
-            flush_title()
-            CMSIS_SET(*entries)
-
-
-    ################################################################################
-
-
     # @/pg 621/tbl B3-7/`Armv7-M`.
     # @/pg 1861/sec D1.2.239/`Armv8-M`.
 
-    title = 'SysTick'
+    TITLE = 'SysTick'
 
     if planner['SYSTICK_ENABLE']:
 
         cmsis_set(
-            mk_tuple('SYSTICK_RELOAD'                ), # Modulation of the counter.
-            mk_tuple('SYSTICK_USE_CPU_CK'            ), # Use CPU clock or the vendor-provided one.
-            mk_tuple('SYSTICK_COUNTER'         , 0   ), # SYST_CVR value is UNKNOWN on reset.
-            mk_tuple('SYSTICK_INTERRUPT_ENABLE', True), # Enable SysTick interrupt, triggered at every overflow.
-            mk_tuple('SYSTICK_ENABLE'                ), # Enable SysTick counter.
+            mk_tuple('SYSTICK_RELOAD'                              ), # Modulation of the counter.
+            mk_tuple('SYSTICK_USE_CPU_CK'                          ), # Use CPU clock or the vendor-provided one.
+            mk_tuple('SYSTICK_COUNTER'         , lambda value: 0   ), # SYST_CVR value is UNKNOWN on reset.
+            mk_tuple('SYSTICK_INTERRUPT_ENABLE', lambda value: True), # Enable SysTick interrupt, triggered at every overflow.
+            mk_tuple('SYSTICK_ENABLE'                              ), # Enable SysTick counter.
         )
 
 
