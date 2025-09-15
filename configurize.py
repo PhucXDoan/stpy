@@ -73,6 +73,9 @@ def system_configurize(Meta, parameterization):
 
 
 
+
+
+
     ################################################################################
 
     # TODO Placement?
@@ -606,18 +609,56 @@ def system_configurize(Meta, parameterization):
 
 
 
+    TITLE = None
+
+    def flush_title():
+        nonlocal TITLE
+        if TITLE is not None:
+            put_title(TITLE)
+            TITLE = None
+
+    def define(key, formatter = lambda value: value, *, name = ...):
+
+        if name is ...:
+            name = f'{key}_init'
+
+        if (value := parameterization(key, None)) is not None:
+            flush_title()
+            Meta.define(name, formatter(value))
+
+    def mk_tuple(key, value = ...):
+
+        if value is ...:
+            value = parameterization(key, None)
+            if value is None:
+                return None
+
+        return (*system_locations[target.mcu][key], value)
+
+
+    def cmsis_set(*entries):
+        entries = [entry for entry in entries if entry is not None]
+        if entries:
+            flush_title()
+            CMSIS_SET(*entries)
+
+
+    ################################################################################
+
+
+    # @/pg 621/tbl B3-7/`Armv7-M`.
+    # @/pg 1861/sec D1.2.239/`Armv8-M`.
+
+    title = 'SysTick'
+
     if planner['SYSTICK_ENABLE']:
 
-        put_title('SysTick')
-
-        # @/pg 621/tbl B3-7/`Armv7-M`.
-        # @/pg 1861/sec D1.2.239/`Armv8-M`.
-        CMSIS_SET(
-            planner.tuple('SYSTICK_RELOAD'          ), # Modulation of the counter.
-            planner.tuple('SYSTICK_USE_CPU_CK'      ), # Use CPU clock or the vendor-provided one.
-            planner.tuple('SYSTICK_COUNTER'         , 0   ), # SYST_CVR value is UNKNOWN on reset.
-            planner.tuple('SYSTICK_INTERRUPT_ENABLE', True), # Enable SysTick interrupt, triggered at every overflow.
-            planner.tuple('SYSTICK_ENABLE'          , True), # Enable SysTick counter.
+        cmsis_set(
+            mk_tuple('SYSTICK_RELOAD'                ), # Modulation of the counter.
+            mk_tuple('SYSTICK_USE_CPU_CK'            ), # Use CPU clock or the vendor-provided one.
+            mk_tuple('SYSTICK_COUNTER'         , 0   ), # SYST_CVR value is UNKNOWN on reset.
+            mk_tuple('SYSTICK_INTERRUPT_ENABLE', True), # Enable SysTick interrupt, triggered at every overflow.
+            mk_tuple('SYSTICK_ENABLE'                ), # Enable SysTick counter.
         )
 
 
@@ -628,33 +669,13 @@ def system_configurize(Meta, parameterization):
 
     for instances in properties.get('UXARTS', ()):
 
-        if planner[f'UXART_{instances}_KERNEL_SOURCE'] is None:
-            continue
+        TITLE = ' / '.join(f'{peripheral}{number}' for peripheral, number in instances)
 
-        put_title(' / '.join(f'{peripheral}{number}' for peripheral, number in instances))
-
-        # TODO I honestly don't know how to feel about doing it this way.
         for peripheral, unit in instances:
-            Meta.define(f'{peripheral}{unit}_KERNEL_SOURCE_init', planner[f'UXART_{instances}_KERNEL_SOURCE'])
+            define(f'UXART_{instances}_KERNEL_SOURCE', name = f'{peripheral}{unit}_KERNEL_SOURCE_init')
 
-        # TODO Deprecate...?
-        Meta.define(
-            f'UXART_{'_'.join(str(number) for peripheral, number in instances)}_KERNEL_SOURCE_init',
-            planner[f'UXART_{instances}_KERNEL_SOURCE']
-        )
-
-        for peripheral, number in instances:
-
-            baud_divider = planner[f'{peripheral}{number}_BAUD_DIVIDER']
-
-            if baud_divider is None:
-                continue
-
-            # TODO More consistent naming?
-            Meta.define(f'{peripheral}{number}_BRR_BRR_init', baud_divider)
-
-        # TODO Deprecate.
-        CMSIS_SET(planner.tuple(f'UXART_{instances}_KERNEL_SOURCE'))
+        for peripheral, unit in instances:
+            define(f'{peripheral}{unit}_BAUD_DIVIDER')
 
 
 
@@ -664,14 +685,11 @@ def system_configurize(Meta, parameterization):
 
     for unit in properties.get('I2CS', ()):
 
-        if planner[f'I2C{unit}_KERNEL_SOURCE'] is None:
-            continue
+        TITLE = f'I2C{unit}'
 
-        put_title(f'I2C{unit}')
-
-        Meta.define(f'I2C{unit}_KERNEL_SOURCE_init', planner[f'I2C{unit}_KERNEL_SOURCE'])
-        Meta.define(f'I2C{unit}_TIMINGR_PRESC_init', planner[f'I2C{unit}_PRESC'        ])
-        Meta.define(f'I2C{unit}_TIMINGR_SCL_init'  , planner[f'I2C{unit}_SCL'          ])
+        define(f'I2C{unit}_KERNEL_SOURCE')
+        define(f'I2C{unit}_PRESC')
+        define(f'I2C{unit}_SCL')
 
 
 
@@ -679,19 +697,14 @@ def system_configurize(Meta, parameterization):
 
 
 
-    if planner.dictionary.get('GLOBAL_TIMER_PRESCALER', None) is not None:
+    TITLE = 'Timers'
 
-        put_title('Timers')
+    define(f'GLOBAL_TIMER_PRESCALER')
 
-        Meta.define(f'GLOBAL_TIMER_PRESCALER_init', planner['GLOBAL_TIMER_PRESCALER'])
+    for unit in properties.get('TIMERS', ()):
 
-        for unit in properties.get('TIMERS', ()):
-
-            if planner.dictionary.get(f'TIM{unit}_DIVIDER', None) is not None:
-                Meta.define(f'TIM{unit}_DIVIDER_init', f'({planner[f'TIM{unit}_DIVIDER']} - 1)')
-
-            if planner.dictionary.get(f'TIM{unit}_MODULATION', None) is not None:
-                Meta.define(f'TIM{unit}_MODULATION_init', f'({planner[f'TIM{unit}_MODULATION']} - 1)')
+        define(f'TIM{unit}_DIVIDER'   , lambda value: f'({value} - 1)')
+        define(f'TIM{unit}_MODULATION', lambda value: f'({value} - 1)')
 
 
 
