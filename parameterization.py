@@ -48,9 +48,13 @@ class Parameterization:
 
 
 
-    def __call__(self, key):
+    def __call__(self, key, default = ...):
 
         if key not in self.dictionary:
+
+            if default is not ...:
+                return default
+
             raise RuntimeError(
                 f'While parameterizing, no key {repr(key)} was '
                 f'found for target {repr(self.target.name)}; '
@@ -148,17 +152,32 @@ class Parameterization:
 
 
 
-        # TODO.
-
-        properties = system_properties[self.target.mcu]
-
-        for key, (category, value) in self.dictionary.items():
-            if key in properties and isinstance(properties[key], dict):
-                if value in properties[key]:
-                    self.dictionary[key] = (category, properties[key][value])
+        # Remap values that were keys of a dictionary
+        # to the respective value within that dictionary.
 
         for key, (category, value) in self.dictionary.items():
+
+            if key not in system_properties[self.target.mcu]:
+                continue
+
+            if not isinstance(system_properties[self.target.mcu][key], dict):
+                continue
+
+            if value not in system_properties[self.target.mcu][key]:
+                continue
+
+            self.dictionary[key] = (category, system_properties[self.target.mcu][key][value])
+
+
+
+        # We convert whole number floats to integers so
+        # that if the value is stringified, it won't be
+        # like '3.0' where C would see it as a double literal.
+
+        for key, (category, value) in self.dictionary.items():
+
             if isinstance(value, float) and value.is_integer():
+
                 self.dictionary[key] = (category, int(value))
 
 
@@ -178,7 +197,7 @@ class Parameterization:
 
 
 
-        self['frequency', None] = 0 # No clock source, no frequency.
+        self['frequency', 0] = 0 # Zero frequency maps to zero frequency!
 
 
 
@@ -336,7 +355,7 @@ class Parameterization:
 
 
 
-        self['frequency', 'PER_CK'] = self(self('PERIPHERAL_CLOCK_OPTION'))
+        self['frequency', 'PER_CK'] = self(self('PERIPHERAL_CLOCK_OPTION', 0))
 
 
 

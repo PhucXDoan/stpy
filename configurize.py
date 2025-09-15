@@ -11,19 +11,6 @@ from ..pxd.log       import log, ANSI
 
 
 
-def get_similars(given, options): # TODO Copy-pasta.
-
-    import difflib
-
-    return difflib.get_close_matches(
-        given if given is not None else 'None',
-        [option if option is not None else 'None' for option in options],
-        n      = 3,
-        cutoff = 0
-    )
-
-
-
 ################################################################################
 
 
@@ -452,7 +439,7 @@ def system_configurize(Meta, target, planner):
     # Set the clock source which will be
     # available for some peripheral to use.
 
-    if planner['PERIPHERAL_CLOCK_OPTION'] is not None:
+    if 'PERIPHERAL_CLOCK_OPTION' in planner.dictionary and planner['PERIPHERAL_CLOCK_OPTION'] is not None:
 
         put_title('Peripheral Clock Source')
 

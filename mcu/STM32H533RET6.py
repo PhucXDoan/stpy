@@ -399,7 +399,7 @@
                     (f'PLL{unit}PEN', f'PLL{unit}P_ENABLE'),
                     (f'PLL{unit}M'  , f'PLL{unit}_PREDIVIDER', IntMinMax(1, 63)),
                     (f'PLL{unit}SRC', f'PLL{unit}_KERNEL_SOURCE', {
-                        None     : '0b00',
+                        0        : '0b00',
                         'HSI_CK' : '0b01',
                         'CSI_CK' : '0b10',
                         'HSE_CK' : '0b11',
@@ -454,7 +454,7 @@
                                 'HSI_CK'   : '0b011',
                                 'CSI_CK'   : '0b100',
                                 'LSE_CK'   : '0b101',
-                                None       : '0b110',
+                                0          : '0b110',
                             },
                         ),
                         (
@@ -468,7 +468,7 @@
                                 'HSI_CK'    : '0b011',
                                 'CSI_CK'    : '0b100',
                                 'LSE_CK'    : '0b101',
-                                None        : '0b110',
+                                0           : '0b110',
                             },
                         ),
                     )
@@ -500,7 +500,7 @@
                                 'HSI_CK'   : '0b011',
                                 'CSI_CK'   : '0b100',
                                 'LSE_CK'   : '0b101',
-                                None       : '0b110',
+                                0          : '0b110',
                             },
                         ),
                         (
@@ -514,7 +514,7 @@
                                 'HSI_CK'    : '0b011',
                                 'CSI_CK'    : '0b100',
                                 'LSE_CK'    : '0b101',
-                                None        : '0b110',
+                                0           : '0b110',
                             },
                         ),
                     )
@@ -549,7 +549,7 @@
                     'HSI_CK' : '0b00',
                     'CSI_CK' : '0b01',
                     'HSE_CK' : '0b10',
-                    None     : '0b11',
+                    0        : '0b11',
                 }),
             ),
 
