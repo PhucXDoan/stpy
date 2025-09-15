@@ -11,15 +11,21 @@ class new_Parameterization:
         self.database[key]['value'] = value
 
 
-    def __getitem__(self, key):
+    def __setitem__(self, key, value):
+
+        self.database[key]['value'] = value
+
+
+    def __call__(self, key, *default):
+
+        if key not in self.database:
+            default, = default
+            return default
 
         return self.database[key]['value']
 
 
     def __init__(self, target):
-
-        if target.mcu != 'STM32H533RET6':
-            return
 
         self.target   = target
         self.database = copy.deepcopy(new_system_database[self.target.mcu])
@@ -45,7 +51,7 @@ class new_Parameterization:
 
         def each(key):
             for self[key] in self.database[key]['constraint']:
-                yield self[key]
+                yield self(key)
 
 
         def satisfied(key, value):
@@ -148,8 +154,8 @@ class new_Parameterization:
 
 
         self['HSI_CK'] = (
-            self['HSI_DEFAULT_FREQUENCY']
-            if self['HSI_ENABLE']
+            self('HSI_DEFAULT_FREQUENCY')
+            if self('HSI_ENABLE')
             else 0
         )
 
@@ -166,7 +172,7 @@ class new_Parameterization:
 
         self['HSI48_CK'] = (
             48_000_000
-            if self['HSI48_ENABLE']
+            if self('HSI48_ENABLE')
             else 0
         )
 
@@ -183,7 +189,7 @@ class new_Parameterization:
 
         self['CSI_CK'] = (
             4_000_000
-            if self['CSI_ENABLE']
+            if self('CSI_ENABLE')
             else 0
         )
 
@@ -209,9 +215,9 @@ class new_Parameterization:
 
 
 
-        if self['PERIPHERAL_CLOCK_OPTION'] is not ...:
+        if self('PERIPHERAL_CLOCK_OPTION') is not ...:
 
-            self['PER_CK'] = self[self['PERIPHERAL_CLOCK_OPTION']]
+            self['PER_CK'] = self(self('PERIPHERAL_CLOCK_OPTION'))
 
 
 
@@ -270,7 +276,7 @@ class new_Parameterization:
             used_channels = [
                 channel
                 for channel in channels
-                if self[f'PLL{unit}{channel}_CK'] is not ...
+                if self(f'PLL{unit}{channel}_CK') is not ...
             ]
 
             if not used_channels:
@@ -283,7 +289,7 @@ class new_Parameterization:
                 every_channel_satisfied = all(
                     satisfied(
                         f'PLL{unit}{channel}_DIVIDER',
-                        self[f'PLL{unit}_VCO_FREQ'] / self[f'PLL{unit}{channel}_CK']
+                        self(f'PLL{unit}_VCO_FREQ') / self(f'PLL{unit}{channel}_CK')
                     )
                     for channel in used_channels
                 )
@@ -312,8 +318,8 @@ class new_Parameterization:
 
                     return any(
                         all(
-                            parameterize_pll(unit, channels, self[kernel_source])
-                            for unit, channels in self['PLLS']
+                            parameterize_pll(unit, channels, self(kernel_source))
+                            for unit, channels in self('PLLS')
                         )
                         for kernel_source in each('PLL_KERNEL_SOURCE')
                     )
@@ -326,10 +332,10 @@ class new_Parameterization:
 
                     return all(
                         any(
-                            parameterize_pll(unit, channels, self[kernel_source])
+                            parameterize_pll(unit, channels, self(kernel_source))
                             for kernel_source in each(f'PLL{unit}_KERNEL_SOURCE')
                         )
-                        for unit, channels in self['PLLS']
+                        for unit, channels in self('PLLS')
                     )
 
 
@@ -358,7 +364,7 @@ class new_Parameterization:
 
                 if not satisfied(
                     'CPU_DIVIDER',
-                    self[kernel_source] / self['CPU_CK']
+                    self(kernel_source) / self('CPU_CK')
                 ):
                     continue
 
@@ -376,7 +382,7 @@ class new_Parameterization:
 
                         if not satisfied(
                             'AXI_AHB_DIVIDER',
-                            self['CPU_CK'] / self['AXI_AHB_CK']
+                            self('CPU_CK') / self('AXI_AHB_CK')
                         ):
                             continue
 
@@ -386,7 +392,7 @@ class new_Parameterization:
 
                     case 'STM32H533RET6':
 
-                        self['AXI_AHB_CK'] = self['CPU_CK']
+                        self['AXI_AHB_CK'] = self('CPU_CK')
 
 
 
@@ -399,9 +405,9 @@ class new_Parameterization:
                 every_apb_satisfied = all(
                     satisfied(
                         f'APB{unit}_DIVIDER',
-                        self['AXI_AHB_CK'] / self[f'APB{unit}_CK']
+                        self('AXI_AHB_CK') / self(f'APB{unit}_CK')
                     )
-                    for unit in self['APBS']
+                    for unit in self('APBS')
                 )
 
                 if not every_apb_satisfied:
@@ -430,9 +436,9 @@ class new_Parameterization:
 
             # See if SysTick is even used.
 
-            self['SYSTICK_ENABLE'] = self['SYSTICK_CK'] is not ...
+            self['SYSTICK_ENABLE'] = self('SYSTICK_CK') is not ...
 
-            if not self['SYSTICK_ENABLE']:
+            if not self('SYSTICK_ENABLE'):
                 return True
 
 
@@ -447,10 +453,10 @@ class new_Parameterization:
                 # @/pg 621/sec B3.3.3/`Armv7-M`.
                 # @/pg 1859/sec D1.2.238/`Armv8-M`.
 
-                if self['SYSTICK_USE_CPU_CK']:
+                if self('SYSTICK_USE_CPU_CK'):
 
                     kernel_frequencies = [
-                        self['CPU_CK']
+                        self('CPU_CK')
                     ]
 
 
@@ -468,7 +474,7 @@ class new_Parameterization:
                         case 'STM32H7S3L8H6':
 
                             kernel_frequencies = [
-                                self['CPU_CK'] / 8
+                                self('CPU_CK') / 8
                             ]
 
 
@@ -493,7 +499,7 @@ class new_Parameterization:
 
                     if satisfied(
                         'SYSTICK_RELOAD',
-                        self['SYSTICK_KERNEL_FREQ'] / self['SYSTICK_CK'] - 1
+                        self('SYSTICK_KERNEL_FREQ') / self('SYSTICK_CK') - 1
                     ):
                         return True
 
@@ -507,7 +513,7 @@ class new_Parameterization:
 
 
 
-        for instances in self['UXARTS']:
+        for instances in self('UXARTS'):
 
             @brute
             def parameterize_uxarts():
@@ -519,7 +525,7 @@ class new_Parameterization:
                 used_instances = [
                     (peripheral, unit)
                     for peripheral, unit in instances
-                    if self[f'{peripheral}{unit}_BAUD'] is not ...
+                    if self(f'{peripheral}{unit}_BAUD') is not ...
                 ]
 
                 if not used_instances:
@@ -535,7 +541,7 @@ class new_Parameterization:
                     every_instance_satisfied = all(
                         satisfied(
                             f'{peripheral}{unit}_BAUD_DIVIDER',
-                            self[kernel_source] / self[f'{peripheral}{unit}_BAUD']
+                            self(kernel_source) / self(f'{peripheral}{unit}_BAUD')
                         )
                         for peripheral, unit in used_instances
                     )
@@ -553,7 +559,7 @@ class new_Parameterization:
 
 
 
-        for unit in self['I2CS']:
+        for unit in self('I2CS', ()):
 
 
 
@@ -564,7 +570,7 @@ class new_Parameterization:
 
                 # See if the unit is even used.
 
-                needed_baud = self[f'I2C{unit}_BAUD']
+                needed_baud = self(f'I2C{unit}_BAUD')
 
                 if needed_baud is ...:
                     return True
@@ -580,7 +586,7 @@ class new_Parameterization:
 
                 for kernel_source in each(f'I2C{unit}_KERNEL_SOURCE'):
 
-                    kernel_frequency = self[kernel_source]
+                    kernel_frequency = self(kernel_source)
 
                     if kernel_frequency is ...:
                         continue
@@ -635,7 +641,7 @@ class new_Parameterization:
 
         def parameterize_timer(unit):
 
-            needed_rate = self[f'TIM{unit}_RATE']
+            needed_rate = self(f'TIM{unit}_RATE')
 
 
 
@@ -647,10 +653,10 @@ class new_Parameterization:
 
                 case 'STM32H533RET6':
 
-                    apb              = self['APB_PERIPHERALS'][f'TIM{unit}']
-                    apb_divider      = self[f'APB{apb}_DIVIDER']
-                    multiplier       = self['GLOBAL_TIMER_PRESCALER_MULTIPLIER_TABLE'][(self['GLOBAL_TIMER_PRESCALER'], apb_divider)]
-                    kernel_frequency = self[f'AXI_AHB_CK'] * multiplier
+                    apb              = self('APB_PERIPHERALS')[f'TIM{unit}']
+                    apb_divider      = self(f'APB{apb}_DIVIDER')
+                    multiplier       = self('GLOBAL_TIMER_PRESCALER_MULTIPLIER_TABLE')[(self('GLOBAL_TIMER_PRESCALER'), apb_divider)]
+                    kernel_frequency = self(f'AXI_AHB_CK') * multiplier
 
 
 
@@ -679,7 +685,7 @@ class new_Parameterization:
 
                 # See if things are within tolerance.
 
-                actual_rate  = counter_frequency / self[f'TIM{unit}_MODULATION']
+                actual_rate  = counter_frequency / self(f'TIM{unit}_MODULATION')
                 actual_error = abs(1 - actual_rate / needed_rate)
 
                 if actual_error <= 0.001: # TODO Ad-hoc.
@@ -698,8 +704,8 @@ class new_Parameterization:
 
             used_units = [
                 unit
-                for unit in self['TIMERS']
-                if self[f'TIM{unit}_RATE'] is not ...
+                for unit in self('TIMERS', ())
+                if self(f'TIM{unit}_RATE') is not ...
             ]
 
             if not used_units:
