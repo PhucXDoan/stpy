@@ -613,12 +613,6 @@ SCHEMA = {
         for unit in APBS
     },
 
-    'GLOBAL_TIMER_PRESCALER' : {
-        'location'   : ('RCC', 'CFGR1', 'TIMPRE'),
-        'constraint' : (False, True),
-        'value'      : ...,
-    },
-
 
     'EFFECTIVE_SCGU_KERNEL_SOURCE' : {
         'location' : ('RCC', 'CFGR1', 'SWS'),
@@ -816,6 +810,12 @@ SCHEMA = {
     #
 
 
+
+    'GLOBAL_TIMER_PRESCALER' : {
+        'location'   : ('RCC', 'CFGR1', 'TIMPRE'),
+        'constraint' : (False, True),
+        'value'      : ...,
+    },
 
     **{
         f'TIM{unit}_RATE' : {
