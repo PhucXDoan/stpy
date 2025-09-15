@@ -313,156 +313,6 @@ def system_configurize(Meta, parameterization):
 
 
 
-    CMSIS_SET(
-        ('SCB', 'SHCSR', 'BUSFAULTENA', True), # Enable the BusFault exception.
-        ('SCB', 'SHCSR', 'MEMFAULTENA', True), # Enable the MemFault exception.
-        ('SCB', 'SHCSR', 'USGFAULTENA', True), # Enable the UsageFault exception.
-    )
-
-
-
-    ################################################################################
-
-    # We have to program a delay for reading the flash as it takes time
-    # for the data stored in the flash memory to stablize for read operations;
-    # this delay varies based on voltage and clock frequency.
-    # @/pg 210/sec 5.3.7/`H7S3rm`.
-
-    put_title('Flash')
-
-
-
-    # Set the wait-states.
-
-    CMSIS_SET(
-        planner.tuple('FLASH_LATENCY'          ),
-        planner.tuple('FLASH_PROGRAMMING_DELAY'),
-    )
-
-
-
-    # Ensure the new number of wait-states is taken into account.
-
-    CMSIS_SPINLOCK(
-        planner.tuple('FLASH_LATENCY'          ),
-        planner.tuple('FLASH_PROGRAMMING_DELAY'),
-    )
-
-
-
-    ################################################################################
-
-
-
-    # The way the power supply is configured can determine the
-    # internal voltage level of the MCU, which can impact the maximum
-    # clock speeds of peripherals for instance.
-
-    put_title('Power Supply')
-
-
-
-    # The power supply setup must be configured first
-    # before configuring VOS or the system clock frequency.
-    # @/pg 323/sec 6.8.4/`H7S3rm`.
-
-    match target.mcu:
-
-        case 'STM32H7S3L8H6':
-            fields = (
-                'SMPS_OUTPUT_LEVEL',
-                'SMPS_FORCED_ON',
-                'SMPS_ENABLE',
-                'LDO_ENABLE',
-                'POWER_MANAGEMENT_BYPASS',
-            )
-
-        case 'STM32H533RET6':
-            fields = (
-                'LDO_ENABLE',
-                'POWER_MANAGEMENT_BYPASS',
-            )
-
-        case _: raise NotImplementedError
-
-    CMSIS_SET(
-        planner.tuple(field)
-        for field in fields
-        if planner[field] is not None
-    )
-
-
-
-    # A higher core voltage means higher power consumption,
-    # but better performance in terms of max clock speed.
-
-    CMSIS_SET(planner.tuple('INTERNAL_VOLTAGE_SCALING'))
-
-
-
-    # Ensure the voltage scaling has been selected.
-
-    CMSIS_SPINLOCK(
-        planner.tuple('CURRENT_ACTIVE_VOS'      , planner['INTERNAL_VOLTAGE_SCALING']),
-        planner.tuple('CURRENT_ACTIVE_VOS_READY', True                            ),
-    )
-
-
-
-    ################################################################################
-
-
-
-    put_title('Built-in Oscillators')
-
-
-
-    # High-speed-internal.
-
-    if planner['HSI_ENABLE']:
-        pass # The HSI oscillator is enabled by default after reset.
-    else:
-        raise NotImplementedError(
-            f'Turning off HSI not implemented yet.'
-        )
-
-
-
-    # High-speed-internal (48MHz).
-
-    if planner['HSI48_ENABLE']:
-        CMSIS_SET     (planner.tuple('HSI48_ENABLE', True))
-        CMSIS_SPINLOCK(planner.tuple('HSI48_READY' , True))
-
-
-
-    # Clock-security-internal.
-
-    if planner['CSI_ENABLE']:
-        CMSIS_SET     (planner.tuple('CSI_ENABLE', True))
-        CMSIS_SPINLOCK(planner.tuple('CSI_READY' , True))
-
-
-
-    ################################################################################
-
-
-
-    # Set the clock source which will be
-    # available for some peripheral to use.
-
-    if 'PERIPHERAL_CLOCK_OPTION' in planner.dictionary and planner['PERIPHERAL_CLOCK_OPTION'] is not None:
-
-        put_title('Peripheral Clock Source')
-
-        CMSIS_SET(planner.tuple('PERIPHERAL_CLOCK_OPTION'))
-
-
-
-    ################################################################################
-
-
-
     TITLE = None
 
     def flush_title():
@@ -489,21 +339,6 @@ def system_configurize(Meta, parameterization):
             flush_title()
             Meta.define(macro, formatting.format(c_repr(value)))
 
-    def mk_tuple(key, formatter = ...):
-
-        if formatter is ...:
-            formatter = lambda value: value
-
-        value = parameterization(key, None)
-
-        if value is None:
-            return None
-
-        value = formatter(value)
-
-        return (*system_locations[target.mcu][key], value)
-
-
     def tuplize(key, value = ..., formatting = '{}'):
 
         if value is ...:
@@ -517,6 +352,22 @@ def system_configurize(Meta, parameterization):
         value = formatting.format(c_repr(value))
 
         return (*system_locations[target.mcu][key], value)
+
+    def tuplize_if_exist(key, value = ..., formatting = '{}'):
+
+        if key not in parameterization.dictionary:
+            return
+
+        if value is ...:
+            value = parameterization(key)
+
+        if value is None:
+            return None
+
+        value = formatting.format(c_repr(value))
+
+        return (*system_locations[target.mcu][key], value)
+
 
     def tuplize_if_not_none(key, value = ..., formatting = '{}'):
 
@@ -544,6 +395,155 @@ def system_configurize(Meta, parameterization):
             CMSIS_SPINLOCK(*entries)
 
 
+
+
+    ################################################################################
+
+
+
+    CMSIS_SET(
+        ('SCB', 'SHCSR', 'BUSFAULTENA', True), # Enable the BusFault exception.
+        ('SCB', 'SHCSR', 'MEMFAULTENA', True), # Enable the MemFault exception.
+        ('SCB', 'SHCSR', 'USGFAULTENA', True), # Enable the UsageFault exception.
+    )
+
+
+
+    ################################################################################
+
+    # We have to program a delay for reading the flash as it takes time
+    # for the data stored in the flash memory to stablize for read operations;
+    # this delay varies based on voltage and clock frequency.
+    # @/pg 210/sec 5.3.7/`H7S3rm`.
+
+    TITLE = 'Flash'
+
+
+
+    # Set the wait-states.
+
+    cmsis_set(
+        tuplize('FLASH_LATENCY'          ),
+        tuplize('FLASH_PROGRAMMING_DELAY'),
+    )
+
+
+
+    # Ensure the new number of wait-states is taken into account.
+
+    cmsis_spinlock(
+        tuplize('FLASH_LATENCY'          ),
+        tuplize('FLASH_PROGRAMMING_DELAY'),
+    )
+
+
+
+    ################################################################################
+
+
+
+    # The way the power supply is configured can determine the
+    # internal voltage level of the MCU, which can impact the maximum
+    # clock speeds of peripherals for instance.
+
+    TITLE = 'Power Supply'
+
+
+
+    # The power supply setup must be configured first
+    # before configuring VOS or the system clock frequency.
+    # @/pg 323/sec 6.8.4/`H7S3rm`.
+
+    match target.mcu:
+
+        case 'STM32H7S3L8H6':
+            fields = (
+                'SMPS_OUTPUT_LEVEL',
+                'SMPS_FORCED_ON',
+                'SMPS_ENABLE',
+                'LDO_ENABLE',
+                'POWER_MANAGEMENT_BYPASS',
+            )
+
+        case 'STM32H533RET6':
+            fields = (
+                'LDO_ENABLE',
+                'POWER_MANAGEMENT_BYPASS',
+            )
+
+        case _: raise NotImplementedError
+
+    cmsis_set(
+        tuplize(field)
+        for field in fields
+        if planner[field] is not None
+    )
+
+
+
+    # A higher core voltage means higher power consumption,
+    # but better performance in terms of max clock speed.
+
+    cmsis_set(tuplize('INTERNAL_VOLTAGE_SCALING'))
+
+
+
+    # Ensure the voltage scaling has been selected.
+
+    cmsis_spinlock(
+        tuplize('CURRENT_ACTIVE_VOS'      , parameterization('INTERNAL_VOLTAGE_SCALING')),
+        tuplize('CURRENT_ACTIVE_VOS_READY', True),
+    )
+
+
+
+    ################################################################################
+
+
+
+    TITLE = 'High-Speed-Internal (General)'
+
+    if planner['HSI_ENABLE']:
+        pass # The HSI oscillator is enabled by default after reset.
+    else:
+        raise NotImplementedError # TODO.
+
+
+
+    ################################################################################
+
+
+
+    TITLE = 'High-Speed-Internal (48MHz)'
+
+    if planner['HSI48_ENABLE']:
+        cmsis_set     (tuplize('HSI48_ENABLE', True))
+        cmsis_spinlock(tuplize('HSI48_READY' , True))
+
+
+
+    ################################################################################
+
+
+
+    TITLE = 'Clock-Security-Internal'
+
+    if planner['CSI_ENABLE']:
+        cmsis_set     (tuplize('CSI_ENABLE', True))
+        cmsis_spinlock(tuplize('CSI_READY' , True))
+
+
+
+    ################################################################################
+
+
+
+    TITLE = 'Peripheral Clock Option'
+
+    cmsis_set(tuplize_if_exist('PERIPHERAL_CLOCK_OPTION'))
+
+
+
     ################################################################################
 
 
@@ -561,7 +561,7 @@ def system_configurize(Meta, parameterization):
     # Set the clock source shared for all PLLs.
 
     if target.mcu == 'STM32H7S3L8H6':
-        sets += [mk_tuple('PLL_KERNEL_SOURCE')]
+        sets += [tuplize('PLL_KERNEL_SOURCE')]
 
 
 
@@ -580,20 +580,20 @@ def system_configurize(Meta, parameterization):
 
         # Set the PLL's predividers.
 
-        sets += [tuplize_if_not_none(f'PLL{unit}_PREDIVIDER')]
+        sets += [tuplize_if_exist(f'PLL{unit}_PREDIVIDER')]
 
 
 
         # Set each PLL unit's expected input frequency range.
 
 
-        sets += [tuplize_if_not_none(f'PLL{unit}_INPUT_RANGE')]
+        sets += [tuplize_if_exist(f'PLL{unit}_INPUT_RANGE')]
 
 
 
         # Set each PLL unit's multipler.
 
-        sets += [tuplize_if_not_none(f'PLL{unit}_MULTIPLIER', formatting = '{} - 1')]
+        sets += [tuplize_if_exist(f'PLL{unit}_MULTIPLIER', formatting = '{} - 1')]
 
 
 
@@ -601,7 +601,7 @@ def system_configurize(Meta, parameterization):
 
         for channel in channels:
 
-            if parameterization(f'PLL{unit}{channel}_DIVIDER') is None:
+            if parameterization(f'PLL{unit}{channel}_DIVIDER', None) is None:
                 continue
 
             sets += [
@@ -626,7 +626,7 @@ def system_configurize(Meta, parameterization):
 
     for unit, channels in properties['PLLS']:
 
-        if not planner[f'PLL{unit}_ENABLE']:
+        if not parameterization(f'PLL{unit}_ENABLE'):
             continue
 
         cmsis_spinlock(tuplize(f'PLL{unit}_READY', True))
@@ -690,7 +690,7 @@ def system_configurize(Meta, parameterization):
 
     TITLE = 'SysTick'
 
-    if planner['SYSTICK_ENABLE']:
+    if parameterization('SYSTICK_ENABLE'):
 
         cmsis_set(
             tuplize('SYSTICK_RELOAD'                ), # Modulation of the counter.

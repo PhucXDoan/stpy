@@ -396,16 +396,6 @@ class Parameterization:
 
 
 
-            # TODO Unnecessary.
-
-            self['settings', f'PLL{unit}_PREDIVIDER' ] = None
-            self['settings', f'PLL{unit}_INPUT_RANGE'] = None
-            self['settings', f'PLL{unit}_MULTIPLIER' ] = None
-            for channel in dict(properties['PLLS'])[unit]:
-                self['settings', f'PLL{unit}{channel}_DIVIDER'] = None
-
-
-
             # See if the PLL unit is even used.
 
             self['settings', f'PLL{unit}_ENABLE'] = any(
