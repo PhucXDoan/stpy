@@ -2,16 +2,17 @@ global APBS
 APBS = (
     1,
     2,
-    3,
+    4,
+    5,
 )
 
 
 
 global PLLS
 PLLS = (
-    (1, ('P', 'Q', 'R')),
-    (2, ('P', 'Q', 'R')),
-    (3, ('P', 'Q', 'R')),
+    (1, ('P', 'Q',      'S',    )),
+    (2, ('P', 'Q', 'R', 'S', 'T')),
+    (3, ('P', 'Q', 'R', 'S',    )),
 )
 
 
@@ -32,39 +33,10 @@ GPIOS = (
 
 
 global UXARTS
-UXARTS = (
-    (('USART', 1),),
-    (('USART', 2),),
-    (('USART', 3),),
-    (('UART' , 4),),
-    (('UART' , 5),),
-    (('USART', 6),),
+UXARTS = ( # TODO Non-exhaustive.
+    (('USART', 2), ('USART', 3), ('UART', 4), ('UART', 5), ('UART', 7), ('UART', 8)),
 )
 
-
-
-global I2CS
-I2CS = (
-    1,
-    2,
-    3,
-)
-
-
-
-global TIMERS
-TIMERS = (
-    1,
-    2,
-    3,
-    4,
-    5,
-    6,
-    7,
-    8,
-    12,
-    15,
-)
 
 
 global INTERRUPTS
@@ -75,7 +47,7 @@ INTERRUPTS = (
     'MemoryManagement',
     'BusFault',
     'UsageFault',
-    'SecureFault',
+    None,
     None,
     None,
     None,
@@ -84,17 +56,22 @@ INTERRUPTS = (
     None,
     'PendSV',
     'SysTick',
+    'PVD_PVM',
+    None,
+    'DTS',
+    'IWDG',
     'WWDG',
-    'PVD_AVD',
-    'RTC',
-    'RTC_S',
-    'TAMP',
-    'RAMCFG',
-    'FLASH',
-    'FLASH_S',
-    'GTZC',
     'RCC',
-    'RCC_S',
+    None,
+    None,
+    'FLASH',
+    'RAMECC',
+    'FPU',
+    None,
+    None,
+    'TAMP',
+    None,
+    None,
     'EXTI0',
     'EXTI1',
     'EXTI2',
@@ -111,6 +88,13 @@ INTERRUPTS = (
     'EXTI13',
     'EXTI14',
     'EXTI15',
+    'RTC',
+    'SAES',
+    'CRYP',
+    'PKA',
+    'HASH',
+    'RNG',
+    'ADC1_2',
     'GPDMA1_Channel0',
     'GPDMA1_Channel1',
     'GPDMA1_Channel2',
@@ -119,12 +103,6 @@ INTERRUPTS = (
     'GPDMA1_Channel5',
     'GPDMA1_Channel6',
     'GPDMA1_Channel7',
-    'IWDG',
-    'SAES',
-    'ADC1',
-    'DAC1',
-    'FDCAN1_IT0',
-    'FDCAN1_IT1',
     'TIM1_BRK',
     'TIM1_UP',
     'TIM1_TRG_COM',
@@ -135,175 +113,143 @@ INTERRUPTS = (
     'TIM5',
     'TIM6',
     'TIM7',
+    'TIM9',
+    'SPI1',
+    'SPI2',
+    'SPI3',
+    'SPI4',
+    'SPI5',
+    'SPI6',
+    'HPDMA1_Channel0',
+    'HPDMA1_Channel1',
+    'HPDMA1_Channel2',
+    'HPDMA1_Channel3',
+    'HPDMA1_Channel4',
+    'HPDMA1_Channel5',
+    'HPDMA1_Channel6',
+    'HPDMA1_Channel7',
+    'SAI1_A',
+    'SAI1_B',
+    'SAI2_A',
+    'SAI2_B',
     'I2C1_EV',
     'I2C1_ER',
     'I2C2_EV',
     'I2C2_ER',
-    'SPI1',
-    'SPI2',
-    'SPI3',
+    'I2C3_EV',
+    'I2C3_ER',
     'USART1',
     'USART2',
     'USART3',
     'UART4',
     'UART5',
-    'LPUART1',
-    'LPTIM1',
-    'TIM8_BRK',
-    'TIM8_UP',
-    'TIM8_TRG_COM',
-    'TIM8_CC',
-    'ADC2',
-    'LPTIM2',
-    'TIM15',
-    None,
-    None,
-    'USB_DRD_FS',
-    'CRS',
-    'UCPD1',
-    'FMC',
-    'OCTOSPI1',
-    'SDMMC1',
-    'I2C3_EV',
-    'I2C3_ER',
-    'SPI4',
-    None,
-    None,
-    'USART6',
-    None,
-    None,
-    None,
-    None,
-    'GPDMA2_Channel0',
-    'GPDMA2_Channel1',
-    'GPDMA2_Channel2',
-    'GPDMA2_Channel3',
-    'GPDMA2_Channel4',
-    'GPDMA2_Channel5',
-    'GPDMA2_Channel6',
-    'GPDMA2_Channel7',
-    None,
-    None,
-    None,
-    None,
-    None,
-    'FPU',
-    'ICACHE',
-    'DCACHE1',
-    None,
-    None,
-    'DCMI_PSSI',
-    'FDCAN2_IT0',
-    'FDCAN2_IT1',
-    None,
-    None,
-    'DTS',
-    'RNG',
-    'OTFDEC1',
-    'AES',
-    'HASH',
-    'PKA',
-    'CEC',
-    'TIM12',
-    None,
-    None,
+    'UART7',
+    'UART8',
     'I3C1_EV',
     'I3C1_ER',
+    'OTG_HS',
+    'ETH',
+    'CORDIC',
+    'GFXTIM',
+    'DCMIPP',
+    None,
+    None,
+    'DMA2D',
+    'JPEG',
+    'GFXMMU',
+    'I3C1_WKUP',
+    'MCE1',
+    'MCE2',
+    'MCE3',
+    'XSPI1',
+    'XSPI2',
+    'FMC',
+    'SDMMC1',
+    'SDMMC2',
+    None,
+    None,
+    'OTG_FS',
+    'TIM12',
+    'TIM13',
+    'TIM14',
+    'TIM15',
+    'TIM16',
+    'TIM17',
+    'LPTIM1',
+    'LPTIM2',
+    'LPTIM3',
+    'LPTIM4',
+    'LPTIM5',
+    'SPDIF_RX',
+    'MDIOS',
+    'ADF1_FLT0',
+    'CRS',
+    'UCPD1',
+    'CEC',
+    'PSSI',
+    'LPUART1',
+    'WAKEUP_PIN',
+    'GPDMA1_Channel8',
+    'GPDMA1_Channel9',
+    'GPDMA1_Channel10',
+    'GPDMA1_Channel11',
+    'GPDMA1_Channel12',
+    'GPDMA1_Channel13',
+    'GPDMA1_Channel14',
+    'GPDMA1_Channel15',
+    'HPDMA1_Channel8',
+    'HPDMA1_Channel9',
+    'HPDMA1_Channel10',
+    'HPDMA1_Channel11',
+    'HPDMA1_Channel12',
+    'HPDMA1_Channel13',
+    'HPDMA1_Channel14',
+    'HPDMA1_Channel15',
     None,
     None,
     None,
-    None,
-    None,
-    None,
-    'I3C2_EV',
-    'I3C2_ER',
+    'FDCAN1_IT0',
+    'FDCAN1_IT1',
+    'FDCAN2_IT0',
+    'FDCAN2_IT1',
 )
 
 
 
-global PLL_CHANNEL_FREQ
-PLL_CHANNEL_FREQ = RealMinMax(1_000_000, 250_000_000)
+global SDMMC_KERNEL_FREQ
+SDMMC_KERNEL_FREQ = RealMinMax(0, 200_000_000)
 
 
 
 global CPU_FREQ
-CPU_FREQ = RealMinMax(0, 250_000_000)
+CPU_FREQ = RealMinMax(0, 600_000_000)
 
 
 
 global AXI_AHB_FREQ
-AXI_AHB_FREQ = RealMinMax(0, 250_000_000)
+AXI_AHB_FREQ = RealMinMax(0, 300_000_000)
 
 
 
 global APB_FREQ
-APB_FREQ = RealMinMax(0, 250_000_000)
+APB_FREQ = RealMinMax(0, 150_000_000)
+
+
+
+global PLL_CHANNEL_FREQ
+PLL_CHANNEL_FREQ = RealMinMax(1_500_000, 600_000_000)
 
 
 
 global HSI_DEFAULT_FREQUENCY
-HSI_DEFAULT_FREQUENCY = 32_000_000
-
-
-
-global APB_PERIPHERALS
-APB_PERIPHERALS = {
-    'TIM2'  : 1,
-    'TIM3'  : 1,
-    'TIM4'  : 1,
-    'TIM5'  : 1,
-    'TIM6'  : 1,
-    'TIM7'  : 1,
-    'TIM12' : 1,
-    'TIM1'  : 2,
-    'TIM8'  : 2,
-    'TIM15' : 2,
-}
-
-
-
-global GLOBAL_TIMER_PRESCALER_MULTIPLIER_TABLE
-GLOBAL_TIMER_PRESCALER_MULTIPLIER_TABLE = {
-    (False, 1 ) : 1,
-    (False, 2 ) : 1,
-    (False, 4 ) : 1 / 2,
-    (False, 8 ) : 1 / 4,
-    (False, 16) : 1 / 8,
-    (True , 1 ) : 1,
-    (True , 2 ) : 1,
-    (True , 4 ) : 1 / 2,
-    (True , 8 ) : 1 / 2,
-    (True , 16) : 1 / 4,
-}
+HSI_DEFAULT_FREQUENCY = 64_000_000
 
 
 
 UXART_KERNEL_SOURCE_TABLE = (
     (
         (
-            ('USART10SEL', (('USART', 10),)),
-            ('UART9SEL'  , (('UART' , 9 ),)),
-            ('UART8SEL'  , (('UART' , 8 ),)),
-            ('UART7SEL'  , (('UART' , 7 ),)),
-            ('USART6SEL' , (('USART', 6 ),)),
-            ('UART5SEL'  , (('UART' , 5 ),)),
-            ('UART4SEL'  , (('UART' , 4 ),)),
-            ('USART3SEL' , (('USART', 3 ),)),
-            ('USART2SEL' , (('USART', 2 ),)),
-        ),
-        {
-            'APB1_CK'  : '0b000',
-            'PLL2Q_CK' : '0b001',
-            'PLL3Q_CK' : '0b010',
-            'HSI_CK'   : '0b011',
-            'CSI_CK'   : '0b100',
-            'LSE_CK'   : '0b101',
-            0          : '0b110',
-        },
-    ),
-    (
-        (
-            ('USART1SEL', (('USART', 1),)),
+            ('UART234578SEL', (('USART', 2), ('USART', 3), ('UART', 4), ('UART', 5), ('UART', 7), ('UART', 8))),
         ),
         {
             'APB2_CK'  : '0b000',
@@ -311,9 +257,8 @@ UXART_KERNEL_SOURCE_TABLE = (
             'PLL3Q_CK' : '0b010',
             'HSI_CK'   : '0b011',
             'CSI_CK'   : '0b100',
-            'LSE_CK'   : '0b101',
-            0          : '0b110',
-        },
+            'LSE_CK'   : '0b101'
+        }
     ),
 )
 
@@ -331,7 +276,7 @@ SCHEMA = {
 
     **{
         f'GPIO{unit}_ENABLE' : {
-            'location'   : ('RCC', 'AHB2ENR', f'GPIO{unit}EN'),
+            'location'   : ('RCC', 'AHB4ENR', f'GPIO{unit}EN'),
             'constraint' : (False, True),
             'value'      : ...,
         }
@@ -380,45 +325,66 @@ SCHEMA = {
 
     'FLASH_PROGRAMMING_DELAY' : {
         'location'   : ('FLASH', 'ACR', 'WRHIGHFREQ'),
-        'constraint' : ('0b00', '0b01', '0b10'),
-        'value'      : ...,
+        'constraint' : (
+            '0b00',
+            '0b11',
+        ),
+        'value' : ...,
     },
 
     'FLASH_LATENCY' : {
         'location'   : ('FLASH', 'ACR', 'LATENCY'),
-        'constraint' : IntMinMax(0b0000, 0b1111),
+        'constraint' : IntMinMax(0, 15),
         'value'      : ...,
     },
 
-    'INTERNAL_VOLTAGE_SCALING' : {
-        'location'   : ('PWR', 'VOSCR', 'VOS'),
-        'constraint' : {
-            'VOS3': '0b00',
-            'VOS2': '0b01',
-            'VOS1': '0b10',
-            'VOS0': '0b11'
-        },
-        'value' : ...,
-    },
-
     'CURRENT_ACTIVE_VOS' : {
-        'location' : ('PWR', 'VOSSR', 'ACTVOS'),
+        'location'   : ('PWR', 'SR1', 'ACTVOS'),
+        'constraint' : (False, True),
     },
 
     'CURRENT_ACTIVE_VOS_READY' : {
-        'location' : ('PWR', 'VOSSR', 'ACTVOSRDY'),
+        'location'   : ('PWR', 'SR1', 'ACTVOSRDY'),
+        'constraint' : (False, True),
+    },
+
+    'SMPS_OUTPUT_LEVEL' : {
+        'location'   : ('PWR', 'CSR2', 'SDHILEVEL'),
+        'constraint' : (False, True),
+        'value'      : ...,
+    },
+
+    'SMPS_FORCED_ON' : {
+        'location'   : ('PWR', 'CSR2', 'SMPSEXTHP'),
+        'constraint' : (False, True),
+        'value'      : ...,
+    },
+
+    'SMPS_ENABLE' : {
+        'location'   : ('PWR', 'CSR2', 'SDEN'),
+        'constraint' : (False, True),
+        'value'      : ...,
     },
 
     'LDO_ENABLE' : {
-        'location'   : ('PWR', 'SCCR', 'LDOEN'),
+        'location'   : ('PWR', 'CSR2', 'LDOEN'),
         'constraint' : (False, True),
         'value'      : ...,
     },
 
     'POWER_MANAGEMENT_BYPASS' : {
-        'location'   : ('PWR', 'SCCR', 'BYPASS'),
+        'location'   : ('PWR', 'CSR2', 'BYPASS'),
         'constraint' : (False, True),
         'value'      : ...,
+    },
+
+    'INTERNAL_VOLTAGE_SCALING' : {
+        'location'   : ('PWR', 'CSR4', 'VOS'),
+        'constraint' : {
+            'low'  : 0,
+            'high' : 1
+        },
+        'value' : ...,
     },
 
 
@@ -471,19 +437,19 @@ SCHEMA = {
             'location' : ('RCC', 'CR', f'{source}RDY'),
         }
         for source in (
-            'HSI'
+            'HSI',
             'HSI48',
             'CSI',
         )
     },
 
     'PERIPHERAL_CLOCK_OPTION' : {
-        'location'   : ('RCC', 'CCIPR5', 'CKPERSEL'),
+        'location'   : ('RCC', 'CCIPR1', 'CKPERSEL'),
         'constraint' : {
             'HSI_CK' : '0b00',
             'CSI_CK' : '0b01',
             'HSE_CK' : '0b10',
-            0        : '0b11'
+            None     : '0b11'
         },
         'value' : ...,
     },
@@ -509,7 +475,7 @@ SCHEMA = {
     **{
         f'PLL{unit}_VCO_FREQ' : {
             'category'   : 'frequency',
-            'constraint' : RealMinMax(128_000_000, 560_000_000),
+            'constraint' : RealMinMax(192_000_000, 836_000_000),
             'value'      : ...,
         }
         for unit, channels in PLLS
@@ -542,26 +508,12 @@ SCHEMA = {
     },
 
     **{
-        f'PLL{unit}_KERNEL_SOURCE' : {
-            'location'   : ('RCC', f'PLL{unit}CFGR', f'PLL{unit}SRC'),
-            'constraint' : {
-                0        : '0b00',
-                'HSI_CK' : '0b01',
-                'CSI_CK' : '0b10',
-                'HSE_CK' : '0b11',
-            },
-            'value' : ...,
-        }
-        for unit, channels in PLLS
-    },
-
-    **{
         f'PLL{unit}_INPUT_RANGE' : {
             'location'   : ('RCC', f'PLL{unit}CFGR', f'PLL{unit}RGE'),
             'constraint' : {
-                (2_000_000,  4_000_000) : 1,
-                (4_000_000,  8_000_000) : 2,
-                (8_000_000, 16_000_000) : 3,
+                (2_000_000, 4_000_000 ) : 0b01,
+                (4_000_000, 8_000_000 ) : 0b10,
+                (8_000_000, 16_000_000) : 0b11,
             },
             'value' : ...,
         }
@@ -570,17 +522,28 @@ SCHEMA = {
 
     **{
         f'PLL{unit}_PREDIVIDER' : {
-            'location'   : ('RCC', f'PLL{unit}CFGR', f'PLL{unit}M'),
+            'location'   : ('RCC', f'PLLCKSELR', f'DIVM{unit}'),
             'constraint' : IntMinMax(1, 63),
             'value'      : ...,
         }
         for unit, channels in PLLS
     },
 
+    'PLL_KERNEL_SOURCE' : {
+        'location'   : ('RCC', 'PLLCKSELR', 'PLLSRC'),
+        'constraint' : {
+            'HSI_CK' : '0b00',
+            'CSI_CK' : '0b01',
+            'HSE_CK' : '0b10',
+            None     : '0b11'
+        },
+        'value' : ...,
+    },
+
     **{
         f'PLL{unit}_MULTIPLIER' : {
-            'location'   : ('RCC', f'PLL{unit}DIVR', f'PLL{unit}N'),
-            'constraint' : IntMinMax(4, 512),
+            'location'   : ('RCC', f'PLL{unit}DIVR1', 'DIVN'),
+            'constraint' : IntMinMax(12, 420),
             'value'      : ...,
         }
         for unit, channels in PLLS
@@ -588,7 +551,7 @@ SCHEMA = {
 
     **{
         f'PLL{unit}{channel}_DIVIDER' : {
-            'location'   : ('RCC', f'PLL{unit}DIV{channel}', f'PLL{unit}{channel}'),
+            'location'   : ('RCC', f'PLL{unit}DIVR{2 if channel in ('S', 'T') else 1}', f'DIV{channel}'),
             'constraint' : IntMinMax(1, 128),
             'value'      : ...,
         }
@@ -613,13 +576,19 @@ SCHEMA = {
         for unit in APBS
     },
 
-
     'EFFECTIVE_SCGU_KERNEL_SOURCE' : {
-        'location' : ('RCC', 'CFGR1', 'SWS'),
+        'location'   : ('RCC', 'CFGR', 'SWS'),
+        'constraint' : {
+            'HSI_CK'   : '0b000',
+            'CSI_CK'   : '0b001',
+            'HSE_CK'   : '0b010',
+            'PLL1P_CK' : '0b011'
+        },
+        'value' : ...,
     },
 
     'SCGU_KERNEL_SOURCE' : {
-        'location'   : ('RCC', 'CFGR1', 'SW'),
+        'location'   : ('RCC', 'CFGR', 'SW'),
         'constraint' : {
             'HSI_CK'   : '0b000',
             'CSI_CK'   : '0b001',
@@ -631,7 +600,7 @@ SCHEMA = {
 
     **{
         f'APB{unit}_DIVIDER' : {
-            'location'   : ('RCC', 'CFGR2', 'PPRE3'),
+            'location'   : ('RCC', 'APBCFGR', f'PPRE{unit}'),
             'constraint' : {
                 1  : '0b000',
                 2  : '0b100',
@@ -645,7 +614,23 @@ SCHEMA = {
     },
 
     'CPU_DIVIDER' : {
-        'location'   : ('RCC', 'CFGR2', 'HPRE'),
+        'location'   : ('RCC', 'CDCFGR', 'CPRE'),
+        'constraint' : {
+            1   : '0b0000', # Low three bits are don't-care.
+            2   : '0b1000',
+            4   : '0b1001',
+            8   : '0b1010',
+            16  : '0b1011',
+            64  : '0b1100',
+            128 : '0b1101',
+            256 : '0b1110',
+            512 : '0b1111',
+        },
+        'value' : ...,
+    },
+
+    'AXI_AHB_DIVIDER' : {
+        'location'   : ('RCC', 'BMCFGR', 'BMPRE'),
         'constraint' : {
             1   : '0b0000', # Low three bits are don't-care.
             2   : '0b1000',
@@ -668,6 +653,7 @@ SCHEMA = {
     #
 
 
+
     **{
         f'{peripheral}{unit}_BAUD' : {
             'category' : 'rate',
@@ -679,7 +665,7 @@ SCHEMA = {
 
     **{
         f'{peripheral}{unit}_ENABLE' : {
-            'location'   : ('RCC', 'APB1LENR', f'{peripheral}{unit}EN'),
+            'location'   : ('RCC', 'APB1ENR1', f'{peripheral}{unit}EN'),
             'constraint' : (False, True),
             'value'      : ...,
         }
@@ -689,7 +675,7 @@ SCHEMA = {
 
     **{
         f'{peripheral}{unit}_RESET' : {
-            'location' : ('RCC', 'APB1LRSTR', f'{peripheral}{unit}RST'),
+            'location' : ('RCC', 'APB1RSTR1', f'{peripheral}{unit}RST'),
         }
         for instances in UXARTS
         for peripheral, unit in instances
@@ -697,7 +683,7 @@ SCHEMA = {
 
     **{
         f'UXART_{instances}_KERNEL_SOURCE' : {
-            'location'   : ('RCC', 'CCIPR1', field),
+            'location'   : ('RCC', 'CCIPR2', field),
             'constraint' : kernel_source,
             'value'      : ...,
             'pseudokeys' : [
@@ -717,130 +703,6 @@ SCHEMA = {
         }
         for instances in UXARTS
         for peripheral, unit in instances
-    },
-
-
-
-    ################################################################################
-    #
-    # I2Cs.
-    #
-
-
-
-    **{
-        f'I2C{unit}_BAUD' : {
-            'category' : 'rate',
-            'value'    : ...,
-        }
-        for unit in I2CS
-    },
-
-    **{
-        f'I2C{unit}_KERNEL_SOURCE' : {
-            'location'   : ('RCC', 'CCIPR4', f'I2C{unit}SEL'),
-            'constraint' : constraint,
-            'value'      : ...,
-        }
-        for units, constraint in(
-            ((1, 2), {
-                'APB1_CK'  : '0b00',
-                'PLL3R_CK' : '0b01',
-                'HSI_CK'   : '0b10',
-                'CSI_CK'   : '0b11'
-            }),
-            ((3,), {
-                'APB3_CK'  : '0b00',
-                'PLL3R_CK' : '0b01',
-                'HSI_CK'   : '0b10',
-                'CSI_CK'   : '0b11',
-            }),
-        )
-        for unit in units
-    },
-
-    **{
-        f'I2C{unit}_RESET' : {
-            'location' : ('RCC', 'APB1LRSTR', f'I2C{unit}RST'),
-        }
-        for unit in I2CS
-    },
-
-    **{
-        f'I2C{unit}_ENABLE' : {
-            'location'   : ('RCC', 'APB1LENR', f'I2C{unit}EN'),
-            'constraint' : (False, True),
-            'value'      : ...,
-        }
-        for unit in I2CS
-    },
-
-    **{
-        f'I2C{unit}_PRESC' : {
-            'location'   : ('I2C', 'TIMINGR', 'PRESC'),
-            'constraint' : IntMinMax(0, 15),
-            'value'      : ...,
-        }
-        for unit in I2CS
-    },
-
-    **{
-        f'I2C{unit}_SCLH' : {
-            'location'   : ('I2C', 'TIMINGR', 'SCLH'),
-            'constraint' : IntMinMax(0, 255),
-            'value'      : ...,
-        }
-        for unit in I2CS
-    },
-
-    **{
-        f'I2C{unit}_SCLL' : {
-            'location'   : ('I2C', 'TIMINGR', 'SCLL'),
-            'constraint' : IntMinMax(0, 255),
-            'value'      : ...,
-        }
-        for unit in I2CS
-    },
-
-
-
-    ################################################################################
-    #
-    # Timers.
-    #
-
-
-
-    'GLOBAL_TIMER_PRESCALER' : {
-        'location'   : ('RCC', 'CFGR1', 'TIMPRE'),
-        'constraint' : (False, True),
-        'value'      : ...,
-    },
-
-    **{
-        f'TIM{unit}_RATE' : {
-            'category' : 'rate',
-            'value'    : ...,
-        }
-        for unit in TIMERS
-    },
-
-    **{
-        f'TIM{unit}_DIVIDER' : {
-            'location'   : (f'TIM{unit}', 'PSC', 'PSC'),
-            'constraint' : IntMinMax(1, 1 << 16),
-            'value'      : ...,
-        }
-        for unit in TIMERS
-    },
-
-    **{
-        f'TIM{unit}_MODULATION' : {
-            'location'   : (f'TIM{unit}', 'PSC', 'ARR'),
-            'constraint' : IntMinMax(1, 1 << (32 if unit in (2, 5) else 16)),
-            'value'      : ...,
-        }
-        for unit in TIMERS
     },
 
 
