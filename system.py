@@ -1,7 +1,6 @@
 from ..stpy.database         import system_properties
 from ..stpy.parameterization import Parameterization
 from ..stpy.configurize      import system_configurize
-from ..stpy.planner          import SystemPlanner
 from ..pxd.utils             import justify
 
 
@@ -36,12 +35,6 @@ def do(Meta, target):
     # based on the target's constraints.
 
     parameterization = Parameterization(target)
-    planner = SystemPlanner(target)
-
-    planner.dictionary = {
-        key : value
-        for key, (kind, value) in parameterization.dictionary.items()
-    }
 
 
 
@@ -52,7 +45,7 @@ def do(Meta, target):
         SYSTEM_init(void)
     '''):
 
-        system_configurize(Meta, target, planner)
+        system_configurize(Meta, parameterization)
 
 
 

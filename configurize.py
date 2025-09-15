@@ -2,6 +2,7 @@ import collections, builtins, difflib
 from ..stpy.database import system_properties, system_locations
 from ..stpy.gpio     import process_all_gpios
 from ..stpy.helpers  import get_helpers
+from ..stpy.planner  import SystemPlanner
 from ..pxd.utils     import OrderedSet
 from ..pxd.log       import log, ANSI
 
@@ -34,7 +35,15 @@ INTERRUPTS_THAT_MUST_BE_DEFINED = (
 
 
 
-def system_configurize(Meta, target, planner):
+def system_configurize(Meta, parameterization):
+
+    target = parameterization.target
+    planner = SystemPlanner(target)
+
+    planner.dictionary = {
+        key : value
+        for key, (kind, value) in parameterization.dictionary.items()
+    }
 
     properties = system_properties[target.mcu]
 
