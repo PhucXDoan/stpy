@@ -477,6 +477,7 @@ def system_configurize(Meta, parameterization):
         tuplize(field)
         for field in fields
         if planner[field] is not None
+        if planner[field] is not ...
     )
 
 

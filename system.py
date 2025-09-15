@@ -39,12 +39,11 @@ def do(Meta, target):
     parameterization = Parameterization(target)
     new_parameterization = new_Parameterization(target)
 
-    if target.mcu == 'STM32H533RET6':
-        parameterization.dictionary = {
-            key : ('setting', value['value'])
-            for key, value in new_parameterization.database.items()
-            if 'value' in value
-        }
+    parameterization.dictionary = {
+        key : ('setting', value['value'])
+        for key, value in new_parameterization.database.items()
+        if 'value' in value
+    }
 
 
     # Generate the code to configure the MCU.
