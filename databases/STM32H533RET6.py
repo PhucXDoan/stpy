@@ -262,7 +262,22 @@ APB_PERIPHERALS = {
 
 
 
-global UXART_KERNEL_SOURCE_TABLE
+global GLOBAL_TIMER_PRESCALER_MULTIPLIER_TABLE
+GLOBAL_TIMER_PRESCALER_MULTIPLIER_TABLE = {
+    (False, 1 ) : 1,
+    (False, 2 ) : 1,
+    (False, 4 ) : 1 / 2,
+    (False, 8 ) : 1 / 4,
+    (False, 16) : 1 / 8,
+    (True , 1 ) : 1,
+    (True , 2 ) : 1,
+    (True , 4 ) : 1 / 2,
+    (True , 8 ) : 1 / 2,
+    (True , 16) : 1 / 4,
+}
+
+
+
 UXART_KERNEL_SOURCE_TABLE = (
     (
         (
@@ -301,22 +316,6 @@ UXART_KERNEL_SOURCE_TABLE = (
         },
     ),
 )
-
-
-
-global GLOBAL_TIMER_PRESCALER_MULTIPLIER_TABLE
-GLOBAL_TIMER_PRESCALER_MULTIPLIER_TABLE = {
-    (False, 1 ) : 1,
-    (False, 2 ) : 1,
-    (False, 4 ) : 1 / 2,
-    (False, 8 ) : 1 / 4,
-    (False, 16) : 1 / 8,
-    (True , 1 ) : 1,
-    (True , 2 ) : 1,
-    (True , 4 ) : 1 / 2,
-    (True , 8 ) : 1 / 2,
-    (True , 16) : 1 / 4,
-}
 
 
 
