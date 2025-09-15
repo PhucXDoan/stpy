@@ -36,8 +36,8 @@ class Parameterization:
                 return default
 
             raise RuntimeError(
-                f'While parameterizing, no key {repr(key)} was '
-                f'found for target {repr(self.target.name)}; '
+                f'No key {repr(key)} was found in the '
+                f'parameterization of target {repr(self.target.name)}; '
                 f'closest matches are: {
                     difflib.get_close_matches(
                         str(key),
