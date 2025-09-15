@@ -299,10 +299,13 @@ def get_helpers(Meta):
         # >
 
         for peripheral, register, field, value in spinlocks:
+
+            value = c_repr(value)
+
             match value:
-                case True  : Meta.line(f'while (!CMSIS_GET({peripheral}, {register}, {field}));')
-                case False : Meta.line(f'while (CMSIS_GET({peripheral}, {register}, {field}));')
-                case _     : Meta.line(f'while (CMSIS_GET({peripheral}, {register}, {field}) != {value});')
+                case 'true'  : Meta.line(f'while (!CMSIS_GET({peripheral}, {register}, {field}));')
+                case 'false' : Meta.line(f'while (CMSIS_GET({peripheral}, {register}, {field}));')
+                case _       : Meta.line(f'while (CMSIS_GET({peripheral}, {register}, {field}) != {value});')
 
 
 
