@@ -45,6 +45,8 @@ for mcu in sorted(dict.fromkeys(
         'IntMinMax'  : IntMinMax,
     }
 
+    original_keys = list(globals.keys())
+
     exec(
         pathlib.Path(__file__)
             .parent
@@ -53,6 +55,19 @@ for mcu in sorted(dict.fromkeys(
         globals,
         {},
     )
+
+    for key in globals.keys():
+
+        if key in ('__builtins__', 'SCHEMA', *original_keys):
+            continue
+
+        new_system_database[mcu][key] = {
+            'category'   : 'constant',
+            'location'   : None,
+            'constraint' : None,
+            'value'      : globals[key],
+        }
+
 
     for key, value in globals['SCHEMA'].items():
 

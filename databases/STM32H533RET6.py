@@ -1,3 +1,4 @@
+global APBS
 APBS = (
     1,
     2,
@@ -6,6 +7,7 @@ APBS = (
 
 
 
+global PLLS
 PLLS = (
     (1, ('P', 'Q', 'R')),
     (2, ('P', 'Q', 'R')),
@@ -14,6 +16,7 @@ PLLS = (
 
 
 
+global GPIOS
 GPIOS = (
     'A',
     'B',
@@ -28,6 +31,7 @@ GPIOS = (
 
 
 
+global UXARTS
 UXARTS = (
     (('USART', 1),),
     (('USART', 2),),
@@ -39,6 +43,7 @@ UXARTS = (
 
 
 
+global I2CS
 I2CS = (
     1,
     2,
@@ -47,6 +52,7 @@ I2CS = (
 
 
 
+global TIMERS
 TIMERS = (
     1,
     2,
@@ -61,7 +67,7 @@ TIMERS = (
 )
 
 
-
+global INTERRUPTS
 INTERRUPTS = (
     'Reset',
     'NonMaskableInt',
@@ -213,12 +219,34 @@ INTERRUPTS = (
     'I3C2_ER',
 )
 
-PLL_CHANNEL_FREQ      = RealMinMax(  1_000_000, 250_000_000)
-CPU_FREQ              = RealMinMax(          0, 250_000_000)
-AXI_AHB_FREQ          = RealMinMax(          0, 250_000_000)
-APB_FREQ              = RealMinMax(          0, 250_000_000)
+
+
+global PLL_CHANNEL_FREQ
+PLL_CHANNEL_FREQ = RealMinMax(1_000_000, 250_000_000)
+
+
+
+global CPU_FREQ
+CPU_FREQ = RealMinMax(0, 250_000_000)
+
+
+
+global AXI_AHB_FREQ
+AXI_AHB_FREQ = RealMinMax(0, 250_000_000)
+
+
+
+global APB_FREQ
+APB_FREQ = RealMinMax(0, 250_000_000)
+
+
+
+global HSI_DEFAULT_FREQUENCY
 HSI_DEFAULT_FREQUENCY = 32_000_000
 
+
+
+global APB_PERIPHERALS
 APB_PERIPHERALS = {
     'TIM2'  : 1,
     'TIM3'  : 1,
@@ -232,6 +260,9 @@ APB_PERIPHERALS = {
     'TIM15' : 2,
 }
 
+
+
+global UXART_KERNEL_SOURCE_TABLE
 UXART_KERNEL_SOURCE_TABLE = (
     (
         (
@@ -271,6 +302,9 @@ UXART_KERNEL_SOURCE_TABLE = (
     ),
 )
 
+
+
+global GLOBAL_TIMER_PRESCALER_MULTIPLIER_TABLE
 GLOBAL_TIMER_PRESCALER_MULTIPLIER_TABLE = {
     (False, 1 ) : 1,
     (False, 2 ) : 1,
@@ -284,31 +318,10 @@ GLOBAL_TIMER_PRESCALER_MULTIPLIER_TABLE = {
     (True , 16) : 1 / 4,
 }
 
+
+
 global SCHEMA
 SCHEMA = {
-
-    ################################################################################
-    #
-    # Constants.
-    #
-
-
-
-    'APBS'       : { 'category' : 'constant', 'value' : APBS       },
-    'PLLS'       : { 'category' : 'constant', 'value' : PLLS       },
-    'GPIOS'      : { 'category' : 'constant', 'value' : GPIOS      },
-    'UXARTS'     : { 'category' : 'constant', 'value' : UXARTS     },
-    'I2CS'       : { 'category' : 'constant', 'value' : I2CS       },
-    'TIMERS'     : { 'category' : 'constant', 'value' : TIMERS     },
-    'INTERRUPTS' : { 'category' : 'constant', 'value' : INTERRUPTS },
-    'APB_PERIPHERALS' : { 'category' : 'constant', 'value' : APB_PERIPHERALS },
-    'GLOBAL_TIMER_PRESCALER_MULTIPLIER_TABLE' : { 'category' : 'constant', 'value' : GLOBAL_TIMER_PRESCALER_MULTIPLIER_TABLE },
-    'PLL_CHANNEL_FREQ' : { 'category' : 'constant', 'value' : PLL_CHANNEL_FREQ },
-    'CPU_FREQ' : { 'category' : 'constant', 'value' : CPU_FREQ },
-    'AXI_AHB_FREQ' : { 'category' : 'constant', 'value' : AXI_AHB_FREQ },
-    'APB_FREQ' : { 'category' : 'constant', 'value' : APB_FREQ },
-    'HSI_DEFAULT_FREQUENCY' : { 'category' : 'constant', 'value' : HSI_DEFAULT_FREQUENCY },
-
 
     ################################################################################
     #
