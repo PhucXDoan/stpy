@@ -2,82 +2,10 @@ import collections, builtins, difflib
 from ..stpy.database import system_properties, system_locations
 from ..stpy.gpio     import process_all_gpios
 from ..stpy.helpers  import get_helpers
-from ..stpy.planner  import SystemPlanner
 from ..pxd.utils     import OrderedSet, c_repr
 from ..pxd.log       import log, ANSI
 
 
-
-################################################################################
-
-
-
-
-class Parameterization:
-
-
-
-    ################################################################################
-    #
-    # Keys can be inserted with an associated category.
-    #
-
-
-
-    def __setitem__(self, category_key, value):
-        category, key        = category_key
-        self.dictionary[key] = (category, value)
-
-
-
-    ################################################################################
-    #
-    # Indexing can be done with just the key. Thus, the
-    # categories' set of keys are disjoint with each other.
-    #
-
-
-
-    def __call__(self, key, default = ...):
-
-        if key not in self.dictionary:
-
-            if default is not ...:
-                return default
-
-            raise RuntimeError(
-                f'No key {repr(key)} was found in the '
-                f'parameterization of target {repr(self.target.name)}; '
-                f'closest matches are: {
-                    difflib.get_close_matches(
-                        str(key),
-                        map(str, self.dictionary.keys()),
-                        n      = 3,
-                        cutoff = 0
-                    )
-                }.'
-            )
-
-        category, value = self.dictionary[key]
-
-        if category == 'clock-tree-unused':
-            self.dictionary[key] = ('clock-tree-used', value)
-
-        return value
-
-
-
-    def __init__(self, target):
-
-
-
-        self.target     = target
-        self.dictionary = {
-            key : ('clock-tree-unused', value)
-            for key, value in target.clock_tree.items()
-        }
-
-        properties = system_properties[target.mcu]
 
 ################################################################################
 
@@ -102,24 +30,9 @@ INTERRUPTS_THAT_MUST_BE_DEFINED = (
 
 
 
-def system_configurize(Meta, new_parameterization):
+def system_configurize(Meta, parameterization):
 
-    parameterization = Parameterization(new_parameterization.target)
-
-    parameterization.dictionary = {
-        key : ('setting', value.value)
-        for key, value in new_parameterization.database.items()
-        if hasattr(value, 'value')
-    }
-
-    target = parameterization.target
-    planner = SystemPlanner(target)
-
-    planner.dictionary = {
-        key : value
-        for key, (kind, value) in parameterization.dictionary.items()
-    }
-
+    target     = parameterization.target
     properties = system_properties[target.mcu]
 
     def put_title(title = None):
@@ -145,8 +58,6 @@ def system_configurize(Meta, new_parameterization):
     CMSIS_SET      = helpers.CMSIS_SET
     CMSIS_WRITE    = helpers.CMSIS_WRITE
     CMSIS_SPINLOCK = helpers.CMSIS_SPINLOCK
-
-
 
 
 
@@ -419,8 +330,6 @@ def system_configurize(Meta, new_parameterization):
         if value is ...:
             value = parameterization(key)
 
-        assert value is not None
-
         if value is None:
             return None
 
@@ -430,7 +339,7 @@ def system_configurize(Meta, new_parameterization):
 
     def tuplize_if_exist(key, value = ..., formatting = '{}'):
 
-        if key not in parameterization.dictionary:
+        if key not in parameterization.database:
             return
 
         if value is ...:
@@ -551,8 +460,8 @@ def system_configurize(Meta, new_parameterization):
     cmsis_set(
         tuplize(field)
         for field in fields
-        if planner[field] is not None
-        if planner[field] is not ...
+        if parameterization(field) is not None
+        if parameterization(field) is not ...
     )
 
 
@@ -579,7 +488,7 @@ def system_configurize(Meta, new_parameterization):
 
     TITLE = 'High-Speed-Internal (General)'
 
-    if planner['HSI_ENABLE']:
+    if parameterization('HSI_ENABLE'):
         pass # The HSI oscillator is enabled by default after reset.
     else:
         raise NotImplementedError # TODO.
@@ -592,7 +501,7 @@ def system_configurize(Meta, new_parameterization):
 
     TITLE = 'High-Speed-Internal (48MHz)'
 
-    if planner['HSI48_ENABLE']:
+    if parameterization('HSI48_ENABLE'):
         cmsis_set     (tuplize('HSI48_ENABLE', True))
         cmsis_spinlock(tuplize('HSI48_READY' , True))
 
@@ -604,7 +513,7 @@ def system_configurize(Meta, new_parameterization):
 
     TITLE = 'Clock-Security-Internal'
 
-    if planner['CSI_ENABLE']:
+    if parameterization('CSI_ENABLE'):
         cmsis_set     (tuplize('CSI_ENABLE', True))
         cmsis_spinlock(tuplize('CSI_READY' , True))
 
@@ -680,7 +589,7 @@ def system_configurize(Meta, new_parameterization):
             if parameterization(f'PLL{unit}{channel}_DIVIDER', None) is None:
                 continue
 
-            if parameterization.dictionary[f'PLL{unit}{channel}_DIVIDER'][1] is ...:
+            if parameterization(f'PLL{unit}{channel}_DIVIDER') is None:
                 continue
 
             sets += [
@@ -697,7 +606,7 @@ def system_configurize(Meta, new_parameterization):
     cmsis_set(
         tuplize(f'PLL{unit}_ENABLE')
         for unit, channels in properties['PLLS']
-        if parameterization.dictionary[f'PLL{unit}_ENABLE'][1] is not ...
+        if not parameterization(f'PLL{unit}_ENABLE')
     )
 
 
@@ -709,7 +618,7 @@ def system_configurize(Meta, new_parameterization):
         if not parameterization(f'PLL{unit}_ENABLE'):
             continue
 
-        if parameterization.dictionary[f'PLL{unit}_ENABLE'][1] is ...:
+        if not parameterization(f'PLL{unit}_ENABLE'):
             continue
 
         cmsis_spinlock(tuplize(f'PLL{unit}_READY', True))
@@ -773,7 +682,7 @@ def system_configurize(Meta, new_parameterization):
 
     TITLE = 'SysTick'
 
-    if parameterization('SYSTICK_ENABLE') and parameterization('SYSTICK_ENABLE') is not ...:
+    if parameterization('SYSTICK_ENABLE'):
 
         cmsis_set(
             tuplize('SYSTICK_RELOAD'                ), # Modulation of the counter.
@@ -831,11 +740,3 @@ def system_configurize(Meta, new_parameterization):
 
         define_if_exist(f'TIM{unit}_DIVIDER'   , '({} - 1)')
         define_if_exist(f'TIM{unit}_MODULATION', '({} - 1)')
-
-
-
-    ################################################################################
-
-
-
-    planner.done_configurize()

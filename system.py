@@ -59,7 +59,7 @@ def do(Meta, target):
         )
         for key, value in parameterization.database.items()
         if value.category == 'frequency'
-        if value.value is not ...
+        if value.value is not None
     ):
         Meta.define(macro, f'({expansion})')
 

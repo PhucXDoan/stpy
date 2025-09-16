@@ -912,14 +912,27 @@ class Parameterization:
 
         for key, entry in self.database.items():
 
-            if not isinstance(self.database[key].constraint, Mapping):
-                continue
-
             if self.database[key].mapped:
                 continue
 
-            if entry.value is ...:
-                continue
 
-            entry.value  = self.database[key].constraint[entry.value]
-            entry.mapped = True
+
+            # Since Ellipsis is truthy, we can make
+            # it easier on us in the configurization
+            # stage by turning it into None which is falsy.
+
+            if entry.value is ...:
+
+                entry.value  = None
+                entry.mapped = True
+
+
+
+            # Mapping constraints are a table of sematic names
+            # to the actual underlying value to be used in the
+            # generated code (e.g. the binary code).
+
+            elif isinstance(self.database[key].constraint, Mapping):
+
+                entry.value  = self.database[key].constraint[entry.value]
+                entry.mapped = True
