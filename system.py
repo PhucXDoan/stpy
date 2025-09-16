@@ -1,8 +1,8 @@
-from ..stpy.database             import system_properties
-from ..stpy.new_database         import system_database
-from ..stpy.new_parameterization import Parameterization
-from ..stpy.configurize          import system_configurize
-from ..pxd.utils                 import justify
+from ..stpy.database         import system_properties
+from ..stpy.new_database     import system_database
+from ..stpy.parameterization import Parameterization
+from ..stpy.configurize      import system_configurize
+from ..pxd.utils             import justify
 
 
 
@@ -35,7 +35,7 @@ def do(Meta, target):
     # Figure out how to configure the MCU
     # based on the target's constraints.
 
-    new_parameterization = Parameterization(target)
+    parameterization = Parameterization(target)
 
 
 
@@ -46,7 +46,7 @@ def do(Meta, target):
         SYSTEM_init(void)
     '''):
 
-        system_configurize(Meta, new_parameterization)
+        system_configurize(Meta, parameterization)
 
 
 
@@ -57,7 +57,7 @@ def do(Meta, target):
             ('<', f'CLOCK_TREE_FREQUENCY_OF_{key}'),
             ('>', f'{value.value :,}'.replace(',', "'")),
         )
-        for key, value in new_parameterization.database.items()
+        for key, value in parameterization.database.items()
         if value.category == 'frequency'
         if value.value is not ...
     ):
