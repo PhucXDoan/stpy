@@ -449,7 +449,7 @@ SCHEMA = {
             'HSI_CK' : '0b00',
             'CSI_CK' : '0b01',
             'HSE_CK' : '0b10',
-            None     : '0b11'
+            0        : '0b11'
         },
         'value' : ...,
     },
@@ -535,7 +535,7 @@ SCHEMA = {
             'HSI_CK' : '0b00',
             'CSI_CK' : '0b01',
             'HSE_CK' : '0b10',
-            None     : '0b11'
+            0        : '0b11'
         },
         'value' : ...,
     },
