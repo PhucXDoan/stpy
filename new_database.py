@@ -6,6 +6,35 @@ import pathlib, types
 
 
 
+def get_similars(given, options): # TODO Copy-pasta.
+
+    import difflib
+
+    return difflib.get_close_matches(
+        str(given),
+        [str(option) for option in options],
+        n      = 3,
+        cutoff = 0
+    )
+
+
+
+class SystemDatabase(dict):
+
+    def __getitem__(self, key):
+
+        if key not in self:
+
+            raise RuntimeError(
+                f'No key {repr(key)} exists in the database for target '
+                f'{'TODO'} ({'TODO'}); '
+                f'close matches: {repr(get_similars(key, self.keys()))}.'
+            )
+
+        return super().__getitem__(key)
+
+
+
 class TBD:
 
     def __bool__(self):
@@ -197,3 +226,7 @@ for mcu in MCUS:
             raise ValueError(
                 f'Leftover schema entry properties: {repr(entry)}.'
             )
+
+
+
+    system_database[mcu] = SystemDatabase(system_database[mcu])
