@@ -607,6 +607,7 @@ SCHEMA = {
             'location'   : ('RCC', f'PLL{unit}DIVR', f'PLL{unit}N'),
             'constraint' : IntMinMax(4, 512),
             'value'      : TBD,
+            'off_by_one' : True,
         }
         for unit, channels in PLLS
     },
@@ -616,6 +617,7 @@ SCHEMA = {
             'location'   : ('RCC', f'PLL{unit}DIVR', f'PLL{unit}{channel}'),
             'constraint' : IntMinMax(1, 128),
             'value'      : TBD,
+            'off_by_one' : True,
         }
         for unit, channels in PLLS
         for channel in channels
@@ -855,6 +857,7 @@ SCHEMA = {
             'location'   : (f'TIM{unit}', 'PSC', 'PSC'),
             'constraint' : IntMinMax(1, 1 << 16),
             'value'      : TBD,
+            'off_by_one' : True,
         }
         for unit in TIMERS
     },
@@ -864,6 +867,7 @@ SCHEMA = {
             'location'   : (f'TIM{unit}', 'PSC', 'ARR'),
             'constraint' : IntMinMax(1, 1 << (32 if unit in (2, 5) else 16)),
             'value'      : TBD,
+            'off_by_one' : True,
         }
         for unit in TIMERS
     },

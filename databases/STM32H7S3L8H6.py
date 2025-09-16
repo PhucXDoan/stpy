@@ -568,6 +568,7 @@ SCHEMA = {
             'location'   : ('RCC', f'PLL{unit}DIVR1', 'DIVN'),
             'constraint' : IntMinMax(12, 420),
             'value'      : TBD,
+            'off_by_one' : True,
         }
         for unit, channels in PLLS
     },
@@ -577,6 +578,7 @@ SCHEMA = {
             'location'   : ('RCC', f'PLL{unit}DIVR{2 if channel in ('S', 'T') else 1}', f'DIV{channel}'),
             'constraint' : IntMinMax(1, 128),
             'value'      : TBD,
+            'off_by_one' : True,
         }
         for unit, channels in PLLS
         for channel in channels

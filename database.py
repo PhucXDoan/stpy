@@ -178,6 +178,7 @@ for mcu in MCUS:
         system_database[mcu][key] = types.SimpleNamespace(
             category   = entry.pop('category'  , None),
             location   = entry.pop('location'  , None),
+            off_by_one = entry.pop('off_by_one', None),
         )
 
 
