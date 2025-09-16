@@ -1,5 +1,4 @@
 import collections, builtins, difflib
-from ..stpy.database         import system_properties, system_locations
 from ..stpy.parameterization import TBD
 from ..stpy.gpio             import process_all_gpios
 from ..stpy.helpers          import get_helpers
@@ -34,7 +33,6 @@ INTERRUPTS_THAT_MUST_BE_DEFINED = (
 def system_configurize(Meta, parameterization):
 
     target     = parameterization.target
-    properties = system_properties[target.mcu]
 
     def put_title(title = None):
 
@@ -71,14 +69,14 @@ def system_configurize(Meta, parameterization):
     # to be used by the target eists.
 
     for interrupt, niceness in target.interrupts:
-        if interrupt not in properties['INTERRUPTS']:
+        if interrupt not in parameterization('INTERRUPTS'):
 
             raise ValueError(
                 f'For target {repr(target.name)}, '
                 f'no such interrupt {repr(interrupt)} '
                 f'exists on {repr(target.mcu)}; '
                 f'did you mean any of the following? : '
-                f'{difflib.get_close_matches(interrupt, properties['INTERRUPTS'].keys(), n = 5, cutoff = 0)}'
+                f'{difflib.get_close_matches(interrupt, parameterization('INTERRUPTS').keys(), n = 5, cutoff = 0)}'
             )
 
 
@@ -111,7 +109,7 @@ def system_configurize(Meta, parameterization):
     # Enable GPIO ports that have defined pins.
 
     CMSIS_SET(
-        (*system_locations[target.mcu][f'GPIO{port}_ENABLE'], True)
+        (*parameterization.database[f'GPIO{port}_ENABLE'].location, True)
         for port in sorted(OrderedSet(
             gpio.port
             for gpio in gpios
@@ -150,7 +148,7 @@ def system_configurize(Meta, parameterization):
             f'GPIO{gpio.port}',
             'OSPEEDR',
             f'OSPEED{gpio.number}',
-            properties['GPIO_SPEED'][gpio.speed]
+            parameterization('GPIO_SPEED')[gpio.speed]
         )
         for gpio in gpios
         if gpio.pin   is not None
@@ -166,7 +164,7 @@ def system_configurize(Meta, parameterization):
             f'GPIO{gpio.port}',
             'PUPDR',
             f'PUPD{gpio.number}',
-            properties['GPIO_PULL'][gpio.pull]
+            parameterization('GPIO_PULL')[gpio.pull]
         )
         for gpio in gpios
         if gpio.pin  is not None
@@ -198,7 +196,7 @@ def system_configurize(Meta, parameterization):
             f'GPIO{gpio.port}',
             'MODER',
             f'MODE{gpio.number}',
-            properties['GPIO_MODE'][gpio.mode]
+            parameterization('GPIO_MODE')[gpio.mode]
         )
         for gpio in gpios
         if gpio.pin  is not None
@@ -219,7 +217,7 @@ def system_configurize(Meta, parameterization):
 
     for routine in OrderedSet((
         *INTERRUPTS_THAT_MUST_BE_DEFINED,
-        *properties['INTERRUPTS']
+        *parameterization('INTERRUPTS')
     )):
 
 
@@ -268,7 +266,7 @@ def system_configurize(Meta, parameterization):
 
         # Set the Arm-specific interrupts' priorities.
 
-        if properties['INTERRUPTS'].index(interrupt) <= 14:
+        if parameterization('INTERRUPTS').index(interrupt) <= 14:
 
             assert interrupt in (
                 'MemoryManagement',
@@ -308,23 +306,23 @@ def system_configurize(Meta, parameterization):
             put_title(TITLE)
             TITLE = None
 
-    def define(key, formatter = lambda value: value, *, name = ...):
 
-        if name is ...:
-            name = f'{key}_init'
 
-        if (value := parameterization(key, None)) is not None:
-            flush_title()
-            Meta.define(name, formatter(value))
 
-    def define_if_exist(key, formatting = '{}', *, macro = ...):
 
-        if macro is ...:
-            macro = f'{key}_init'
+
+
+
+
+    def define_if_exist(key, formatting = '{}'):
 
         if (value := parameterization(key, TBD)) is not TBD:
             flush_title()
-            Meta.define(macro, formatting.format(c_repr(value)))
+            Meta.define(f'{key}_init', formatting.format(c_repr(value)))
+
+
+
+
 
     def tuplize(key, value = ..., formatting = '{}'):
 
@@ -336,7 +334,9 @@ def system_configurize(Meta, parameterization):
 
         value = formatting.format(c_repr(value))
 
-        return (*system_locations[target.mcu][key], value)
+        return (*parameterization.database[key].location, value)
+
+
 
     def tuplize_if_exist(key, value = ..., formatting = '{}'):
 
@@ -351,20 +351,8 @@ def system_configurize(Meta, parameterization):
 
         value = formatting.format(c_repr(value))
 
-        return (*system_locations[target.mcu][key], value)
+        return (*parameterization.database[key].location, value)
 
-
-    def tuplize_if_not_none(key, value = ..., formatting = '{}'):
-
-        if value is ...:
-            value = parameterization(key)
-
-        if value is TBD:
-            return None
-
-        value = formatting.format(c_repr(value))
-
-        return (*system_locations[target.mcu][key], value)
 
 
     def cmsis_set(*entries):
@@ -552,14 +540,14 @@ def system_configurize(Meta, parameterization):
 
     # Configure each PLL.
 
-    for unit, channels in properties['PLLS']:
+    for unit, channels in parameterization('PLLS'):
 
 
 
         # Set the clock source for this PLL unit.
 
         if target.mcu == 'STM32H533RET6':
-            sets += [tuplize_if_not_none(f'PLL{unit}_KERNEL_SOURCE')]
+            sets += [tuplize_if_exist(f'PLL{unit}_KERNEL_SOURCE')]
 
 
 
@@ -605,7 +593,7 @@ def system_configurize(Meta, parameterization):
 
     cmsis_set(
         tuplize(f'PLL{unit}_ENABLE')
-        for unit, channels in properties['PLLS']
+        for unit, channels in parameterization('PLLS')
         if parameterization(f'PLL{unit}_ENABLE')
     )
 
@@ -614,7 +602,7 @@ def system_configurize(Meta, parameterization):
 
     # Ensure each enabled PLL unit has stabilized.
 
-    for unit, channels in properties['PLLS']:
+    for unit, channels in parameterization('PLLS'):
 
         if parameterization(f'PLL{unit}_ENABLE'):
 
@@ -640,7 +628,7 @@ def system_configurize(Meta, parameterization):
                 tuplize('AXI_AHB_DIVIDER'),
                 *(
                     tuplize(f'APB{unit}_DIVIDER')
-                    for unit in properties['APBS']
+                    for unit in parameterization('APBS')
                 ),
             )
 
@@ -649,7 +637,7 @@ def system_configurize(Meta, parameterization):
                 tuplize('CPU_DIVIDER'),
                 *(
                     tuplize(f'APB{unit}_DIVIDER')
-                    for unit in properties['APBS']
+                    for unit in parameterization('APBS')
                 ),
             )
 
@@ -695,15 +683,12 @@ def system_configurize(Meta, parameterization):
 
 
 
-    for instances in properties.get('UXARTS', ()):
+    for instances in parameterization('UXARTS', ()):
 
         TITLE = ' / '.join(f'{peripheral}{unit}' for peripheral, unit in instances)
 
         for peripheral, unit in instances:
-            define_if_exist(
-                f'UXART_{instances}_KERNEL_SOURCE',
-                macro = f'{peripheral}{unit}_KERNEL_SOURCE_init'
-            )
+            define_if_exist(f'{peripheral}{unit}_KERNEL_SOURCE')
 
         for peripheral, unit in instances:
             define_if_exist(f'{peripheral}{unit}_BAUD_DIVIDER')
@@ -714,7 +699,7 @@ def system_configurize(Meta, parameterization):
 
 
 
-    for unit in properties.get('I2CS', ()):
+    for unit in parameterization('I2CS', ()):
 
         TITLE = f'I2C{unit}'
 
@@ -733,7 +718,7 @@ def system_configurize(Meta, parameterization):
 
     define_if_exist(f'GLOBAL_TIMER_PRESCALER')
 
-    for unit in properties.get('TIMERS', ()):
+    for unit in parameterization('TIMERS', ()):
 
         define_if_exist(f'TIM{unit}_DIVIDER'   , '({} - 1)')
         define_if_exist(f'TIM{unit}_MODULATION', '({} - 1)')
