@@ -150,10 +150,8 @@ def system_configurize(Meta, parameterization):
         # Set initial output level.
 
         CMSIS_SET(
-            (f'GPIO{gpio.port}', 'ODR', f'OD{gpio.number}', gpio.initlvl)
+            tuplize(f'GPIO{gpio.port}{gpio.number}_OUTPUT', tbd_ok = True)
             for gpio in parameterization.gpios
-            if gpio.pin     is not None
-            if gpio.initlvl is not None
         )
 
 

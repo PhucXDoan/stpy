@@ -914,6 +914,18 @@ class Parameterization:
             if gpio.pin is None:
                 continue
 
+            if gpio.initlvl is None:
+                continue
+
+            self[f'GPIO{gpio.port}{gpio.number}_OUTPUT'] = gpio.initlvl
+
+
+
+        for gpio in self.gpios:
+
+            if gpio.pin is None:
+                continue
+
             if gpio.speed is None:
                 continue
 

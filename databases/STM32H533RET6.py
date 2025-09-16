@@ -383,6 +383,16 @@ SCHEMA = {
     },
 
     **{
+        f'GPIO{port}{number}_OUTPUT' : {
+            'location'   : (f'GPIO{port}', 'ODR', f'OD{number}'),
+            'constraint' : (False, True),
+            'value'      : TBD,
+        }
+        for port, numbers in GPIOS
+        for number in numbers
+    },
+
+    **{
         f'GPIO{port}{number}_SPEED' : {
             'location'   : (f'GPIO{port}', 'OSPEEDR', f'OSPEED{number}'),
             'constraint' : {
