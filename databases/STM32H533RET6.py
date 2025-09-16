@@ -471,7 +471,7 @@ SCHEMA = {
             'location' : ('RCC', 'CR', f'{source}RDY'),
         }
         for source in (
-            'HSI'
+            'HSI',
             'HSI48',
             'CSI',
         )
