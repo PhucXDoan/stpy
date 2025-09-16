@@ -1065,6 +1065,39 @@ class Parameterization:
                     f'GPIO {repr(name)} has leftover properties: {properties}.'
                 )
 
+
+
+            if gpio.pin is not None:
+
+                self[f'GPIO{gpio.port}_ENABLE'] = True
+
+                if gpio.open_drain is not None:
+                    self[f'GPIO{gpio.port}{gpio.number}_OPEN_DRAIN'] = gpio.open_drain
+
+
+                if gpio.initlvl is not None:
+                    self[f'GPIO{gpio.port}{gpio.number}_OUTPUT'] = gpio.initlvl
+
+
+                if gpio.speed is not None:
+                    self[f'GPIO{gpio.port}{gpio.number}_SPEED'] = gpio.speed
+
+
+                if gpio.pull is not None:
+                    self[f'GPIO{gpio.port}{gpio.number}_PULL'] = gpio.pull
+
+
+                if gpio.afsel is not None:
+
+                    self[f'GPIO{gpio.port}{gpio.number}_ALTERNATE_FUNCTION'] = gpio.afsel
+
+
+                if gpio.mode not in (None, 'RESERVED'):
+
+                    self[f'GPIO{gpio.port}{gpio.number}_MODE'] = gpio.mode
+
+
+
             return gpio
 
 
@@ -1105,82 +1138,6 @@ class Parameterization:
             raise ValueError(
                 f'GPIO pin {repr(duplicate_pin)} used more than once.'
             )
-
-
-
-        for port in sorted(dict.fromkeys(
-            gpio.port
-            for gpio in self.gpios
-            if gpio.pin is not None
-        )):
-            self[f'GPIO{port}_ENABLE'] = True
-
-
-        for gpio in self.gpios:
-
-            if gpio.pin is None:
-                continue
-
-            if gpio.open_drain is None:
-                continue
-
-            self[f'GPIO{gpio.port}{gpio.number}_OPEN_DRAIN'] = gpio.open_drain
-
-
-        for gpio in self.gpios:
-
-            if gpio.pin is None:
-                continue
-
-            if gpio.initlvl is None:
-                continue
-
-            self[f'GPIO{gpio.port}{gpio.number}_OUTPUT'] = gpio.initlvl
-
-
-
-        for gpio in self.gpios:
-
-            if gpio.pin is None:
-                continue
-
-            if gpio.speed is None:
-                continue
-
-            self[f'GPIO{gpio.port}{gpio.number}_SPEED'] = gpio.speed
-
-
-
-        for gpio in self.gpios:
-
-            if gpio.pin is None:
-                continue
-
-            if gpio.pull is None:
-                continue
-
-            self[f'GPIO{gpio.port}{gpio.number}_PULL'] = gpio.pull
-
-
-
-        for gpio in self.gpios:
-
-            if gpio.afsel is None:
-                continue
-
-            self[f'GPIO{gpio.port}{gpio.number}_ALTERNATE_FUNCTION'] = gpio.afsel
-
-
-
-        for gpio in self.gpios:
-
-            if gpio.pin is None:
-                continue
-
-            if gpio.mode in (None, 'RESERVED'):
-                continue
-
-            self[f'GPIO{gpio.port}{gpio.number}_MODE'] = gpio.mode
 
 
 
