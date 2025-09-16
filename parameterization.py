@@ -93,7 +93,8 @@ class Parameterization:
             raise RuntimeError(
                 f'For target {repr(self.target.name)} ({repr(self.target.mcu)}), '
                 f'the key {repr(key)} was written with value {repr(value)}, '
-                f'but this does not satisfy the constraint: {entry.constraint.show()}.'
+                f'but this does not satisfy the constraint: '
+                f'{self.database[key].constraint.show()}.'
             )
 
 
