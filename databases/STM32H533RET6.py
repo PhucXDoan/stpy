@@ -588,7 +588,7 @@ SCHEMA = {
 
     **{
         f'PLL{unit}{channel}_DIVIDER' : {
-            'location'   : ('RCC', f'PLL{unit}DIV{channel}', f'PLL{unit}{channel}'),
+            'location'   : ('RCC', f'PLL{unit}DIVR', f'PLL{unit}{channel}'),
             'constraint' : IntMinMax(1, 128),
             'value'      : TBD,
         }
@@ -631,7 +631,7 @@ SCHEMA = {
 
     **{
         f'APB{unit}_DIVIDER' : {
-            'location'   : ('RCC', 'CFGR2', 'PPRE3'),
+            'location'   : ('RCC', 'CFGR2', f'PPRE{unit}'),
             'constraint' : {
                 1  : '0b000',
                 2  : '0b100',

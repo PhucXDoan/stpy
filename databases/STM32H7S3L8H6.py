@@ -490,7 +490,7 @@ SCHEMA = {
 
     **{
         f'PLL{unit}{channel}_ENABLE' : {
-            'location'   : ('RCC', f'PLL{unit}CFGR', f'PLL{unit}{channel}EN'),
+            'location'   : ('RCC', 'PLLCFGR', f'PLL{unit}{channel}EN'),
             'constraint' : (False, True),
             'value'      : TBD,
         }
@@ -507,7 +507,7 @@ SCHEMA = {
 
     **{
         f'PLL{unit}_INPUT_RANGE' : {
-            'location'   : ('RCC', f'PLL{unit}CFGR', f'PLL{unit}RGE'),
+            'location'   : ('RCC', 'PLLCFGR', f'PLL{unit}RGE'),
             'constraint' : {
                 (2_000_000, 4_000_000 ) : 0b01,
                 (4_000_000, 8_000_000 ) : 0b10,
