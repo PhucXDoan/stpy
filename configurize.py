@@ -314,17 +314,36 @@ def system_configurize(Meta, parameterization):
 
 
 
-    def define_if_exist(key, formatting = '{}'):
+    def define_if_exist(key, *, undefined_ok = False):
 
-        if (value := parameterization(key, TBD)) is not TBD:
-            flush_title()
-            Meta.define(f'{key}_init', formatting.format(c_repr(value)))
+        if undefined_ok:
+            if (value := parameterization(key, TBD)) is not TBD:
+
+                flush_title()
+
+                if parameterization.database[key].off_by_one:
+                    formatting = '({} - 1)'
+                else:
+                    formatting = '{}'
+
+                Meta.define(f'{key}_init', formatting.format(c_repr(value)))
+        else:
+            if (value := parameterization(key)) is not TBD:
+
+                flush_title()
+
+                if parameterization.database[key].off_by_one:
+                    formatting = '({} - 1)'
+                else:
+                    formatting = '{}'
+
+                Meta.define(f'{key}_init', formatting.format(c_repr(value)))
 
 
 
 
 
-    def tuplize(key, value = ..., formatting = '{}'):
+    def tuplize(key, value = ...):
 
         if value is ...:
             value = parameterization(key)
@@ -332,13 +351,18 @@ def system_configurize(Meta, parameterization):
         if value is None:
             return None
 
+        if parameterization.database[key].off_by_one:
+            formatting = '({} - 1)'
+        else:
+            formatting = '{}'
+
         value = formatting.format(c_repr(value))
 
         return (*parameterization.database[key].location, value)
 
 
 
-    def tuplize_if_exist(key, value = ..., formatting = '{}'):
+    def tuplize_if_exist(key, value = ...):
 
         if key not in parameterization.database:
             return
@@ -348,6 +372,11 @@ def system_configurize(Meta, parameterization):
 
         if value is TBD:
             return None
+
+        if parameterization.database[key].off_by_one:
+            formatting = '({} - 1)'
+        else:
+            formatting = '{}'
 
         value = formatting.format(c_repr(value))
 
@@ -566,7 +595,7 @@ def system_configurize(Meta, parameterization):
 
         # Set each PLL unit's multipler.
 
-        sets += [tuplize_if_exist(f'PLL{unit}_MULTIPLIER', formatting = '{} - 1')]
+        sets += [tuplize_if_exist(f'PLL{unit}_MULTIPLIER')]
 
 
 
@@ -581,7 +610,7 @@ def system_configurize(Meta, parameterization):
                 continue
 
             sets += [
-                tuplize(f'PLL{unit}{channel}_DIVIDER', formatting = '{} - 1'),
+                tuplize(f'PLL{unit}{channel}_DIVIDER'),
                 tuplize(f'PLL{unit}{channel}_ENABLE', True),
             ]
 
@@ -716,9 +745,9 @@ def system_configurize(Meta, parameterization):
 
     TITLE = 'Timers'
 
-    define_if_exist(f'GLOBAL_TIMER_PRESCALER')
+    define_if_exist(f'GLOBAL_TIMER_PRESCALER', undefined_ok = True)
 
     for unit in parameterization('TIMERS', ()):
 
-        define_if_exist(f'TIM{unit}_DIVIDER'   , '({} - 1)')
-        define_if_exist(f'TIM{unit}_MODULATION', '({} - 1)')
+        define_if_exist(f'TIM{unit}_DIVIDER'   )
+        define_if_exist(f'TIM{unit}_MODULATION')
