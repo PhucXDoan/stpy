@@ -1,6 +1,5 @@
-import copy
-from ..stpy.database import system_database, TBD, Mapping
-from ..stpy.gpio     import process_all_gpios
+import copy, types, collections
+from ..stpy.database import system_database, TBD, Mapping, GPIO_ALTERNATE_FUNCTION_CODES
 
 
 
@@ -167,7 +166,6 @@ class Parameterization:
 
         self.target   = target
         self.database = copy.deepcopy(system_database[self.target.mcu])
-        self.gpios    = process_all_gpios(self.target)
 
 
 
@@ -906,6 +904,206 @@ class Parameterization:
         #
         # GPIOs.
         #
+
+
+
+        def process_single_gpio(target, entry):
+
+            name, pin, mode, properties = entry
+
+
+
+            # The layout of a GPIO instance.
+
+            gpio = types.SimpleNamespace(
+                name       = name,
+                pin        = pin,
+                mode       = mode,
+                port       = None,
+                number     = None,
+                speed      = None,
+                pull       = None,
+                open_drain = None,
+                initlvl    = None,
+                altfunc    = None,
+                afsel      = None,
+            )
+
+
+
+            # If the pin of the GPIO is given, split it into
+            # its port and number parts (e.g. 'A10' -> ('A', 10)).
+            # The pin can be left unspecified as `None`, which is
+            # useful for when we don't know where the pin will be
+            # end up being at but we want to at least have it still
+            # be in the table.
+
+            if pin is not None:
+                gpio.port   = pin[0]
+                gpio.number = int(pin[1:])
+
+
+
+            # Handle the GPIO mode.
+
+            match mode:
+
+
+
+                # A simple input GPIO to read digital voltage levels.
+
+                case 'INPUT':
+
+
+
+                    # The pull-direction must be specified in order to
+                    # prevent accidentally defining a floating GPIO pin.
+
+                    gpio.pull = properties.pop('pull')
+
+
+
+                # A simple output GPIO that can be driven low or high.
+
+                case 'OUTPUT':
+
+
+
+                    # The initial voltage level must be specified
+                    # so the user remembers to take it into consideration.
+
+                    gpio.initlvl = properties.pop('initlvl')
+
+
+
+                    # Other optional properties.
+
+                    gpio.speed      = properties.pop('speed'     , None)
+                    gpio.open_drain = properties.pop('open_drain', None)
+
+
+
+
+                # This GPIO would typically be used for some
+                # peripheral functionality (e.g. SPI clock output).
+
+                case 'ALTERNATE':
+
+
+
+                    # Alternate GPIOs are denoted by a string like
+                    # "UART8_TX" to indicate its alternate function.
+
+                    gpio.altfunc = properties.pop('altfunc')
+
+
+
+                    # Other optional properties.
+
+                    gpio.speed      = properties.pop('speed'     , None)
+                    gpio.pull       = properties.pop('pull'      , None)
+                    gpio.open_drain = properties.pop('open_drain', None)
+
+
+
+                # An analog GPIO would have its Schmit trigger function
+                # disabled; this obviously allows for ADC/DAC usage,
+                # but it can also serve as a power-saving measure.
+
+                case 'ANALOG':
+
+                    raise NotImplementedError
+
+
+
+                # A GPIO that's marked as "RESERVED" is often useful
+                # for marking a particular pin as something that
+                # shouldn't be used because it has an important
+                # functionality (e.g. JTAG debug).
+                # We ignore any properties the reserved pin may have.
+
+                case 'RESERVED':
+
+                    properties = {}
+
+
+
+                # Unknown GPIO mode.
+
+                case unknown:
+
+                    raise ValueError(
+                        f'GPIO {repr(name)} has unknown '
+                        f'mode: {repr(unknown)}.'
+                    )
+
+
+
+            # Determine the GPIO's alternate function code.
+
+            if gpio.pin is not None and gpio.altfunc is not None:
+
+                gpio.afsel = GPIO_ALTERNATE_FUNCTION_CODES[target.mcu].get(
+                    (gpio.port, gpio.number, gpio.altfunc),
+                    None
+                )
+
+                if gpio.afsel is None:
+                    raise ValueError(
+                        f'GPIO pin {repr(gpio.pin)} '
+                        f'for {target.mcu} ({target.name}) '
+                        f'has no alternate function {repr(gpio.altfunc)}.'
+                    )
+
+
+
+            # Done processing this GPIO entry!
+
+            if properties:
+                raise ValueError(
+                    f'GPIO {repr(name)} has leftover properties: {properties}.'
+                )
+
+            return gpio
+
+
+
+        self.gpios = tuple(
+            process_single_gpio(target, gpio)
+            for gpio in target.gpios
+        )
+
+
+
+        if duplicate_names := [
+            name
+            for name, count in collections.Counter(
+                gpio.name for gpio in self.gpios
+            ).items()
+            if count >= 2
+        ]:
+
+            duplicate_name, *_ = duplicate_names
+
+            raise ValueError(
+                f'GPIO name {repr(duplicate_name)} used more than once.'
+            )
+
+
+
+        if duplicate_pins := [
+            pin
+            for pin, count in collections.Counter(
+                gpio.pin for gpio in self.gpios
+            ).items()
+            if count >= 2
+        ]:
+
+            duplicate_pin, *_ = duplicate_pins
+
+            raise ValueError(
+                f'GPIO pin {repr(duplicate_pin)} used more than once.'
+            )
 
 
 

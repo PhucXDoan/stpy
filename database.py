@@ -1,4 +1,4 @@
-import pathlib, types
+import pathlib, types, csv
 
 
 
@@ -231,3 +231,107 @@ for mcu in MCUS:
 
 
     system_database[mcu] = SystemDatabase(system_database[mcu])
+
+
+
+################################################################################
+#
+# STM32CubeMX can generate a CSV file that'll detail all of the MCU's GPIO's
+# alternate functions; when working a particular MCU, we should have this file
+# generated already.
+#
+
+
+
+GPIO_ALTERNATE_FUNCTION_CODES = {}
+
+for mcu in system_database:
+
+    GPIO_ALTERNATE_FUNCTION_CODES[mcu] = {}
+
+    for entry in csv.DictReader(
+        pathlib.Path(__file__)
+            .parent
+            .joinpath(f'databases/{mcu}.csv')
+            .read_text()
+            .splitlines()
+    ):
+
+        match entry['Type']:
+
+
+
+            # Most GPIOs we care about are the I/O ones.
+
+            case 'I/O':
+
+
+
+                # Some GPIO names are suffixed with additional things,
+                # so we need to format it slightly so that we just get
+                # the port letter and pin number.
+                # e.g:
+                # >
+                # >     PC14-OSC32_IN(OSC32_IN) -> PC14
+                # >     PH1-OSC_OUT(PH1)        -> PH1
+                # >     PA14(JTCK/SWCLK)        -> PA14
+                # >     PC2_C                   -> PC2
+                # >
+
+                pin    = entry['Name']
+                pin    = pin.split('-', 1)[0]
+                pin    = pin.split('(', 1)[0]
+                pin    = pin.split('_', 1)[0]
+                port   = pin[1]
+                number = int(pin[2:])
+
+                assert pin.startswith('P') and ('A' <= port <= 'Z')
+
+
+
+                # Gather all the alternate functions of the GPIO, if any.
+
+                for code in range(16):
+
+
+
+                    # Skip empty cells.
+
+                    if not entry[f'AF{code}']:
+                        continue
+
+
+
+                    # Some have multiple names for the
+                    # same AFSEL code (e.g. "I2S3_CK/SPI3_SCK").
+
+                    for alternate_function in entry[f'AF{code}'].split('/'):
+
+                        key = (port, number, alternate_function)
+
+                        assert key not in GPIO_ALTERNATE_FUNCTION_CODES[mcu]
+
+                        GPIO_ALTERNATE_FUNCTION_CODES[mcu][key] = code
+
+
+
+            # TODO Maybe use this information to ensure
+            #      the PCB footprint is correct?
+
+            case 'Power' | 'Reset' | 'Boot':
+                pass
+
+
+
+            # TODO I have no idea what this is.
+
+            case 'MonoIO':
+                pass
+
+
+
+            # Unknown GPIO type in the CSV;
+            # doesn't neccessarily mean an error though.
+
+            case _:
+                pass # TODO Warn.
