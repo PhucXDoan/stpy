@@ -1,5 +1,5 @@
 import copy
-from ..stpy.new_database import system_database, TBD, Mapping
+from ..stpy.database import system_database, TBD, Mapping
 
 
 

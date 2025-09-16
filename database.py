@@ -1,8 +1,52 @@
-import pathlib, collections
+import pathlib, types
 
 
 
 ################################################################################
+
+
+
+def get_similars(given, options): # TODO Copy-pasta.
+
+    import difflib
+
+    return difflib.get_close_matches(
+        str(given),
+        [str(option) for option in options],
+        n      = 3,
+        cutoff = 0
+    )
+
+
+
+class SystemDatabase(dict):
+
+    def __getitem__(self, key):
+
+        if key not in self:
+
+            raise RuntimeError(
+                f'No key {repr(key)} exists in the database for target '
+                f'{'TODO'} ({'TODO'}); '
+                f'close matches: {repr(get_similars(key, self.keys()))}.'
+            )
+
+        return super().__getitem__(key)
+
+
+
+class TBD:
+
+    def __bool__(self):
+        return False
+
+    def __str__(self):
+        return '<TBD>'
+
+    def __deepcopy__(self, memo):
+        return self
+
+TBD = TBD()
 
 
 
@@ -12,8 +56,12 @@ class RealMinMax:
         self.minimum = minimum
         self.maximum = maximum
 
-    def __contains__(self, value):
+    def check(self, value):
+        if isinstance(value, str): value = float(value)
         return self.minimum <= value <= self.maximum
+
+    def show(self):
+        return f'{type(self).__name__}({self.minimum}, {self.maximum})'
 
 
 
@@ -23,11 +71,41 @@ class IntMinMax:
         self.minimum = minimum
         self.maximum = maximum
 
-    def __contains__(self, value):
+    def check(self, value):
+        if isinstance(value, str): value = int(value, 0)
         return value.is_integer() and self.minimum <= value <= self.maximum
 
-    def __iter__(self):
+    def iterate(self):
         return iter(range(self.minimum, self.maximum + 1))
+
+    def show(self):
+        return f'{type(self).__name__}({self.minimum}, {self.maximum})'
+
+
+
+class Choices(tuple):
+
+    def check(self, value):
+        return value in self
+
+    def iterate(self):
+        return iter(self)
+
+    def show(self):
+        return f'({', '.join(map(repr, self))})'
+
+
+
+class Mapping(dict):
+
+    def check(self, value):
+        return value in self
+
+    def iterate(self):
+        return iter(self)
+
+    def show(self):
+        return f'({', '.join(map(repr, self.keys()))})'
 
 
 
@@ -35,119 +113,120 @@ class IntMinMax:
 
 
 
-system_locations  = {}
-system_properties = {}
-
-for mcu in sorted(dict.fromkeys( # TODO Cleaner way to determine the MCUs?
+MCUS = sorted(dict.fromkeys(
     item.stem
-    for item in pathlib.Path(__file__).parent.joinpath('mcu').iterdir()
+    for item in pathlib.Path(__file__).parent.joinpath('databases').iterdir()
     if item.is_file()
     if item.stem.isidentifier()
-)):
+    if item.stem.startswith('STM32')
+))
 
 
 
-    # Parse the database file.
+################################################################################
 
-    locationless_properties, location_tree = eval(
+
+
+system_database = {
+    mcu : {}
+    for mcu in MCUS
+}
+
+for mcu in MCUS:
+
+
+
+    # Execute the database script.
+
+    database_globals = {
+        'TBD'        : TBD,
+        'RealMinMax' : RealMinMax,
+        'IntMinMax'  : IntMinMax,
+    }
+
+    initial_globals = list(database_globals.keys())
+
+    exec(
         pathlib.Path(__file__)
             .parent
-            .joinpath(f'mcu/{mcu}.py')
+            .joinpath(f'databases/{mcu}.py')
             .read_text(),
-        {
-            'RealMinMax' : RealMinMax,
-            'IntMinMax'  : IntMinMax,
-        },
+        database_globals,
         {},
     )
 
 
 
-    # Organize the entries' values and locations.
+    # Any newly declared globals will be added to the schema as a constant.
 
-    properties = list(locationless_properties)
-    locations  = []
+    for key in database_globals.keys():
 
-    for peripheral, *register_tree in location_tree:
+        if key in ('__builtins__', 'SCHEMA', *initial_globals):
+            continue
 
-        for register, *field_tree in register_tree:
-
-            for field, key, *value in field_tree:
-
-
-
-                # If a value field is not explicitly given,
-                # we assume it's a single-bit field.
-                # e.g:
-                # >
-                # >    ('RCC',
-                # >        ('CR',
-                # >            ('HSION', 'HSI_ENABLE'),
-                # >        ),
-                # >    ),
-                # >
-
-                if value:
-                    value, = value
-                else:
-                    value = (False, True)
+        database_globals['SCHEMA'][key] = {
+            'category' : 'constant',
+            'value'    : database_globals[key],
+        }
 
 
 
-                properties += [(key, value)]
-                locations  += [(key, (peripheral, register, field))]
+    # Process each entry of the database schema.
 
+    for key, entry in database_globals['SCHEMA'].items():
 
-
-    # Sanity checks.
-
-    if duplicate_keys := [
-        key
-        for key, count in collections.Counter(
-            key for key, value in properties
-        ).items()
-        if count >= 2
-    ]:
-
-        duplicate_key, *_ = duplicate_keys
-
-        raise ValueError(
-            f'For {mcu}, there is already a database '
-            f'entry with the key {repr(duplicate_key)}.'
+        system_database[mcu][key] = types.SimpleNamespace(
+            category   = entry.pop('category'  , None),
+            location   = entry.pop('location'  , None),
         )
 
-    system_properties[mcu] = dict(properties)
-    system_locations [mcu] = dict(locations )
+
+
+        # We can apply a weak but simple constraint
+        # on the set of values that the entry can take,
+        # if any.
+
+        match constraint := entry.pop('constraint', None):
+            case None         : pass
+            case RealMinMax() : pass
+            case IntMinMax()  : pass
+            case tuple()      : constraint = Choices(constraint)
+            case dict()       : constraint = Mapping(constraint)
+            case unknown      : raise ValueError(unknown)
+
+        system_database[mcu][key].constraint = constraint
 
 
 
-################################################################################
+        # Some database entries can be assigned a
+        # value during parameterization. Entries
+        # can also be pinned to indicate that their
+        # value shouldn't be modified. Some entries'
+        # values can also be mapped to the actual
+        # value to be used in the generated code.
+
+        system_database[mcu][key].can_hold_value = 'value' in entry
+        system_database[mcu][key].value          = entry.pop('value', None)
+        system_database[mcu][key].pinned         = system_database[mcu][key].value is not TBD
+        system_database[mcu][key].mapped         = False
 
 
 
-# TODO Stale?
-# The microcontroller database contains information found in reference manuals
-# and datasheets. The point of the database is to make it easy to port common
-# code between multiple microcontrollers without having to worry about the exact
-# naming conventions and specified values of each register / hardware properties.
-#
-# For instance, STM32 microcontrollers typically have a PLL unit to generate bus
-# frequencies for other parts of the MCU to use. How many PLL units and channels,
-# what the exact range of multipliers and dividers are, and so on would all be
-# described in the database file (as found in <./deps/mcu/{MCU}_database.py>).
-#
-# This in turns makes the logic that needs to brute-force the PLL units for the
-# clock-tree be overlapped with other microcontrollers. There will always be
-# some slight differences that the database can't account for, like whether or
-# not each PLL unit has its own clock source or they all share the same one,
-# but this layer of abstraction helps a lot with reducing the code duplication.
-#
-# The database is just defined as a Python expression in a file that we then
-# evaluate; we do a small amount of post-processing so it's more usable, but
-# overall it's really not that complicated.
-#
-# The database is not at all comprehensive. When working with low-level system
-# stuff and trying to automate things with meta-directives, you might find
-# yourself seeing that there's missing entries in the database. This is expected;
-# just add more registers and stuff to the database whenever needed. The syntax
-# of the database expression should be pretty straight-forward to figure out.
+        # It's useful to have the same entry go by multiple keys.
+
+        for pseudokey in entry.pop('pseudokeys', ()):
+
+            system_database[mcu][pseudokey] = system_database[mcu][key]
+
+
+
+        # Ensure everything has been accounted for.
+
+        if entry:
+            raise ValueError(
+                f'Leftover schema entry properties: {repr(entry)}.'
+            )
+
+
+
+    system_database[mcu] = SystemDatabase(system_database[mcu])
