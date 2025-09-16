@@ -911,6 +911,15 @@ class Parameterization:
 
         for gpio in self.gpios:
 
+            if gpio.afsel is None:
+                continue
+
+            self[f'GPIO{gpio.port}{gpio.number}_ALTERNATE_FUNCTION'] = gpio.afsel
+
+
+
+        for gpio in self.gpios:
+
             if gpio.pin is None:
                 continue
 

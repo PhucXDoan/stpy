@@ -345,6 +345,15 @@ SCHEMA = {
     },
 
     **{
+        f'GPIO{port}{number}_ALTERNATE_FUNCTION' : {
+            'location' : (f'GPIO_AFR{('L', 'H')[number // 8]}', f'GPIO{port}->AFR[{number // 8}]', f'AFSEL{number}'),
+            'value'    : TBD,
+        }
+        for port, numbers in GPIOS
+        for number in numbers
+    },
+
+    **{
         f'GPIO{port}{number}_MODE' : {
             'location'   : (f'GPIO{port}', 'MODER', f'MODE{number}'),
             'constraint' : {

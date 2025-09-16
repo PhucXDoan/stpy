@@ -194,14 +194,8 @@ def system_configurize(Meta, parameterization):
         # so that the alternate function pin will start off properly.
 
         CMSIS_WRITE(
-            (
-                f'GPIO_AFR{('L', 'H')[gpio.number // 8]}',
-                f'GPIO{gpio.port}->AFR[{gpio.number // 8}]',
-                f'AFSEL{gpio.number}',
-                gpio.afsel
-            )
+            tuplize(f'GPIO{gpio.port}{gpio.number}_ALTERNATE_FUNCTION', tbd_ok = True)
             for gpio in parameterization.gpios
-            if gpio.afsel is not None
         )
 
 
