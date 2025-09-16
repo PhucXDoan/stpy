@@ -65,16 +65,15 @@ def get_helpers(Meta):
             # >    CMSIS_SET(())
             # >
 
-            if len(modifies) == 0:
-                return
-
-
-
             modifies = [
                 modify
                 for modify in modifies
                 if modify is not None
             ]
+
+            if len(modifies) == 0:
+                return
+
 
 
             # If multiple fields of the same register are to be modified,
@@ -267,6 +266,11 @@ def get_helpers(Meta):
 
 
     def CMSIS_SPINLOCK(*spinlocks):
+
+
+
+        if len(spinlocks) == 1:
+            spinlocks, = spinlocks
 
 
 
