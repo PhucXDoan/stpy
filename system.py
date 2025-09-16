@@ -1,6 +1,6 @@
 from ..stpy.database             import system_properties
 from ..stpy.new_database         import system_database
-from ..stpy.new_parameterization import new_Parameterization
+from ..stpy.new_parameterization import Parameterization
 from ..stpy.configurize          import system_configurize
 from ..pxd.utils                 import justify
 
@@ -35,7 +35,7 @@ def do(Meta, target):
     # Figure out how to configure the MCU
     # based on the target's constraints.
 
-    new_parameterization = new_Parameterization(target)
+    new_parameterization = Parameterization(target)
 
 
 

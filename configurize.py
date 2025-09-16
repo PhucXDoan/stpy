@@ -773,7 +773,7 @@ def system_configurize(Meta, new_parameterization):
 
     TITLE = 'SysTick'
 
-    if parameterization('SYSTICK_ENABLE'):
+    if parameterization('SYSTICK_ENABLE') and parameterization('SYSTICK_ENABLE') is not ...:
 
         cmsis_set(
             tuplize('SYSTICK_RELOAD'                ), # Modulation of the counter.

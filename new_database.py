@@ -12,8 +12,12 @@ class RealMinMax:
         self.minimum = minimum
         self.maximum = maximum
 
-    def __contains__(self, value):
+    def check(self, value):
+        if isinstance(value, str): value = float(value)
         return self.minimum <= value <= self.maximum
+
+    def show(self):
+        return f'{type(self).__name__}({self.minimum}, {self.maximum})'
 
 
 
@@ -23,11 +27,41 @@ class IntMinMax:
         self.minimum = minimum
         self.maximum = maximum
 
-    def __contains__(self, value):
+    def check(self, value):
+        if isinstance(value, str): value = int(value, 0)
         return value.is_integer() and self.minimum <= value <= self.maximum
 
-    def __iter__(self):
+    def iterate(self):
         return iter(range(self.minimum, self.maximum + 1))
+
+    def show(self):
+        return f'{type(self).__name__}({self.minimum}, {self.maximum})'
+
+
+
+class Choices(tuple):
+
+    def check(self, value):
+        return value in self
+
+    def iterate(self):
+        return iter(self)
+
+    def show(self):
+        return f'({', '.join(map(repr, self))})'
+
+
+
+class Mapping(dict):
+
+    def check(self, value):
+        return value in self
+
+    def iterate(self):
+        return iter(self)
+
+    def show(self):
+        return f'({', '.join(map(repr, self.keys()))})'
 
 
 
@@ -96,22 +130,40 @@ for mcu in MCUS:
 
     for key, entry in database_globals['SCHEMA'].items():
 
-
-
-        # Common fields all database entries have.
-
         system_database[mcu][key] = types.SimpleNamespace(
             category   = entry.pop('category'  , None),
             location   = entry.pop('location'  , None),
-            constraint = entry.pop('constraint', None),
         )
 
 
 
-        # Some database entries can be assigned a value for parameterization.
+        # We can apply a weak but simple constraint
+        # on the set of values that the entry can take,
+        # if any.
 
-        if 'value' in entry:
-            system_database[mcu][key].value = entry.pop('value')
+        match constraint := entry.pop('constraint', None):
+            case None         : pass
+            case RealMinMax() : pass
+            case IntMinMax()  : pass
+            case tuple()      : constraint = Choices(constraint)
+            case dict()       : constraint = Mapping(constraint)
+            case unknown      : raise ValueError(unknown)
+
+        system_database[mcu][key].constraint = constraint
+
+
+
+        # Some database entries can be assigned a
+        # value during parameterization. Entries
+        # can also be pinned to indicate that their
+        # value shouldn't be modified. Some entries'
+        # values can also be mapped to the actual
+        # value to be used in the generated code.
+
+        system_database[mcu][key].can_hold_value = 'value' in entry
+        system_database[mcu][key].value          = entry.pop('value', None)
+        system_database[mcu][key].pinned         = system_database[mcu][key].value is not ...
+        system_database[mcu][key].mapped         = False
 
 
 

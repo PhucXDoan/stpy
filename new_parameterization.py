@@ -1,28 +1,165 @@
 import copy
-from ..stpy.new_database import system_database
+from ..stpy.new_database import system_database, Mapping
 
-class new_Parameterization:
+
+
+def get_similars(given, options): # TODO Copy-pasta.
+
+    import difflib
+
+    return difflib.get_close_matches(
+        str(given),
+        [str(option) for option in options],
+        n      = 3,
+        cutoff = 0
+    )
+
+
+
+class Parameterization:
+
+
+
+    ################################################################################
+    #
+    # For easy print-debugging.
+    # TODO Improve.
+    #
+
+
+
+    def __str__(self):
+        output = '\n'
+        for key, entry in self.database.items():
+            output += f'{key :<40} | {str(entry.category) :<12} | {entry.value if entry.can_hold_value else ''}\n'
+        output += '\n'
+        return output
+
+
+
+    ################################################################################
+    #
+    # Shorthand to allow for updating values in the target's database.
+    #
+
 
 
     def __setitem__(self, key, value):
 
-        assert hasattr(self.database[key], 'value')
+
+
+        # Ensure the key exists.
+
+        if key not in self.database:
+
+            raise RuntimeError(
+                f'No key {repr(key)} exists in the database for target '
+                f'{repr(self.target.name)} ({repr(self.target.mcu)}); '
+                f'close matches: {repr(get_similars(key, self.database.keys()))}.'
+            )
+
+
+
+        # Ensure the key is meant to be parameterized.
+
+        if not self.database[key].can_hold_value:
+
+            raise RuntimeError(
+                f'Attempting to write to unparameterizable '
+                f'key {repr(key)} for target '
+                f'{repr(self.target.name)} ({repr(self.target.mcu)}).'
+            )
+
+
+
+        # Ensure the key's value can be changed.
+
+        if self.database[key].pinned:
+
+            raise RuntimeError(
+                f'Attempting to write to pinned '
+                f'key {repr(key)} for target '
+                f'{repr(self.target.name)} ({repr(self.target.mcu)}).'
+            )
+
+
+
+        # Ensure the new value fits the entry's constraint.
+
+        if (
+            self.database[key].constraint is not None and
+            not self.database[key].constraint.check(value)
+        ):
+            raise RuntimeError(
+                f'For target {repr(self.target.name)} ({repr(self.target.mcu)}), '
+                f'the key {repr(key)} was written with value {repr(value)}, '
+                f'but this does not satisfy the constraint: {entry.constraint.show()}.'
+            )
+
+
+
+        # Alright, update the value!
 
         self.database[key].value = value
 
 
-    def __setitem__(self, key, value):
 
-        self.database[key].value = value
+    ################################################################################
+    #
+    # Shorthand to index for the value of a datbase entry.
+    # We are not using `__getitem__` here because there can
+    # be a default, and this also has the additional benefit
+    # of being easier to search for whenever we need to find
+    # where accesses to the database is done.
+    #
+
 
 
     def __call__(self, key, *default):
 
-        if key not in self.database:
+
+
+        # Get the database entry.
+
+        if key in self.database:
+
+            if not self.database[key].can_hold_value:
+
+                raise RuntimeError(
+                    f'Attempting to read key {repr(key)} which '
+                    f'is not associated with a value for target '
+                    f'{repr(self.target.name)} ({repr(self.target.mcu)}).'
+                )
+
+            return self.database[key].value
+
+
+
+        # Fallback to a default value.
+
+        elif default:
+
             default, = default
             return default
 
-        return self.database[key].value
+
+
+        # Missing database entry!
+
+        else:
+            raise RuntimeError(
+                f'No key {repr(key)} exists in the database for target '
+                f'{repr(self.target.name)} ({repr(self.target.mcu)}); '
+                f'close matches: {repr(get_similars(key, self.database.keys()))}.'
+            )
+
+
+
+    ################################################################################
+    #
+    # Algorithm to brute-force the parameterization of the target.
+    #
+
 
 
     def __init__(self, target):
@@ -30,36 +167,82 @@ class new_Parameterization:
         self.target   = target
         self.database = copy.deepcopy(system_database[self.target.mcu])
 
-        for key, value in target.clock_tree.items():
 
-            if value is None:
-                value = ...
 
-            self[key] = value
+        # The target specifies part of the parameterization
+        # that we then figure out the rest automatically.
 
-        # Provide a way to perform brute-forcing conveniently.
+        for key, value in self.target.clock_tree.items():
 
-        def brute(function):
+            self[key]                 = value
+            self.database[key].pinned = True
+
+
+
+        # Routine to ensure the parameterization is not in a conflicting state.
+
+        def sanity_check():
+
+            for key, entry in self.database.items():
+
+                if entry.constraint is None:
+                    continue
+
+                if entry.value is ...:
+                    continue
+
+                if not entry.constraint.check(entry.value):
+                    raise RuntimeError(
+                        f'For target {repr(self.target.name)} ({repr(self.target.mcu)}), '
+                        f'key {repr(key)} has value {repr(entry.value)} '
+                        f'which does not satisfy the constraint: {entry.constraint.show()}.'
+                    )
+
+        sanity_check()
+
+
+
+        # Decorater to indicate the entry-point
+        # to when we are starting to brute-force.
+
+        def bruteforce(function):
 
             success = function()
 
             if not success:
                 raise RuntimeError(
                     f'Failed to brute-force {repr(function.__name__)} '
-                    f'for target {repr(target.name)}.'
+                    f'for target {repr(self.target.name)}.'
                 )
 
+
+
+        # Shorthand to update the value of a database entry
+        # by iterating over all the possible valid values
+        # it can be.
+
         def each(key):
-            for self[key] in self.database[key].constraint:
+
+            for self[key] in self.database[key].constraint.iterate():
+
                 yield self(key)
 
 
-        def satisfied(key, value):
-            if value in self.database[key].constraint:
+
+        # Shorthand to update the value of a database
+        # entry if it satisfies the constraint.
+        # As of now, the constraint is something
+        # simple that we can check the membership of;
+        # things like tuples, dictionaries, or ranges.
+
+        def checkout(key, value):
+
+            ok = self.database[key].constraint.check(value)
+
+            if ok:
                 self[key] = value
-                return True
-            else:
-                return False
+
+            return ok
 
 
 
@@ -76,7 +259,7 @@ class new_Parameterization:
 
 
 
-        match target.mcu:
+        match self.target.mcu:
 
 
 
@@ -116,7 +299,7 @@ class new_Parameterization:
 
 
 
-        match target.mcu:
+        match self.target.mcu:
 
 
 
@@ -197,18 +380,6 @@ class new_Parameterization:
 
         ################################################################################
         #
-        # TODO Not implemented yet.
-        #
-
-
-
-        self['HSE_CK'] = 0
-        self['LSE_CK'] = 0
-
-
-
-        ################################################################################
-        #
         # Peripheral Clock Source.
         # TODO Automate.
         #
@@ -255,7 +426,7 @@ class new_Parameterization:
 
                 for multiplier in each(f'PLL{unit}_MULTIPLIER'):
 
-                    if satisfied(
+                    if checkout(
                         f'PLL{unit}_VCO_FREQ',
                         input_frequency * multiplier
                     ):
@@ -282,12 +453,14 @@ class new_Parameterization:
             if not used_channels:
                 return True
 
+
+
             self[f'PLL{unit}_ENABLE'] = True
 
             for _ in each_vco_frequency(unit, kernel_frequency):
 
                 every_channel_satisfied = all(
-                    satisfied(
+                    checkout(
                         f'PLL{unit}{channel}_DIVIDER',
                         self(f'PLL{unit}_VCO_FREQ') / self(f'PLL{unit}{channel}_CK')
                     )
@@ -305,10 +478,10 @@ class new_Parameterization:
 
 
 
-        @brute
+        @bruteforce
         def parameterize_plls():
 
-            match target.mcu:
+            match self.target.mcu:
 
 
 
@@ -353,18 +526,22 @@ class new_Parameterization:
 
 
 
-        @brute
+        @bruteforce
         def parameterize_scgu():
 
             for kernel_source in each('SCGU_KERNEL_SOURCE'):
 
+                kernel_frequency = self(kernel_source)
+
+                if kernel_frequency is ...:
+                    continue
 
 
                 # CPU.
 
-                if not satisfied(
+                if not checkout(
                     'CPU_DIVIDER',
-                    self(kernel_source) / self('CPU_CK')
+                     kernel_frequency / self('CPU_CK')
                 ):
                     continue
 
@@ -372,7 +549,7 @@ class new_Parameterization:
 
                 # AXI/AHB busses.
 
-                match target.mcu:
+                match self.target.mcu:
 
 
 
@@ -380,7 +557,7 @@ class new_Parameterization:
 
                     case 'STM32H7S3L8H6':
 
-                        if not satisfied(
+                        if not checkout(
                             'AXI_AHB_DIVIDER',
                             self('CPU_CK') / self('AXI_AHB_CK')
                         ):
@@ -403,7 +580,7 @@ class new_Parameterization:
                 # APB busses.
 
                 every_apb_satisfied = all(
-                    satisfied(
+                    checkout(
                         f'APB{unit}_DIVIDER',
                         self('AXI_AHB_CK') / self(f'APB{unit}_CK')
                     )
@@ -429,17 +606,17 @@ class new_Parameterization:
 
 
 
-        @brute
+        @bruteforce
         def parameterize_systick():
 
 
 
             # See if SysTick is even used.
 
-            self['SYSTICK_ENABLE'] = self('SYSTICK_CK') is not ...
-
-            if not self('SYSTICK_ENABLE'):
+            if self('SYSTICK_CK') is ...:
                 return True
+
+            self['SYSTICK_ENABLE'] = True
 
 
 
@@ -465,7 +642,7 @@ class new_Parameterization:
 
                 else:
 
-                    match target.mcu:
+                    match self.target.mcu:
 
 
 
@@ -497,7 +674,7 @@ class new_Parameterization:
 
                 for self['SYSTICK_KERNEL_FREQ'] in kernel_frequencies:
 
-                    if satisfied(
+                    if checkout(
                         'SYSTICK_RELOAD',
                         self('SYSTICK_KERNEL_FREQ') / self('SYSTICK_CK') - 1
                     ):
@@ -513,9 +690,9 @@ class new_Parameterization:
 
 
 
-        for instances in self('UXARTS'):
+        for instances in self('UXARTS', ()):
 
-            @brute
+            @bruteforce
             def parameterize_uxarts():
 
 
@@ -539,7 +716,7 @@ class new_Parameterization:
                 for kernel_source in each(f'UXART_{instances}_KERNEL_SOURCE'):
 
                     every_instance_satisfied = all(
-                        satisfied(
+                        checkout(
                             f'{peripheral}{unit}_BAUD_DIVIDER',
                             self(kernel_source) / self(f'{peripheral}{unit}_BAUD')
                         )
@@ -563,7 +740,7 @@ class new_Parameterization:
 
 
 
-            @brute
+            @bruteforce
             def parameterize():
 
 
@@ -599,10 +776,10 @@ class new_Parameterization:
 
                         scl = round(kernel_frequency / (presc + 1) / needed_baud / 2)
 
-                        if scl not in self.database[f'I2C{unit}_SCLH'].constraint:
+                        if not self.database[f'I2C{unit}_SCLH'].constraint.check(scl):
                             continue
 
-                        if scl not in self.database[f'I2C{unit}_SCLL'].constraint:
+                        if not self.database[f'I2C{unit}_SCLL'].constraint.check(scl):
                             continue
 
 
@@ -647,7 +824,7 @@ class new_Parameterization:
 
             # Determine the kernel frequency.
 
-            match target.mcu:
+            match self.target.mcu:
 
 
 
@@ -675,7 +852,7 @@ class new_Parameterization:
 
                 # Determine the modulation value.
 
-                if not satisfied(
+                if not checkout(
                     f'TIM{unit}_MODULATION',
                     round(counter_frequency / needed_rate)
                 ):
@@ -699,7 +876,7 @@ class new_Parameterization:
 
 
 
-        @brute
+        @bruteforce
         def parameterize_timers():
 
             used_units = [
@@ -727,17 +904,22 @@ class new_Parameterization:
 
 
 
+        sanity_check()
 
-        for key, value in self.database.items():
 
-            if not hasattr(value, 'value') or value.value is ...:
+
+        # Perform value mapping.
+
+        for key, entry in self.database.items():
+
+            if not isinstance(self.database[key].constraint, Mapping):
                 continue
 
-            if isinstance(self.database[key].constraint, dict) and 'remapped' not in value.__dict__:
-                value.remapped = True
-                value.value = self.database[key].constraint[value.value]
-
-            if not hasattr(value, 'value') or value.value is ...:
+            if self.database[key].mapped:
                 continue
 
-            print(f'{key :<40} | {str(value.category) :<12} | {value.value if hasattr(value, 'value') else ''}')
+            if entry.value is ...:
+                continue
+
+            entry.value  = self.database[key].constraint[entry.value]
+            entry.mapped = True
