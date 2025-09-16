@@ -341,37 +341,17 @@ def system_configurize(Meta, parameterization):
 
 
 
-
-
-    def tuplize(key, value = ...):
-
-        if value is ...:
-            value = parameterization(key)
-
-        if value is None:
-            return None
-
-        if parameterization.database[key].off_by_one:
-            formatting = '({} - 1)'
-        else:
-            formatting = '{}'
-
-        value = formatting.format(c_repr(value))
-
-        return (*parameterization.database[key].location, value)
-
-
-
-    def tuplize_if_exist(key, value = ...):
-
-        if key not in parameterization.database:
-            return
+    def tuplize(key, value = ..., *, tbd_ok = False):
 
         if value is ...:
             value = parameterization(key)
 
         if value is TBD:
-            return None
+            if tbd_ok:
+                return None
+            else:
+                assert False, key
+
 
         if parameterization.database[key].off_by_one:
             formatting = '({} - 1)'
@@ -400,6 +380,9 @@ def system_configurize(Meta, parameterization):
 
 
     ################################################################################
+    #
+    # Interrupts.
+    #
 
 
 
@@ -412,11 +395,16 @@ def system_configurize(Meta, parameterization):
 
 
     ################################################################################
-
+    #
+    # Flash.
+    #
     # We have to program a delay for reading the flash as it takes time
     # for the data stored in the flash memory to stablize for read operations;
     # this delay varies based on voltage and clock frequency.
     # @/pg 210/sec 5.3.7/`H7S3rm`.
+    #
+
+
 
     TITLE = 'Flash'
 
@@ -441,12 +429,15 @@ def system_configurize(Meta, parameterization):
 
 
     ################################################################################
-
-
-
+    #
+    # Power Supply.
+    #
     # The way the power supply is configured can determine the
     # internal voltage level of the MCU, which can impact the maximum
     # clock speeds of peripherals for instance.
+    #
+
+
 
     TITLE = 'Power Supply'
 
@@ -459,27 +450,21 @@ def system_configurize(Meta, parameterization):
     match target.mcu:
 
         case 'STM32H7S3L8H6':
-            fields = (
-                'SMPS_OUTPUT_LEVEL',
-                'SMPS_FORCED_ON',
-                'SMPS_ENABLE',
-                'LDO_ENABLE',
-                'POWER_MANAGEMENT_BYPASS',
+            cmsis_set(
+                tuplize('SMPS_OUTPUT_LEVEL'      , tbd_ok = True),
+                tuplize('SMPS_FORCED_ON'         , tbd_ok = True),
+                tuplize('SMPS_ENABLE'            , tbd_ok = True),
+                tuplize('LDO_ENABLE'             , tbd_ok = True),
+                tuplize('POWER_MANAGEMENT_BYPASS', tbd_ok = True),
             )
 
         case 'STM32H533RET6':
-            fields = (
-                'LDO_ENABLE',
-                'POWER_MANAGEMENT_BYPASS',
+            cmsis_set(
+                tuplize('LDO_ENABLE'             , tbd_ok = True),
+                tuplize('POWER_MANAGEMENT_BYPASS', tbd_ok = True),
             )
 
         case _: raise NotImplementedError
-
-    cmsis_set(
-        tuplize(field)
-        for field in fields
-        if parameterization(field) is not TBD
-    )
 
 
 
@@ -500,6 +485,9 @@ def system_configurize(Meta, parameterization):
 
 
     ################################################################################
+    #
+    # HSI Oscillator.
+    #
 
 
 
@@ -507,46 +495,61 @@ def system_configurize(Meta, parameterization):
 
     if parameterization('HSI_ENABLE'):
         pass # The HSI oscillator is enabled by default after reset.
+
     else:
         raise NotImplementedError # TODO.
 
 
 
     ################################################################################
+    #
+    # HSI48 Oscillator.
+    #
 
 
 
     TITLE = 'High-Speed-Internal (48MHz)'
 
     if parameterization('HSI48_ENABLE'):
+
         cmsis_set     (tuplize('HSI48_ENABLE', True))
         cmsis_spinlock(tuplize('HSI48_READY' , True))
 
 
 
     ################################################################################
+    #
+    # CSI Oscillator.
+    #
 
 
 
     TITLE = 'Clock-Security-Internal'
 
     if parameterization('CSI_ENABLE'):
+
         cmsis_set     (tuplize('CSI_ENABLE', True))
         cmsis_spinlock(tuplize('CSI_READY' , True))
 
 
 
     ################################################################################
+    #
+    # Peripheral Clock Option.
+    #
 
 
 
     TITLE = 'Peripheral Clock Option'
 
-    cmsis_set(tuplize_if_exist('PERIPHERAL_CLOCK_OPTION'))
+    cmsis_set(tuplize('PERIPHERAL_CLOCK_OPTION', tbd_ok = True))
 
 
 
     ################################################################################
+    #
+    # PLLs.
+    #
 
 
 
@@ -554,7 +557,11 @@ def system_configurize(Meta, parameterization):
 
 
 
-    # Set up the PLL registers.
+    enabled_plls = [
+        (unit, channels)
+        for unit, channels in parameterization('PLLS')
+        if parameterization(f'PLL{unit}_ENABLE')
+    ]
 
     sets = []
 
@@ -562,48 +569,41 @@ def system_configurize(Meta, parameterization):
 
     # Set the clock source shared for all PLLs.
 
-    if target.mcu == 'STM32H7S3L8H6':
-        sets += [tuplize('PLL_KERNEL_SOURCE')]
+    match target.mcu:
+        case 'STM32H7S3L8H6':
+            sets += [tuplize('PLL_KERNEL_SOURCE')]
 
 
 
     # Configure each PLL.
 
-    for unit, channels in parameterization('PLLS'):
+    for unit, channels in enabled_plls:
 
 
 
-        # Set the clock source for this PLL unit.
+        # Set the clock source for the specific PLL unit.
 
-        if target.mcu == 'STM32H533RET6':
-            sets += [tuplize_if_exist(f'PLL{unit}_KERNEL_SOURCE')]
-
-
-
-        # Set the PLL's predividers.
-
-        sets += [tuplize_if_exist(f'PLL{unit}_PREDIVIDER')]
+        match target.mcu:
+            case 'STM32H533RET6':
+                sets += [tuplize(f'PLL{unit}_KERNEL_SOURCE')]
 
 
 
-        # Set each PLL unit's expected input frequency range.
+        # Configure the PLL unit.
 
-
-        sets += [tuplize_if_exist(f'PLL{unit}_INPUT_RANGE')]
-
-
-
-        # Set each PLL unit's multipler.
-
-        sets += [tuplize_if_exist(f'PLL{unit}_MULTIPLIER')]
+        sets += [
+            tuplize(f'PLL{unit}_PREDIVIDER' ),
+            tuplize(f'PLL{unit}_INPUT_RANGE'),
+            tuplize(f'PLL{unit}_MULTIPLIER' ),
+        ]
 
 
 
-        # Set each PLL unit's output divider and enable the channel.
+        # Configure the PLL unit's channels.
 
         for channel in channels:
 
-            if parameterization(f'PLL{unit}{channel}_DIVIDER', None) is TBD:
+            if parameterization(f'PLL{unit}{channel}_DIVIDER') is TBD:
                 continue
 
             if parameterization(f'PLL{unit}{channel}_DIVIDER') is TBD:
@@ -614,32 +614,31 @@ def system_configurize(Meta, parameterization):
                 tuplize(f'PLL{unit}{channel}_ENABLE', True),
             ]
 
+
+
     cmsis_set(*sets)
 
 
 
-    # Enable each PLL unit that is to be used.
+    # Enable each PLL unit that are to be used
+    # and ensure they become stablized.
 
-    cmsis_set(
+    cmsis_set(*(
         tuplize(f'PLL{unit}_ENABLE')
-        for unit, channels in parameterization('PLLS')
-        if parameterization(f'PLL{unit}_ENABLE')
-    )
+        for unit, channels in enabled_plls
+    ))
 
-
-
-
-    # Ensure each enabled PLL unit has stabilized.
-
-    for unit, channels in parameterization('PLLS'):
-
-        if parameterization(f'PLL{unit}_ENABLE'):
-
-            cmsis_spinlock(tuplize(f'PLL{unit}_READY', True))
+    cmsis_spinlock(*(
+        tuplize(f'PLL{unit}_READY', True)
+        for unit, channels in enabled_plls
+    ))
 
 
 
     ################################################################################
+    #
+    # SCGU.
+    #
 
 
 
@@ -652,6 +651,7 @@ def system_configurize(Meta, parameterization):
     match target.mcu:
 
         case 'STM32H7S3L8H6':
+
             cmsis_set(
                 tuplize('CPU_DIVIDER'),
                 tuplize('AXI_AHB_DIVIDER'),
@@ -661,7 +661,10 @@ def system_configurize(Meta, parameterization):
                 ),
             )
 
+
+
         case 'STM32H533RET6':
+
             cmsis_set(
                 tuplize('CPU_DIVIDER'),
                 *(
@@ -669,6 +672,8 @@ def system_configurize(Meta, parameterization):
                     for unit in parameterization('APBS')
                 ),
             )
+
+
 
         case _: raise NotImplementedError
 
@@ -689,26 +694,33 @@ def system_configurize(Meta, parameterization):
 
 
     ################################################################################
-
-
+    #
+    # SysTick.
+    #
     # @/pg 621/tbl B3-7/`Armv7-M`.
     # @/pg 1861/sec D1.2.239/`Armv8-M`.
+    #
+
+
 
     TITLE = 'SysTick'
 
     if parameterization('SYSTICK_ENABLE'):
 
         cmsis_set(
-            tuplize('SYSTICK_RELOAD'                ), # Modulation of the counter.
-            tuplize('SYSTICK_USE_CPU_CK'            ), # Use CPU clock or the vendor-provided one.
-            tuplize('SYSTICK_COUNTER'         , 0   ), # SYST_CVR value is UNKNOWN on reset.
-            tuplize('SYSTICK_INTERRUPT_ENABLE', True), # Enable SysTick interrupt, triggered at every overflow.
-            tuplize('SYSTICK_ENABLE'                ), # Enable SysTick counter.
+            tuplize('SYSTICK_RELOAD'                ),
+            tuplize('SYSTICK_USE_CPU_CK'            ),
+            tuplize('SYSTICK_COUNTER'         , 0   ),
+            tuplize('SYSTICK_INTERRUPT_ENABLE', True),
+            tuplize('SYSTICK_ENABLE'                ),
         )
 
 
 
     ################################################################################
+    #
+    # UXARTs.
+    #
 
 
 
@@ -725,6 +737,9 @@ def system_configurize(Meta, parameterization):
 
 
     ################################################################################
+    #
+    # I2Cs.
+    #
 
 
 
@@ -740,6 +755,9 @@ def system_configurize(Meta, parameterization):
 
 
     ################################################################################
+    #
+    # Timers.
+    #
 
 
 
@@ -751,3 +769,7 @@ def system_configurize(Meta, parameterization):
 
         define_if_exist(f'TIM{unit}_DIVIDER'   )
         define_if_exist(f'TIM{unit}_MODULATION')
+
+
+
+    ################################################################################
