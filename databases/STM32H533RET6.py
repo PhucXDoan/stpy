@@ -21,16 +21,6 @@ GPIOS = tuple((port, tuple(range(0, 16))) for port in 'ABCDEFGHI')
 
 
 
-global GPIO_SPEED
-GPIO_SPEED = {
-    'LOW'       : '0b00',
-    'MEDIUM'    : '0b01',
-    'HIGH'      : '0b10',
-    'VERY_HIGH' : '0b11',
-}
-
-
-
 global UXARTS
 UXARTS = (
     (('USART', 1),),
@@ -390,6 +380,21 @@ SCHEMA = {
             'value'      : TBD,
         }
         for port, numbers in GPIOS
+    },
+
+    **{
+        f'GPIO{port}{number}_SPEED' : {
+            'location'   : (f'GPIO{port}', 'OSPEEDR', f'OSPEED{number}'),
+            'constraint' : {
+                'LOW'       : '0b00',
+                'MEDIUM'    : '0b01',
+                'HIGH'      : '0b10',
+                'VERY_HIGH' : '0b11',
+            },
+            'value' : TBD,
+        }
+        for port, numbers in GPIOS
+        for number in numbers
     },
 
     **{

@@ -914,6 +914,18 @@ class Parameterization:
             if gpio.pin is None:
                 continue
 
+            if gpio.speed is None:
+                continue
+
+            self[f'GPIO{gpio.port}{gpio.number}_SPEED'] = gpio.speed
+
+
+
+        for gpio in self.gpios:
+
+            if gpio.pin is None:
+                continue
+
             if gpio.pull is None:
                 continue
 

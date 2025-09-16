@@ -161,15 +161,8 @@ def system_configurize(Meta, parameterization):
         # Set drive strength.
 
         CMSIS_SET(
-            (
-                f'GPIO{gpio.port}',
-                'OSPEEDR',
-                f'OSPEED{gpio.number}',
-                parameterization('GPIO_SPEED')[gpio.speed]
-            )
+            tuplize(f'GPIO{gpio.port}{gpio.number}_SPEED', tbd_ok = True)
             for gpio in parameterization.gpios
-            if gpio.pin   is not None
-            if gpio.speed is not None
         )
 
 
