@@ -31,6 +31,31 @@ GPIOS = (
 
 
 
+global GPIO_MODE
+GPIO_MODE = {
+    'INPUT'     : '0b00',
+    'OUTPUT'    : '0b01',
+    'ALTERNATE' : '0b10',
+    'ANALOG'    : '0b11',
+}
+
+global GPIO_SPEED
+GPIO_SPEED = {
+    'LOW'       : '0b00',
+    'MEDIUM'    : '0b01',
+    'HIGH'      : '0b10',
+    'VERY_HIGH' : '0b11',
+}
+
+global GPIO_PULL
+GPIO_PULL = {
+    None   : '0b00',
+    'UP'   : '0b01',
+    'DOWN' : '0b10',
+}
+
+
+
 global UXARTS
 UXARTS = (
     (('USART', 1),),
