@@ -386,10 +386,10 @@ def system_configurize(Meta, parameterization):
 
 
 
-    CMSIS_SET(
-        ('SCB', 'SHCSR', 'BUSFAULTENA', True), # Enable the BusFault exception.
-        ('SCB', 'SHCSR', 'MEMFAULTENA', True), # Enable the MemFault exception.
-        ('SCB', 'SHCSR', 'USGFAULTENA', True), # Enable the UsageFault exception.
+    cmsis_set(
+        tuplize('BUS_FAULT_ENABLE'              , True),
+        tuplize('MEMORY_MANAGEMENT_FAULT_ENABLE', True),
+        tuplize('USAGE_FAULT_ENABLE'            , True),
     )
 
 

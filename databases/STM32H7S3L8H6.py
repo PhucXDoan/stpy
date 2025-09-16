@@ -292,20 +292,25 @@ UXART_KERNEL_SOURCE_TABLE = (
 global SCHEMA
 SCHEMA = {
 
+
+
     ################################################################################
     #
-    # GPIOs.
+    # Interrupts.
     #
 
 
 
-    **{
-        f'GPIO{unit}_ENABLE' : {
-            'location'   : ('RCC', 'AHB4ENR', f'GPIO{unit}EN'),
-            'constraint' : (False, True),
-            'value'      : TBD,
-        }
-        for unit in GPIOS
+    'BUS_FAULT_ENABLE' : {
+        'location' : ('SCB', 'SHCSR', 'BUSFAULTENA'),
+    },
+
+    'MEMORY_MANAGEMENT_FAULT_ENABLE' : {
+        'location' : ('SCB', 'SHCSR', 'MEMFAULTENA'),
+    },
+
+    'USAGE_FAULT_ENABLE' : {
+        'location' : ('SCB', 'SHCSR', 'USGFAULTENA'),
     },
 
 
@@ -337,6 +342,24 @@ SCHEMA = {
         'location'   : ('SysTick', 'CTRL', 'ENABLE'),
         'constraint' : (False, True),
         'value'      : TBD,
+    },
+
+
+
+    ################################################################################
+    #
+    # GPIOs.
+    #
+
+
+
+    **{
+        f'GPIO{unit}_ENABLE' : {
+            'location'   : ('RCC', 'AHB4ENR', f'GPIO{unit}EN'),
+            'constraint' : (False, True),
+            'value'      : TBD,
+        }
+        for unit in GPIOS
     },
 
 
