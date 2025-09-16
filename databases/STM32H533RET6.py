@@ -17,27 +17,9 @@ PLLS = (
 
 
 global GPIOS
-GPIOS = (
-    'A',
-    'B',
-    'C',
-    'D',
-    'E',
-    'F',
-    'G',
-    'H',
-    'I',
-)
+GPIOS = tuple((port, tuple(range(0, 16))) for port in 'ABCDEFGHI')
 
 
-
-global GPIO_MODE
-GPIO_MODE = {
-    'INPUT'     : '0b00',
-    'OUTPUT'    : '0b01',
-    'ALTERNATE' : '0b10',
-    'ANALOG'    : '0b11',
-}
 
 global GPIO_SPEED
 GPIO_SPEED = {
@@ -409,12 +391,27 @@ SCHEMA = {
 
 
     **{
-        f'GPIO{unit}_ENABLE' : {
-            'location'   : ('RCC', 'AHB2ENR', f'GPIO{unit}EN'),
+        f'GPIO{port}_ENABLE' : {
+            'location'   : ('RCC', 'AHB2ENR', f'GPIO{port}EN'),
             'constraint' : (False, True),
             'value'      : TBD,
         }
-        for unit in GPIOS
+        for port, numbers in GPIOS
+    },
+
+    **{
+        f'GPIO{port}{number}_MODE' : {
+            'location'   : (f'GPIO{port}', 'MODER', f'MODE{number}'),
+            'constraint' : {
+                'INPUT'     : '0b00',
+                'OUTPUT'    : '0b01',
+                'ALTERNATE' : '0b10',
+                'ANALOG'    : '0b11',
+            },
+            'value' : TBD,
+        }
+        for port, numbers in GPIOS
+        for number in numbers
     },
 
 

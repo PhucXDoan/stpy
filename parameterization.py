@@ -1,5 +1,6 @@
 import copy
 from ..stpy.database import system_database, TBD, Mapping
+from ..stpy.gpio     import process_all_gpios
 
 
 
@@ -166,6 +167,7 @@ class Parameterization:
 
         self.target   = target
         self.database = copy.deepcopy(system_database[self.target.mcu])
+        self.gpios    = process_all_gpios(self.target)
 
 
 
@@ -897,6 +899,25 @@ class Parameterization:
 
                 if every_unit_satisfied:
                     return True
+
+
+
+        ################################################################################
+        #
+        # GPIOs.
+        #
+
+
+
+        for gpio in self.gpios:
+
+            if gpio.pin is None:
+                continue
+
+            if gpio.mode in (None, 'RESERVED'):
+                continue
+
+            self[f'GPIO{gpio.port}{gpio.number}_MODE'] = gpio.mode
 
 
 

@@ -1,6 +1,5 @@
 import difflib
 from ..stpy.parameterization import TBD
-from ..stpy.gpio             import process_all_gpios
 from ..stpy.helpers          import get_helpers
 from ..pxd.utils             import c_repr
 
@@ -31,178 +30,22 @@ INTERRUPTS_THAT_MUST_BE_DEFINED = (
 
 def system_configurize(Meta, parameterization):
 
-    target     = parameterization.target
-
-    def title_of(title):
-        return f'''
 
 
-
-            //{f' {title} //'.center(80 - 4, '/')}
-
-
-
-        '''
-
-    helpers = get_helpers(Meta)
-
+    target         = parameterization.target
+    helpers        = get_helpers(Meta)
     CMSIS_SET      = helpers.CMSIS_SET
     CMSIS_WRITE    = helpers.CMSIS_WRITE
     CMSIS_SPINLOCK = helpers.CMSIS_SPINLOCK
+    title_of       = lambda title: f'''
 
 
 
-
-    ################################################################################
-
-    # TODO Placement?
-
-    # Check to make sure the interrupts
-    # to be used by the target eists.
-
-    for interrupt, niceness in target.interrupts:
-        if interrupt not in parameterization('INTERRUPTS'):
-
-            raise ValueError(
-                f'For target {repr(target.name)}, '
-                f'no such interrupt {repr(interrupt)} '
-                f'exists on {repr(target.mcu)}; '
-                f'did you mean any of the following? : '
-                f'{difflib.get_close_matches(interrupt, parameterization('INTERRUPTS').keys(), n = 5, cutoff = 0)}'
-            )
+        //{f' {title} //'.center(80 - 4, '/')}
 
 
 
-    ################################################################################
-    #
-    # GPIOs.
-    #
-
-
-
-    with Meta.section(title_of('GPIOS')):  # @/`How GPIOs Are Made`:
-
-        gpios = process_all_gpios(target)
-
-
-
-        # Macros to make GPIOs easy to use.
-
-        for gpio in gpios:
-
-            if gpio.pin is None:
-                continue
-
-            if gpio.mode in ('INPUT', 'ALTERNATE'):
-                Meta.define('_PORT_FOR_GPIO_READ'  , ('NAME'), gpio.port  , NAME = gpio.name)
-                Meta.define('_NUMBER_FOR_GPIO_READ', ('NAME'), gpio.number, NAME = gpio.name)
-
-            if gpio.mode == 'OUTPUT':
-                Meta.define('_PORT_FOR_GPIO_WRITE'  , ('NAME'), gpio.port  , NAME = gpio.name)
-                Meta.define('_NUMBER_FOR_GPIO_WRITE', ('NAME'), gpio.number, NAME = gpio.name)
-
-
-
-        # Enable GPIO ports that have defined pins.
-
-        CMSIS_SET(
-            (*parameterization.database[f'GPIO{port}_ENABLE'].location, True)
-            for port in sorted(dict.fromkeys(
-                gpio.port
-                for gpio in gpios
-                if gpio.pin is not None
-            ))
-        )
-
-
-
-        # Set output type (push-pull/open-drain).
-
-        CMSIS_SET(
-            (f'GPIO{gpio.port}', 'OTYPER', f'OT{gpio.number}', gpio.open_drain)
-            for gpio in gpios
-            if gpio.pin        is not None
-            if gpio.open_drain is not None
-        )
-
-
-
-        # Set initial output level.
-
-        CMSIS_SET(
-            (f'GPIO{gpio.port}', 'ODR', f'OD{gpio.number}', gpio.initlvl)
-            for gpio in gpios
-            if gpio.pin     is not None
-            if gpio.initlvl is not None
-        )
-
-
-
-        # Set drive strength.
-
-        CMSIS_SET(
-            (
-                f'GPIO{gpio.port}',
-                'OSPEEDR',
-                f'OSPEED{gpio.number}',
-                parameterization('GPIO_SPEED')[gpio.speed]
-            )
-            for gpio in gpios
-            if gpio.pin   is not None
-            if gpio.speed is not None
-        )
-
-
-
-        # Set pull configuration.
-
-        CMSIS_SET(
-            (
-                f'GPIO{gpio.port}',
-                'PUPDR',
-                f'PUPD{gpio.number}',
-                parameterization('GPIO_PULL')[gpio.pull]
-            )
-            for gpio in gpios
-            if gpio.pin  is not None
-            if gpio.pull is not None
-        )
-
-
-
-        # Set alternative function; must be done before setting pin mode
-        # so that the alternate function pin will start off properly.
-
-        CMSIS_WRITE(
-            (
-                f'GPIO_AFR{('L', 'H')[gpio.number // 8]}',
-                f'GPIO{gpio.port}->AFR[{gpio.number // 8}]',
-                f'AFSEL{gpio.number}',
-                gpio.afsel
-            )
-            for gpio in gpios
-            if gpio.afsel is not None
-        )
-
-
-
-        # Set pin mode.
-
-        CMSIS_SET(
-            (
-                f'GPIO{gpio.port}',
-                'MODER',
-                f'MODE{gpio.number}',
-                parameterization('GPIO_MODE')[gpio.mode]
-            )
-            for gpio in gpios
-            if gpio.pin  is not None
-            if gpio.mode not in (None, 'RESERVED')
-        )
-
-
-
-    ################################################################################
+    '''
 
 
 
@@ -254,8 +97,145 @@ def system_configurize(Meta, parameterization):
 
     ################################################################################
     #
+    # GPIOs.
+    #
+
+
+
+    with Meta.section(title_of('GPIOS')):  # @/`How GPIOs Are Made`:
+
+
+
+        # Macros to make GPIOs easy to use.
+
+        for gpio in parameterization.gpios:
+
+            if gpio.pin is None:
+                continue
+
+            if gpio.mode in ('INPUT', 'ALTERNATE'):
+                Meta.define('_PORT_FOR_GPIO_READ'  , ('NAME'), gpio.port  , NAME = gpio.name)
+                Meta.define('_NUMBER_FOR_GPIO_READ', ('NAME'), gpio.number, NAME = gpio.name)
+
+            if gpio.mode == 'OUTPUT':
+                Meta.define('_PORT_FOR_GPIO_WRITE'  , ('NAME'), gpio.port  , NAME = gpio.name)
+                Meta.define('_NUMBER_FOR_GPIO_WRITE', ('NAME'), gpio.number, NAME = gpio.name)
+
+
+
+        # Enable GPIO ports that have defined pins.
+
+        CMSIS_SET(
+            (*parameterization.database[f'GPIO{port}_ENABLE'].location, True)
+            for port in sorted(dict.fromkeys(
+                gpio.port
+                for gpio in parameterization.gpios
+                if gpio.pin is not None
+            ))
+        )
+
+
+
+        # Set output type (push-pull/open-drain).
+
+        CMSIS_SET(
+            (f'GPIO{gpio.port}', 'OTYPER', f'OT{gpio.number}', gpio.open_drain)
+            for gpio in parameterization.gpios
+            if gpio.pin        is not None
+            if gpio.open_drain is not None
+        )
+
+
+
+        # Set initial output level.
+
+        CMSIS_SET(
+            (f'GPIO{gpio.port}', 'ODR', f'OD{gpio.number}', gpio.initlvl)
+            for gpio in parameterization.gpios
+            if gpio.pin     is not None
+            if gpio.initlvl is not None
+        )
+
+
+
+        # Set drive strength.
+
+        CMSIS_SET(
+            (
+                f'GPIO{gpio.port}',
+                'OSPEEDR',
+                f'OSPEED{gpio.number}',
+                parameterization('GPIO_SPEED')[gpio.speed]
+            )
+            for gpio in parameterization.gpios
+            if gpio.pin   is not None
+            if gpio.speed is not None
+        )
+
+
+
+        # Set pull configuration.
+
+        CMSIS_SET(
+            (
+                f'GPIO{gpio.port}',
+                'PUPDR',
+                f'PUPD{gpio.number}',
+                parameterization('GPIO_PULL')[gpio.pull]
+            )
+            for gpio in parameterization.gpios
+            if gpio.pin  is not None
+            if gpio.pull is not None
+        )
+
+
+
+        # Set alternative function; must be done before setting pin mode
+        # so that the alternate function pin will start off properly.
+
+        CMSIS_WRITE(
+            (
+                f'GPIO_AFR{('L', 'H')[gpio.number // 8]}',
+                f'GPIO{gpio.port}->AFR[{gpio.number // 8}]',
+                f'AFSEL{gpio.number}',
+                gpio.afsel
+            )
+            for gpio in parameterization.gpios
+            if gpio.afsel is not None
+        )
+
+
+
+        # Set pin mode.
+
+        CMSIS_SET(
+            tuplize(f'GPIO{gpio.port}{gpio.number}_MODE', tbd_ok = True)
+            for gpio in parameterization.gpios
+        )
+
+
+
+    ################################################################################
+    #
     # Interrupts.
     #
+
+
+
+    # Check to make sure the interrupts
+    # to be used by the target exists.
+
+    for interrupt, niceness in target.interrupts:
+
+        if interrupt not in parameterization('INTERRUPTS'):
+
+            raise ValueError(
+                f'For target {repr(target.name)}, '
+                f'no such interrupt {repr(interrupt)} '
+                f'exists on {repr(target.mcu)}; '
+                f'did you mean any of the following? : '
+                f'{difflib.get_close_matches(interrupt, parameterization('INTERRUPTS').keys(), n = 5, cutoff = 0)}'
+            )
 
 
 
@@ -298,6 +278,8 @@ def system_configurize(Meta, parameterization):
             )
 
 
+
+        # Configure the interrupt priorities.
 
         for interrupt, niceness in target.interrupts:
 
@@ -344,7 +326,7 @@ def system_configurize(Meta, parameterization):
 
 
 
-
+        # Enable Arm exceptions.
 
         CMSIS_SET(
             tuplize('BUS_FAULT_ENABLE'              , True),
@@ -583,15 +565,15 @@ def system_configurize(Meta, parameterization):
         # Enable each PLL unit that are to be used
         # and ensure they become stablized.
 
-        CMSIS_SET(*(
+        CMSIS_SET(
             tuplize(f'PLL{unit}_ENABLE')
             for unit, channels in enabled_plls
-        ))
+        )
 
-        CMSIS_SPINLOCK(*(
+        CMSIS_SPINLOCK(
             tuplize(f'PLL{unit}_READY', True)
             for unit, channels in enabled_plls
-        ))
+        )
 
 
 
