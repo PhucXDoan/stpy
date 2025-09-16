@@ -908,6 +908,16 @@ class Parameterization:
         #
 
 
+        for gpio in self.gpios:
+
+            if gpio.pin is None:
+                continue
+
+            if gpio.open_drain is None:
+                continue
+
+            self[f'GPIO{gpio.port}{gpio.number}_OPEN_DRAIN'] = gpio.open_drain
+
 
         for gpio in self.gpios:
 

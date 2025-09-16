@@ -139,10 +139,8 @@ def system_configurize(Meta, parameterization):
         # Set output type (push-pull/open-drain).
 
         CMSIS_SET(
-            (f'GPIO{gpio.port}', 'OTYPER', f'OT{gpio.number}', gpio.open_drain)
+            tuplize(f'GPIO{gpio.port}{gpio.number}_OPEN_DRAIN', tbd_ok = True)
             for gpio in parameterization.gpios
-            if gpio.pin        is not None
-            if gpio.open_drain is not None
         )
 
 
