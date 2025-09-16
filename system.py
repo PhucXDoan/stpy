@@ -1,5 +1,5 @@
 from ..stpy.database         import system_properties
-from ..stpy.new_database     import system_database
+from ..stpy.new_database     import system_database, TBD
 from ..stpy.parameterization import Parameterization
 from ..stpy.configurize      import system_configurize
 from ..pxd.utils             import justify
@@ -59,7 +59,7 @@ def do(Meta, target):
         )
         for key, value in parameterization.database.items()
         if value.category == 'frequency'
-        if value.value is not None
+        if value.value is not TBD
     ):
         Meta.define(macro, f'({expansion})')
 

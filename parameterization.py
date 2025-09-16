@@ -1,5 +1,5 @@
 import copy
-from ..stpy.new_database import system_database, Mapping
+from ..stpy.new_database import system_database, TBD, Mapping
 
 
 
@@ -188,7 +188,7 @@ class Parameterization:
                 if entry.constraint is None:
                     continue
 
-                if entry.value is ...:
+                if entry.value is TBD:
                     continue
 
                 if not entry.constraint.check(entry.value):
@@ -386,7 +386,7 @@ class Parameterization:
 
 
 
-        if self('PERIPHERAL_CLOCK_OPTION') is not ...:
+        if self('PERIPHERAL_CLOCK_OPTION') is not TBD:
 
             self['PER_CK'] = self(self('PERIPHERAL_CLOCK_OPTION'))
 
@@ -447,7 +447,7 @@ class Parameterization:
             used_channels = [
                 channel
                 for channel in channels
-                if self(f'PLL{unit}{channel}_CK') is not ...
+                if self(f'PLL{unit}{channel}_CK') is not TBD
             ]
 
             if not used_channels:
@@ -533,7 +533,7 @@ class Parameterization:
 
                 kernel_frequency = self(kernel_source)
 
-                if kernel_frequency is ...:
+                if kernel_frequency is TBD:
                     continue
 
 
@@ -613,7 +613,7 @@ class Parameterization:
 
             # See if SysTick is even used.
 
-            if self('SYSTICK_CK') is ...:
+            if self('SYSTICK_CK') is TBD:
                 return True
 
             self['SYSTICK_ENABLE'] = True
@@ -702,7 +702,7 @@ class Parameterization:
                 used_instances = [
                     (peripheral, unit)
                     for peripheral, unit in instances
-                    if self(f'{peripheral}{unit}_BAUD') is not ...
+                    if self(f'{peripheral}{unit}_BAUD') is not TBD
                 ]
 
                 if not used_instances:
@@ -749,7 +749,7 @@ class Parameterization:
 
                 needed_baud = self(f'I2C{unit}_BAUD')
 
-                if needed_baud is ...:
+                if needed_baud is TBD:
                     return True
 
 
@@ -765,7 +765,7 @@ class Parameterization:
 
                     kernel_frequency = self(kernel_source)
 
-                    if kernel_frequency is ...:
+                    if kernel_frequency is TBD:
                         continue
 
                     for presc in each(f'I2C{unit}_PRESC'):
@@ -882,7 +882,7 @@ class Parameterization:
             used_units = [
                 unit
                 for unit in self('TIMERS', ())
-                if self(f'TIM{unit}_RATE') is not ...
+                if self(f'TIM{unit}_RATE') is not TBD
             ]
 
             if not used_units:
@@ -908,31 +908,19 @@ class Parameterization:
 
 
 
-        # Perform value mapping.
+        # Mapping constraints are a table of sematic names
+        # to the actual underlying value to be used in the
+        # generated code (e.g. the binary code).
 
         for key, entry in self.database.items():
 
             if self.database[key].mapped:
                 continue
 
+            if self.database[key].value is TBD:
+                continue
 
-
-            # Since Ellipsis is truthy, we can make
-            # it easier on us in the configurization
-            # stage by turning it into None which is falsy.
-
-            if entry.value is ...:
-
-                entry.value  = None
-                entry.mapped = True
-
-
-
-            # Mapping constraints are a table of sematic names
-            # to the actual underlying value to be used in the
-            # generated code (e.g. the binary code).
-
-            elif isinstance(self.database[key].constraint, Mapping):
+            if isinstance(self.database[key].constraint, Mapping):
 
                 entry.value  = self.database[key].constraint[entry.value]
                 entry.mapped = True

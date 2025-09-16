@@ -6,6 +6,21 @@ import pathlib, types
 
 
 
+class TBD:
+
+    def __bool__(self):
+        return False
+
+    def __str__(self):
+        return '<TBD>'
+
+    def __deepcopy__(self, memo):
+        return self
+
+TBD = TBD()
+
+
+
 class RealMinMax:
 
     def __init__(self, minimum, maximum):
@@ -95,6 +110,7 @@ for mcu in MCUS:
     # Execute the database script.
 
     database_globals = {
+        'TBD'        : TBD,
         'RealMinMax' : RealMinMax,
         'IntMinMax'  : IntMinMax,
     }
@@ -162,7 +178,7 @@ for mcu in MCUS:
 
         system_database[mcu][key].can_hold_value = 'value' in entry
         system_database[mcu][key].value          = entry.pop('value', None)
-        system_database[mcu][key].pinned         = system_database[mcu][key].value is not ...
+        system_database[mcu][key].pinned         = system_database[mcu][key].value is not TBD
         system_database[mcu][key].mapped         = False
 
 

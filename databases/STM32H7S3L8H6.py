@@ -278,7 +278,7 @@ SCHEMA = {
         f'GPIO{unit}_ENABLE' : {
             'location'   : ('RCC', 'AHB4ENR', f'GPIO{unit}EN'),
             'constraint' : (False, True),
-            'value'      : ...,
+            'value'      : TBD,
         }
         for unit in GPIOS
     },
@@ -299,19 +299,19 @@ SCHEMA = {
     'SYSTICK_USE_CPU_CK' : {
         'location'   : ('SysTick', 'CTRL', 'CLKSOURCE'),
         'constraint' : (False, True),
-        'value'      : ...,
+        'value'      : TBD,
     },
 
     'SYSTICK_INTERRUPT_ENABLE' : {
         'location'   : ('SysTick', 'CTRL', 'TICKINT'),
         'constraint' : (False, True),
-        'value'      : ...,
+        'value'      : TBD,
     },
 
     'SYSTICK_ENABLE' : {
         'location'   : ('SysTick', 'CTRL', 'ENABLE'),
         'constraint' : (False, True),
-        'value'      : ...,
+        'value'      : TBD,
     },
 
 
@@ -329,13 +329,13 @@ SCHEMA = {
             '0b00',
             '0b11',
         ),
-        'value' : ...,
+        'value' : TBD,
     },
 
     'FLASH_LATENCY' : {
         'location'   : ('FLASH', 'ACR', 'LATENCY'),
         'constraint' : IntMinMax(0, 15),
-        'value'      : ...,
+        'value'      : TBD,
     },
 
     'CURRENT_ACTIVE_VOS' : {
@@ -349,31 +349,31 @@ SCHEMA = {
     'SMPS_OUTPUT_LEVEL' : {
         'location'   : ('PWR', 'CSR2', 'SDHILEVEL'),
         'constraint' : (False, True),
-        'value'      : ...,
+        'value'      : TBD,
     },
 
     'SMPS_FORCED_ON' : {
         'location'   : ('PWR', 'CSR2', 'SMPSEXTHP'),
         'constraint' : (False, True),
-        'value'      : ...,
+        'value'      : TBD,
     },
 
     'SMPS_ENABLE' : {
         'location'   : ('PWR', 'CSR2', 'SDEN'),
         'constraint' : (False, True),
-        'value'      : ...,
+        'value'      : TBD,
     },
 
     'LDO_ENABLE' : {
         'location'   : ('PWR', 'CSR2', 'LDOEN'),
         'constraint' : (False, True),
-        'value'      : ...,
+        'value'      : TBD,
     },
 
     'POWER_MANAGEMENT_BYPASS' : {
         'location'   : ('PWR', 'CSR2', 'BYPASS'),
         'constraint' : (False, True),
-        'value'      : ...,
+        'value'      : TBD,
     },
 
     'INTERNAL_VOLTAGE_SCALING' : {
@@ -382,7 +382,7 @@ SCHEMA = {
             'low'  : 0,
             'high' : 1
         },
-        'value' : ...,
+        'value' : TBD,
     },
 
 
@@ -402,7 +402,7 @@ SCHEMA = {
     **{
         key : {
             'category' : 'frequency',
-            'value'    : ...,
+            'value'    : TBD,
         }
         for key in (
             'CPU_CK',
@@ -421,7 +421,7 @@ SCHEMA = {
         f'{source}_ENABLE' : {
             'location'   : ('RCC', 'CR', f'{source}ON'),
             'constraint' : (False, True),
-            'value'      : ...,
+            'value'      : TBD,
         }
         for source in (
             'HSI',
@@ -449,7 +449,7 @@ SCHEMA = {
             'HSE_CK' : '0b10',
             0        : '0b11'
         },
-        'value' : ...,
+        'value' : TBD,
     },
 
 
@@ -464,7 +464,7 @@ SCHEMA = {
     **{
         f'PLL{unit}{channel}_CK' : {
             'category' : 'frequency',
-            'value'    : ...,
+            'value'    : TBD,
         }
         for unit, channels in PLLS
         for channel in channels
@@ -474,7 +474,7 @@ SCHEMA = {
         f'PLL{unit}_VCO_FREQ' : {
             'category'   : 'frequency',
             'constraint' : RealMinMax(192_000_000, 836_000_000),
-            'value'      : ...,
+            'value'      : TBD,
         }
         for unit, channels in PLLS
     },
@@ -483,7 +483,7 @@ SCHEMA = {
         f'PLL{unit}_ENABLE' : {
             'location'   : ('RCC', 'CR', f'PLL{unit}ON'),
             'constraint' : (False, True),
-            'value'      : ...,
+            'value'      : TBD,
         }
         for unit, channels in PLLS
     },
@@ -492,7 +492,7 @@ SCHEMA = {
         f'PLL{unit}{channel}_ENABLE' : {
             'location'   : ('RCC', f'PLL{unit}CFGR', f'PLL{unit}{channel}EN'),
             'constraint' : (False, True),
-            'value'      : ...,
+            'value'      : TBD,
         }
         for unit, channels in PLLS
         for channel in channels
@@ -513,7 +513,7 @@ SCHEMA = {
                 (4_000_000, 8_000_000 ) : 0b10,
                 (8_000_000, 16_000_000) : 0b11,
             },
-            'value' : ...,
+            'value' : TBD,
         }
         for unit, channels in PLLS
     },
@@ -522,7 +522,7 @@ SCHEMA = {
         f'PLL{unit}_PREDIVIDER' : {
             'location'   : ('RCC', f'PLLCKSELR', f'DIVM{unit}'),
             'constraint' : IntMinMax(1, 63),
-            'value'      : ...,
+            'value'      : TBD,
         }
         for unit, channels in PLLS
     },
@@ -535,14 +535,14 @@ SCHEMA = {
             'HSE_CK' : '0b10',
             0        : '0b11'
         },
-        'value' : ...,
+        'value' : TBD,
     },
 
     **{
         f'PLL{unit}_MULTIPLIER' : {
             'location'   : ('RCC', f'PLL{unit}DIVR1', 'DIVN'),
             'constraint' : IntMinMax(12, 420),
-            'value'      : ...,
+            'value'      : TBD,
         }
         for unit, channels in PLLS
     },
@@ -551,7 +551,7 @@ SCHEMA = {
         f'PLL{unit}{channel}_DIVIDER' : {
             'location'   : ('RCC', f'PLL{unit}DIVR{2 if channel in ('S', 'T') else 1}', f'DIV{channel}'),
             'constraint' : IntMinMax(1, 128),
-            'value'      : ...,
+            'value'      : TBD,
         }
         for unit, channels in PLLS
         for channel in channels
@@ -569,7 +569,7 @@ SCHEMA = {
     **{
         f'APB{unit}_CK' : {
             'category' : 'frequency',
-            'value'    : ...,
+            'value'    : TBD,
         }
         for unit in APBS
     },
@@ -582,7 +582,7 @@ SCHEMA = {
             'HSE_CK'   : '0b010',
             'PLL1P_CK' : '0b011'
         },
-        'value' : ...,
+        'value' : TBD,
     },
 
     'SCGU_KERNEL_SOURCE' : {
@@ -593,7 +593,7 @@ SCHEMA = {
             'HSE_CK'   : '0b010',
             'PLL1P_CK' : '0b011'
         },
-        'value' : ...,
+        'value' : TBD,
     },
 
     **{
@@ -606,7 +606,7 @@ SCHEMA = {
                 8  : '0b110',
                 16 : '0b111',
             },
-            'value' : ...,
+            'value' : TBD,
         }
         for unit in APBS
     },
@@ -624,7 +624,7 @@ SCHEMA = {
             256 : '0b1110',
             512 : '0b1111',
         },
-        'value' : ...,
+        'value' : TBD,
     },
 
     'AXI_AHB_DIVIDER' : {
@@ -640,7 +640,7 @@ SCHEMA = {
             256 : '0b1110',
             512 : '0b1111',
         },
-        'value' : ...,
+        'value' : TBD,
     },
 
 
@@ -655,7 +655,7 @@ SCHEMA = {
     **{
         f'{peripheral}{unit}_BAUD' : {
             'category' : 'rate',
-            'value'    : ...,
+            'value'    : TBD,
         }
         for instances in UXARTS
         for peripheral, unit in instances
@@ -665,7 +665,7 @@ SCHEMA = {
         f'{peripheral}{unit}_ENABLE' : {
             'location'   : ('RCC', 'APB1ENR1', f'{peripheral}{unit}EN'),
             'constraint' : (False, True),
-            'value'      : ...,
+            'value'      : TBD,
         }
         for instances in UXARTS
         for peripheral, unit in instances
@@ -683,7 +683,7 @@ SCHEMA = {
         f'UXART_{instances}_KERNEL_SOURCE' : {
             'location'   : ('RCC', 'CCIPR2', field),
             'constraint' : kernel_source,
-            'value'      : ...,
+            'value'      : TBD,
             'pseudokeys' : [
                 f'{peripheral}{unit}_KERNEL_SOURCE'
                 for peripheral, unit in instances
@@ -697,7 +697,7 @@ SCHEMA = {
         f'{peripheral}{unit}_BAUD_DIVIDER' : {
             'location'   : ('USART', 'BRR', 'BRR'),
             'constraint' : IntMinMax(1, 1 << 16),
-            'value'      : ...,
+            'value'      : TBD,
         }
         for instances in UXARTS
         for peripheral, unit in instances
