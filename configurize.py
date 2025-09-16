@@ -1,9 +1,10 @@
 import collections, builtins, difflib
-from ..stpy.database import system_properties, system_locations
-from ..stpy.gpio     import process_all_gpios
-from ..stpy.helpers  import get_helpers
-from ..pxd.utils     import OrderedSet, c_repr
-from ..pxd.log       import log, ANSI
+from ..stpy.database         import system_properties, system_locations
+from ..stpy.parameterization import TBD
+from ..stpy.gpio             import process_all_gpios
+from ..stpy.helpers          import get_helpers
+from ..pxd.utils             import OrderedSet, c_repr
+from ..pxd.log               import log, ANSI
 
 
 
@@ -321,7 +322,7 @@ def system_configurize(Meta, parameterization):
         if macro is ...:
             macro = f'{key}_init'
 
-        if (value := parameterization(key, None)) is not None:
+        if (value := parameterization(key, TBD)) is not TBD:
             flush_title()
             Meta.define(macro, formatting.format(c_repr(value)))
 
@@ -345,7 +346,7 @@ def system_configurize(Meta, parameterization):
         if value is ...:
             value = parameterization(key)
 
-        if value is ...:
+        if value is TBD:
             return None
 
         value = formatting.format(c_repr(value))
@@ -358,7 +359,7 @@ def system_configurize(Meta, parameterization):
         if value is ...:
             value = parameterization(key)
 
-        if value is None:
+        if value is TBD:
             return None
 
         value = formatting.format(c_repr(value))
@@ -460,8 +461,7 @@ def system_configurize(Meta, parameterization):
     cmsis_set(
         tuplize(field)
         for field in fields
-        if parameterization(field) is not None
-        if parameterization(field) is not ...
+        if parameterization(field) is not TBD
     )
 
 
@@ -586,10 +586,10 @@ def system_configurize(Meta, parameterization):
 
         for channel in channels:
 
-            if parameterization(f'PLL{unit}{channel}_DIVIDER', None) is None:
+            if parameterization(f'PLL{unit}{channel}_DIVIDER', None) is TBD:
                 continue
 
-            if parameterization(f'PLL{unit}{channel}_DIVIDER') is None:
+            if parameterization(f'PLL{unit}{channel}_DIVIDER') is TBD:
                 continue
 
             sets += [
@@ -606,8 +606,9 @@ def system_configurize(Meta, parameterization):
     cmsis_set(
         tuplize(f'PLL{unit}_ENABLE')
         for unit, channels in properties['PLLS']
-        if not parameterization(f'PLL{unit}_ENABLE')
+        if parameterization(f'PLL{unit}_ENABLE')
     )
+
 
 
 
@@ -615,13 +616,9 @@ def system_configurize(Meta, parameterization):
 
     for unit, channels in properties['PLLS']:
 
-        if not parameterization(f'PLL{unit}_ENABLE'):
-            continue
+        if parameterization(f'PLL{unit}_ENABLE'):
 
-        if not parameterization(f'PLL{unit}_ENABLE'):
-            continue
-
-        cmsis_spinlock(tuplize(f'PLL{unit}_READY', True))
+            cmsis_spinlock(tuplize(f'PLL{unit}_READY', True))
 
 
 
