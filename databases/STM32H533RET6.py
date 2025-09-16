@@ -29,13 +29,6 @@ GPIO_SPEED = {
     'VERY_HIGH' : '0b11',
 }
 
-global GPIO_PULL
-GPIO_PULL = {
-    None   : '0b00',
-    'UP'   : '0b01',
-    'DOWN' : '0b10',
-}
-
 
 
 global UXARTS
@@ -397,6 +390,20 @@ SCHEMA = {
             'value'      : TBD,
         }
         for port, numbers in GPIOS
+    },
+
+    **{
+        f'GPIO{port}{number}_PULL' : {
+            'location'   : (f'GPIO{port}', 'PUPDR', f'PUPD{number}'),
+            'constraint' : {
+                None   : '0b00',
+                'UP'   : '0b01',
+                'DOWN' : '0b10',
+            },
+            'value' : TBD,
+        }
+        for port, numbers in GPIOS
+        for number in numbers
     },
 
     **{

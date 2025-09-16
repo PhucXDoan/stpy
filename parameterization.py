@@ -911,6 +911,18 @@ class Parameterization:
 
         for gpio in self.gpios:
 
+            if gpio.pin is None:
+                continue
+
+            if gpio.pull is None:
+                continue
+
+            self[f'GPIO{gpio.port}{gpio.number}_PULL'] = gpio.pull
+
+
+
+        for gpio in self.gpios:
+
             if gpio.afsel is None:
                 continue
 

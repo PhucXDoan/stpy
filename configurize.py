@@ -177,15 +177,8 @@ def system_configurize(Meta, parameterization):
         # Set pull configuration.
 
         CMSIS_SET(
-            (
-                f'GPIO{gpio.port}',
-                'PUPDR',
-                f'PUPD{gpio.number}',
-                parameterization('GPIO_PULL')[gpio.pull]
-            )
+            tuplize(f'GPIO{gpio.port}{gpio.number}_PULL', tbd_ok = True)
             for gpio in parameterization.gpios
-            if gpio.pin  is not None
-            if gpio.pull is not None
         )
 
 
