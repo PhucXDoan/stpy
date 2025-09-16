@@ -339,13 +339,11 @@ SCHEMA = {
     },
 
     'CURRENT_ACTIVE_VOS' : {
-        'location'   : ('PWR', 'SR1', 'ACTVOS'),
-        'constraint' : (False, True),
+        'location' : ('PWR', 'SR1', 'ACTVOS'),
     },
 
     'CURRENT_ACTIVE_VOS_READY' : {
-        'location'   : ('PWR', 'SR1', 'ACTVOSRDY'),
-        'constraint' : (False, True),
+        'location' : ('PWR', 'SR1', 'ACTVOSRDY'),
     },
 
     'SMPS_OUTPUT_LEVEL' : {
