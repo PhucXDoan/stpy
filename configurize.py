@@ -126,12 +126,8 @@ def system_configurize(Meta, parameterization):
         # Enable GPIO ports that have defined pins.
 
         CMSIS_SET(
-            (*parameterization.database[f'GPIO{port}_ENABLE'].location, True)
-            for port in sorted(dict.fromkeys(
-                gpio.port
-                for gpio in parameterization.gpios
-                if gpio.pin is not None
-            ))
+            tuplize(f'GPIO{port}_ENABLE', tbd_ok = True)
+            for port, numbers in parameterization('GPIOS')
         )
 
 
