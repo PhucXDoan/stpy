@@ -135,8 +135,9 @@ def system_configurize(Meta, parameterization):
         # Set output type (push-pull/open-drain).
 
         CMSIS_SET(
-            tuplize(f'GPIO{gpio.port}{gpio.number}_OPEN_DRAIN', tbd_ok = True)
-            for gpio in parameterization.gpios
+            tuplize(f'GPIO{port}{number}_OPEN_DRAIN', tbd_ok = True)
+            for port, numbers in parameterization('GPIOS')
+            for number in numbers
         )
 
 
@@ -144,8 +145,9 @@ def system_configurize(Meta, parameterization):
         # Set initial output level.
 
         CMSIS_SET(
-            tuplize(f'GPIO{gpio.port}{gpio.number}_OUTPUT', tbd_ok = True)
-            for gpio in parameterization.gpios
+            tuplize(f'GPIO{port}{number}_OUTPUT', tbd_ok = True)
+            for port, numbers in parameterization('GPIOS')
+            for number in numbers
         )
 
 
@@ -153,8 +155,9 @@ def system_configurize(Meta, parameterization):
         # Set drive strength.
 
         CMSIS_SET(
-            tuplize(f'GPIO{gpio.port}{gpio.number}_SPEED', tbd_ok = True)
-            for gpio in parameterization.gpios
+            tuplize(f'GPIO{port}{number}_SPEED', tbd_ok = True)
+            for port, numbers in parameterization('GPIOS')
+            for number in numbers
         )
 
 
@@ -162,8 +165,9 @@ def system_configurize(Meta, parameterization):
         # Set pull configuration.
 
         CMSIS_SET(
-            tuplize(f'GPIO{gpio.port}{gpio.number}_PULL', tbd_ok = True)
-            for gpio in parameterization.gpios
+            tuplize(f'GPIO{port}{number}_PULL', tbd_ok = True)
+            for port, numbers in parameterization('GPIOS')
+            for number in numbers
         )
 
 
@@ -172,8 +176,9 @@ def system_configurize(Meta, parameterization):
         # so that the alternate function pin will start off properly.
 
         CMSIS_WRITE(
-            tuplize(f'GPIO{gpio.port}{gpio.number}_ALTERNATE_FUNCTION', tbd_ok = True)
-            for gpio in parameterization.gpios
+            tuplize(f'GPIO{port}{number}_ALTERNATE_FUNCTION', tbd_ok = True)
+            for port, numbers in parameterization('GPIOS')
+            for number in numbers
         )
 
 
@@ -181,8 +186,9 @@ def system_configurize(Meta, parameterization):
         # Set pin mode.
 
         CMSIS_SET(
-            tuplize(f'GPIO{gpio.port}{gpio.number}_MODE', tbd_ok = True)
-            for gpio in parameterization.gpios
+            tuplize(f'GPIO{port}{number}_MODE', tbd_ok = True)
+            for port, numbers in parameterization('GPIOS')
+            for number in numbers
         )
 
 
