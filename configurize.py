@@ -1,9 +1,8 @@
-import collections, builtins, difflib
+import difflib
 from ..stpy.parameterization import TBD
 from ..stpy.gpio             import process_all_gpios
 from ..stpy.helpers          import get_helpers
-from ..pxd.utils             import OrderedSet, c_repr
-from ..pxd.log               import log, ANSI
+from ..pxd.utils             import c_repr
 
 
 
@@ -34,23 +33,16 @@ def system_configurize(Meta, parameterization):
 
     target     = parameterization.target
 
-    def put_title(title = None):
+    def title_of(title):
+        return f'''
 
-        if title is None:
 
-            Meta.line(f'''
 
-                {"/" * 128}
+            //{f' {title} //'.center(80 - 4, '/')}
 
-            ''')
 
-        else:
 
-            Meta.line(f'''
-
-                {"/" * 64} {title} {"/" * 64}
-
-            ''')
+        '''
 
     helpers = get_helpers(Meta)
 
@@ -82,235 +74,135 @@ def system_configurize(Meta, parameterization):
 
 
     ################################################################################
-
-    put_title('GPIOs') # @/`How GPIOs Are Made`:
-
-    gpios = process_all_gpios(target)
-
-
-
-    # Macros to make GPIOs easy to use.
-
-    for gpio in gpios:
-
-        if gpio.pin is None:
-            continue
-
-        if gpio.mode in ('INPUT', 'ALTERNATE'):
-            Meta.define('_PORT_FOR_GPIO_READ'  , ('NAME'), gpio.port  , NAME = gpio.name)
-            Meta.define('_NUMBER_FOR_GPIO_READ', ('NAME'), gpio.number, NAME = gpio.name)
-
-        if gpio.mode == 'OUTPUT':
-            Meta.define('_PORT_FOR_GPIO_WRITE'  , ('NAME'), gpio.port  , NAME = gpio.name)
-            Meta.define('_NUMBER_FOR_GPIO_WRITE', ('NAME'), gpio.number, NAME = gpio.name)
+    #
+    # GPIOs.
+    #
 
 
 
-    # Enable GPIO ports that have defined pins.
+    with Meta.section(title_of('GPIOS')):  # @/`How GPIOs Are Made`:
 
-    CMSIS_SET(
-        (*parameterization.database[f'GPIO{port}_ENABLE'].location, True)
-        for port in sorted(OrderedSet(
-            gpio.port
+        gpios = process_all_gpios(target)
+
+
+
+        # Macros to make GPIOs easy to use.
+
+        for gpio in gpios:
+
+            if gpio.pin is None:
+                continue
+
+            if gpio.mode in ('INPUT', 'ALTERNATE'):
+                Meta.define('_PORT_FOR_GPIO_READ'  , ('NAME'), gpio.port  , NAME = gpio.name)
+                Meta.define('_NUMBER_FOR_GPIO_READ', ('NAME'), gpio.number, NAME = gpio.name)
+
+            if gpio.mode == 'OUTPUT':
+                Meta.define('_PORT_FOR_GPIO_WRITE'  , ('NAME'), gpio.port  , NAME = gpio.name)
+                Meta.define('_NUMBER_FOR_GPIO_WRITE', ('NAME'), gpio.number, NAME = gpio.name)
+
+
+
+        # Enable GPIO ports that have defined pins.
+
+        CMSIS_SET(
+            (*parameterization.database[f'GPIO{port}_ENABLE'].location, True)
+            for port in sorted(dict.fromkeys(
+                gpio.port
+                for gpio in gpios
+                if gpio.pin is not None
+            ))
+        )
+
+
+
+        # Set output type (push-pull/open-drain).
+
+        CMSIS_SET(
+            (f'GPIO{gpio.port}', 'OTYPER', f'OT{gpio.number}', gpio.open_drain)
             for gpio in gpios
-            if gpio.pin is not None
-        ))
-    )
-
-
-
-    # Set output type (push-pull/open-drain).
-
-    CMSIS_SET(
-        (f'GPIO{gpio.port}', 'OTYPER', f'OT{gpio.number}', gpio.open_drain)
-        for gpio in gpios
-        if gpio.pin        is not None
-        if gpio.open_drain is not None
-    )
-
-
-
-    # Set initial output level.
-
-    CMSIS_SET(
-        (f'GPIO{gpio.port}', 'ODR', f'OD{gpio.number}', gpio.initlvl)
-        for gpio in gpios
-        if gpio.pin     is not None
-        if gpio.initlvl is not None
-    )
-
-
-
-    # Set drive strength.
-
-    CMSIS_SET(
-        (
-            f'GPIO{gpio.port}',
-            'OSPEEDR',
-            f'OSPEED{gpio.number}',
-            parameterization('GPIO_SPEED')[gpio.speed]
-        )
-        for gpio in gpios
-        if gpio.pin   is not None
-        if gpio.speed is not None
-    )
-
-
-
-    # Set pull configuration.
-
-    CMSIS_SET(
-        (
-            f'GPIO{gpio.port}',
-            'PUPDR',
-            f'PUPD{gpio.number}',
-            parameterization('GPIO_PULL')[gpio.pull]
-        )
-        for gpio in gpios
-        if gpio.pin  is not None
-        if gpio.pull is not None
-    )
-
-
-
-    # Set alternative function; must be done before setting pin mode
-    # so that the alternate function pin will start off properly.
-
-    CMSIS_WRITE(
-        (
-            f'GPIO_AFR{('L', 'H')[gpio.number // 8]}',
-            f'GPIO{gpio.port}->AFR[{gpio.number // 8}]',
-            f'AFSEL{gpio.number}',
-            gpio.afsel
-        )
-        for gpio in gpios
-        if gpio.afsel is not None
-    )
-
-
-
-    # Set pin mode.
-
-    CMSIS_SET(
-        (
-            f'GPIO{gpio.port}',
-            'MODER',
-            f'MODE{gpio.number}',
-            parameterization('GPIO_MODE')[gpio.mode]
-        )
-        for gpio in gpios
-        if gpio.pin  is not None
-        if gpio.mode not in (None, 'RESERVED')
-    )
-
-
-
-    ################################################################################
-
-
-
-    put_title('Interrupts')
-
-
-
-    # @/`Defining Interrupt Handlers`.
-
-    for routine in OrderedSet((
-        *INTERRUPTS_THAT_MUST_BE_DEFINED,
-        *parameterization('INTERRUPTS')
-    )):
-
-
-
-        # Skip reserved interrupts.
-
-        if routine is None:
-            continue
-
-
-
-        # Skip unused interrupts.
-
-        if routine not in (
-            *INTERRUPTS_THAT_MUST_BE_DEFINED,
-            *(name for name, niceness in target.interrupts)
-        ):
-            continue
-
-
-
-        # The macro will ensure only the
-        # expected ISRs can be defined.
-
-        Meta.define(
-            f'INTERRUPT_{routine}',
-            f'extern void INTERRUPT_{routine}(void)'
+            if gpio.pin        is not None
+            if gpio.open_drain is not None
         )
 
 
 
-    for interrupt, niceness in target.interrupts:
+        # Set initial output level.
+
+        CMSIS_SET(
+            (f'GPIO{gpio.port}', 'ODR', f'OD{gpio.number}', gpio.initlvl)
+            for gpio in gpios
+            if gpio.pin     is not None
+            if gpio.initlvl is not None
+        )
 
 
 
-        # The amount of bits that can be used to specify
-        # the priorities vary between implementations.
-        # @/pg 526/sec B1.5.4/`Armv7-M`.
-        # @/pg 86/sec B3.9/`Armv8-M`.
+        # Set drive strength.
 
-        Meta.line(f'''
-            static_assert(0 <= {niceness} && {niceness} < (1 << __NVIC_PRIO_BITS));
-        ''')
-
-
-
-        # Set the Arm-specific interrupts' priorities.
-
-        if parameterization('INTERRUPTS').index(interrupt) <= 14:
-
-            assert interrupt in (
-                'MemoryManagement',
-                'BusFault',
-                'UsageFault',
-                'SVCall',
-                'DebugMonitor',
-                'PendSV',
-                'SysTick',
+        CMSIS_SET(
+            (
+                f'GPIO{gpio.port}',
+                'OSPEEDR',
+                f'OSPEED{gpio.number}',
+                parameterization('GPIO_SPEED')[gpio.speed]
             )
+            for gpio in gpios
+            if gpio.pin   is not None
+            if gpio.speed is not None
+        )
 
-            Meta.line(f'''
-                SCB->SHPR[{interrupt}_IRQn + 12] = {niceness} << __NVIC_PRIO_BITS;
-            ''')
+
+
+        # Set pull configuration.
+
+        CMSIS_SET(
+            (
+                f'GPIO{gpio.port}',
+                'PUPDR',
+                f'PUPD{gpio.number}',
+                parameterization('GPIO_PULL')[gpio.pull]
+            )
+            for gpio in gpios
+            if gpio.pin  is not None
+            if gpio.pull is not None
+        )
 
 
 
-        # Set the MCU-specific interrupts' priorities within NVIC.
+        # Set alternative function; must be done before setting pin mode
+        # so that the alternate function pin will start off properly.
 
-        else:
+        CMSIS_WRITE(
+            (
+                f'GPIO_AFR{('L', 'H')[gpio.number // 8]}',
+                f'GPIO{gpio.port}->AFR[{gpio.number // 8}]',
+                f'AFSEL{gpio.number}',
+                gpio.afsel
+            )
+            for gpio in gpios
+            if gpio.afsel is not None
+        )
 
-            Meta.line(f'''
-                NVIC->IPR[NVICInterrupt_{interrupt}] = {niceness} << __NVIC_PRIO_BITS;
-            ''')
+
+
+        # Set pin mode.
+
+        CMSIS_SET(
+            (
+                f'GPIO{gpio.port}',
+                'MODER',
+                f'MODE{gpio.number}',
+                parameterization('GPIO_MODE')[gpio.mode]
+            )
+            for gpio in gpios
+            if gpio.pin  is not None
+            if gpio.mode not in (None, 'RESERVED')
+        )
 
 
 
     ################################################################################
-
-
-
-    TITLE = None
-
-    def flush_title():
-        nonlocal TITLE
-        if TITLE is not None:
-            put_title(TITLE)
-            TITLE = None
-
-
-
-
-
-
 
 
 
@@ -318,8 +210,6 @@ def system_configurize(Meta, parameterization):
 
         if undefined_ok:
             if (value := parameterization(key, TBD)) is not TBD:
-
-                flush_title()
 
                 if parameterization.database[key].off_by_one:
                     formatting = '({} - 1)'
@@ -329,8 +219,6 @@ def system_configurize(Meta, parameterization):
                 Meta.define(f'{key}_init', formatting.format(c_repr(value)))
         else:
             if (value := parameterization(key)) is not TBD:
-
-                flush_title()
 
                 if parameterization.database[key].off_by_one:
                     formatting = '({} - 1)'
@@ -364,21 +252,6 @@ def system_configurize(Meta, parameterization):
 
 
 
-    def cmsis_set(*entries):
-        entries = [entry for entry in entries if entry is not None]
-        if entries:
-            flush_title()
-            CMSIS_SET(*entries)
-
-    def cmsis_spinlock(*entries):
-        entries = [entry for entry in entries if entry is not None]
-        if entries:
-            flush_title()
-            CMSIS_SPINLOCK(*entries)
-
-
-
-
     ################################################################################
     #
     # Interrupts.
@@ -386,11 +259,98 @@ def system_configurize(Meta, parameterization):
 
 
 
-    cmsis_set(
-        tuplize('BUS_FAULT_ENABLE'              , True),
-        tuplize('MEMORY_MANAGEMENT_FAULT_ENABLE', True),
-        tuplize('USAGE_FAULT_ENABLE'            , True),
-    )
+    with Meta.section(title_of('Interrupts')):
+
+
+
+        # @/`Defining Interrupt Handlers`.
+
+        for interrupt in dict.fromkeys((
+            *INTERRUPTS_THAT_MUST_BE_DEFINED,
+            *parameterization('INTERRUPTS'),
+        )):
+
+
+
+            # Skip reserved interrupts.
+
+            if interrupt is None:
+                continue
+
+
+
+            # Skip unused interrupts.
+
+            if interrupt not in (
+                *INTERRUPTS_THAT_MUST_BE_DEFINED,
+                *(name for name, niceness in target.interrupts)
+            ):
+                continue
+
+
+
+            # The macro will ensure only the
+            # expected ISRs can be defined.
+
+            Meta.define(
+                f'INTERRUPT_{interrupt}',
+                f'extern void INTERRUPT_{interrupt}(void)'
+            )
+
+
+
+        for interrupt, niceness in target.interrupts:
+
+
+
+            # The amount of bits that can be used to specify
+            # the priorities vary between implementations.
+            # @/pg 526/sec B1.5.4/`Armv7-M`.
+            # @/pg 86/sec B3.9/`Armv8-M`.
+
+            Meta.line(f'''
+                static_assert(0 <= {niceness} && {niceness} < (1 << __NVIC_PRIO_BITS));
+            ''')
+
+
+
+            # Set the Arm-specific interrupts' priorities.
+
+            if parameterization('INTERRUPTS').index(interrupt) <= 14:
+
+                assert interrupt in (
+                    'MemoryManagement',
+                    'BusFault',
+                    'UsageFault',
+                    'SVCall',
+                    'DebugMonitor',
+                    'PendSV',
+                    'SysTick',
+                )
+
+                Meta.line(f'''
+                    SCB->SHPR[{interrupt}_IRQn + 12] = {niceness} << __NVIC_PRIO_BITS;
+                ''')
+
+
+
+            # Set the MCU-specific interrupts' priorities within NVIC.
+
+            else:
+
+                Meta.line(f'''
+                    NVIC->IPR[NVICInterrupt_{interrupt}] = {niceness} << __NVIC_PRIO_BITS;
+                ''')
+
+
+
+
+
+        CMSIS_SET(
+            tuplize('BUS_FAULT_ENABLE'              , True),
+            tuplize('MEMORY_MANAGEMENT_FAULT_ENABLE', True),
+            tuplize('USAGE_FAULT_ENABLE'            , True),
+        )
 
 
 
@@ -406,25 +366,25 @@ def system_configurize(Meta, parameterization):
 
 
 
-    TITLE = 'Flash'
+    with Meta.section(title_of('Flash')):
 
 
 
-    # Set the wait-states.
+        # Set the wait-states.
 
-    cmsis_set(
-        tuplize('FLASH_LATENCY'          ),
-        tuplize('FLASH_PROGRAMMING_DELAY'),
-    )
+        CMSIS_SET(
+            tuplize('FLASH_LATENCY'          ),
+            tuplize('FLASH_PROGRAMMING_DELAY'),
+        )
 
 
 
-    # Ensure the new number of wait-states is taken into account.
+        # Ensure the new number of wait-states is taken into account.
 
-    cmsis_spinlock(
-        tuplize('FLASH_LATENCY'          ),
-        tuplize('FLASH_PROGRAMMING_DELAY'),
-    )
+        CMSIS_SPINLOCK(
+            tuplize('FLASH_LATENCY'          ),
+            tuplize('FLASH_PROGRAMMING_DELAY'),
+        )
 
 
 
@@ -439,48 +399,48 @@ def system_configurize(Meta, parameterization):
 
 
 
-    TITLE = 'Power Supply'
+    with Meta.section(title_of('Power Supply')):
 
 
 
-    # The power supply setup must be configured first
-    # before configuring VOS or the system clock frequency.
-    # @/pg 323/sec 6.8.4/`H7S3rm`.
+        # The power supply setup must be configured first
+        # before configuring VOS or the system clock frequency.
+        # @/pg 323/sec 6.8.4/`H7S3rm`.
 
-    match target.mcu:
+        match target.mcu:
 
-        case 'STM32H7S3L8H6':
-            cmsis_set(
-                tuplize('SMPS_OUTPUT_LEVEL'      , tbd_ok = True),
-                tuplize('SMPS_FORCED_ON'         , tbd_ok = True),
-                tuplize('SMPS_ENABLE'            , tbd_ok = True),
-                tuplize('LDO_ENABLE'             , tbd_ok = True),
-                tuplize('POWER_MANAGEMENT_BYPASS', tbd_ok = True),
-            )
+            case 'STM32H7S3L8H6':
+                CMSIS_SET(
+                    tuplize('SMPS_OUTPUT_LEVEL'      , tbd_ok = True),
+                    tuplize('SMPS_FORCED_ON'         , tbd_ok = True),
+                    tuplize('SMPS_ENABLE'            , tbd_ok = True),
+                    tuplize('LDO_ENABLE'             , tbd_ok = True),
+                    tuplize('POWER_MANAGEMENT_BYPASS', tbd_ok = True),
+                )
 
-        case 'STM32H533RET6':
-            cmsis_set(
-                tuplize('LDO_ENABLE'             , tbd_ok = True),
-                tuplize('POWER_MANAGEMENT_BYPASS', tbd_ok = True),
-            )
+            case 'STM32H533RET6':
+                CMSIS_SET(
+                    tuplize('LDO_ENABLE'             , tbd_ok = True),
+                    tuplize('POWER_MANAGEMENT_BYPASS', tbd_ok = True),
+                )
 
-        case _: raise NotImplementedError
-
-
-
-    # A higher core voltage means higher power consumption,
-    # but better performance in terms of max clock speed.
-
-    cmsis_set(tuplize('INTERNAL_VOLTAGE_SCALING'))
+            case _: raise NotImplementedError
 
 
 
-    # Ensure the voltage scaling has been selected.
+        # A higher core voltage means higher power consumption,
+        # but better performance in terms of max clock speed.
 
-    cmsis_spinlock(
-        tuplize('CURRENT_ACTIVE_VOS'      , parameterization('INTERNAL_VOLTAGE_SCALING')),
-        tuplize('CURRENT_ACTIVE_VOS_READY', True),
-    )
+        CMSIS_SET(tuplize('INTERNAL_VOLTAGE_SCALING'))
+
+
+
+        # Ensure the voltage scaling has been selected.
+
+        CMSIS_SPINLOCK(
+            tuplize('CURRENT_ACTIVE_VOS'      , parameterization('INTERNAL_VOLTAGE_SCALING')),
+            tuplize('CURRENT_ACTIVE_VOS_READY', True),
+        )
 
 
 
@@ -491,13 +451,13 @@ def system_configurize(Meta, parameterization):
 
 
 
-    TITLE = 'High-Speed-Internal (General)'
+    with Meta.section(title_of('High-Speed-Internal (General)')):
 
-    if parameterization('HSI_ENABLE'):
-        pass # The HSI oscillator is enabled by default after reset.
+        if parameterization('HSI_ENABLE'):
+            pass # The HSI oscillator is enabled by default after reset.
 
-    else:
-        raise NotImplementedError # TODO.
+        else:
+            raise NotImplementedError # TODO.
 
 
 
@@ -508,12 +468,12 @@ def system_configurize(Meta, parameterization):
 
 
 
-    TITLE = 'High-Speed-Internal (48MHz)'
+    with Meta.section(title_of('High-Speed-Internal (48MHz)')):
 
-    if parameterization('HSI48_ENABLE'):
+        if parameterization('HSI48_ENABLE'):
 
-        cmsis_set     (tuplize('HSI48_ENABLE', True))
-        cmsis_spinlock(tuplize('HSI48_READY' , True))
+            CMSIS_SET     (tuplize('HSI48_ENABLE', True))
+            CMSIS_SPINLOCK(tuplize('HSI48_READY' , True))
 
 
 
@@ -524,12 +484,12 @@ def system_configurize(Meta, parameterization):
 
 
 
-    TITLE = 'Clock-Security-Internal'
+    with Meta.section(title_of('Clock-Security-Internal')):
 
-    if parameterization('CSI_ENABLE'):
+        if parameterization('CSI_ENABLE'):
 
-        cmsis_set     (tuplize('CSI_ENABLE', True))
-        cmsis_spinlock(tuplize('CSI_READY' , True))
+            CMSIS_SET     (tuplize('CSI_ENABLE', True))
+            CMSIS_SPINLOCK(tuplize('CSI_READY' , True))
 
 
 
@@ -540,9 +500,9 @@ def system_configurize(Meta, parameterization):
 
 
 
-    TITLE = 'Peripheral Clock Option'
+    with Meta.section(title_of('Peripheral Clock Option')):
 
-    cmsis_set(tuplize('PERIPHERAL_CLOCK_OPTION', tbd_ok = True))
+        CMSIS_SET(tuplize('PERIPHERAL_CLOCK_OPTION', tbd_ok = True))
 
 
 
@@ -553,85 +513,85 @@ def system_configurize(Meta, parameterization):
 
 
 
-    TITLE = 'PLLs'
+    with Meta.section(title_of('PLLs')):
 
 
 
-    enabled_plls = [
-        (unit, channels)
-        for unit, channels in parameterization('PLLS')
-        if parameterization(f'PLL{unit}_ENABLE')
-    ]
-
-    sets = []
-
-
-
-    # Set the clock source shared for all PLLs.
-
-    match target.mcu:
-        case 'STM32H7S3L8H6':
-            sets += [tuplize('PLL_KERNEL_SOURCE')]
-
-
-
-    # Configure each PLL.
-
-    for unit, channels in enabled_plls:
-
-
-
-        # Set the clock source for the specific PLL unit.
-
-        match target.mcu:
-            case 'STM32H533RET6':
-                sets += [tuplize(f'PLL{unit}_KERNEL_SOURCE')]
-
-
-
-        # Configure the PLL unit.
-
-        sets += [
-            tuplize(f'PLL{unit}_PREDIVIDER' ),
-            tuplize(f'PLL{unit}_INPUT_RANGE'),
-            tuplize(f'PLL{unit}_MULTIPLIER' ),
+        enabled_plls = [
+            (unit, channels)
+            for unit, channels in parameterization('PLLS')
+            if parameterization(f'PLL{unit}_ENABLE')
         ]
 
+        sets = []
 
 
-        # Configure the PLL unit's channels.
 
-        for channel in channels:
+        # Set the clock source shared for all PLLs.
 
-            if parameterization(f'PLL{unit}{channel}_DIVIDER') is TBD:
-                continue
+        match target.mcu:
+            case 'STM32H7S3L8H6':
+                sets += [tuplize('PLL_KERNEL_SOURCE')]
 
-            if parameterization(f'PLL{unit}{channel}_DIVIDER') is TBD:
-                continue
+
+
+        # Configure each PLL.
+
+        for unit, channels in enabled_plls:
+
+
+
+            # Set the clock source for the specific PLL unit.
+
+            match target.mcu:
+                case 'STM32H533RET6':
+                    sets += [tuplize(f'PLL{unit}_KERNEL_SOURCE')]
+
+
+
+            # Configure the PLL unit.
 
             sets += [
-                tuplize(f'PLL{unit}{channel}_DIVIDER'),
-                tuplize(f'PLL{unit}{channel}_ENABLE', True),
+                tuplize(f'PLL{unit}_PREDIVIDER' ),
+                tuplize(f'PLL{unit}_INPUT_RANGE'),
+                tuplize(f'PLL{unit}_MULTIPLIER' ),
             ]
 
 
 
-    cmsis_set(*sets)
+            # Configure the PLL unit's channels.
+
+            for channel in channels:
+
+                if parameterization(f'PLL{unit}{channel}_DIVIDER') is TBD:
+                    continue
+
+                if parameterization(f'PLL{unit}{channel}_DIVIDER') is TBD:
+                    continue
+
+                sets += [
+                    tuplize(f'PLL{unit}{channel}_DIVIDER'),
+                    tuplize(f'PLL{unit}{channel}_ENABLE', True),
+                ]
 
 
 
-    # Enable each PLL unit that are to be used
-    # and ensure they become stablized.
+        CMSIS_SET(*sets)
 
-    cmsis_set(*(
-        tuplize(f'PLL{unit}_ENABLE')
-        for unit, channels in enabled_plls
-    ))
 
-    cmsis_spinlock(*(
-        tuplize(f'PLL{unit}_READY', True)
-        for unit, channels in enabled_plls
-    ))
+
+        # Enable each PLL unit that are to be used
+        # and ensure they become stablized.
+
+        CMSIS_SET(*(
+            tuplize(f'PLL{unit}_ENABLE')
+            for unit, channels in enabled_plls
+        ))
+
+        CMSIS_SPINLOCK(*(
+            tuplize(f'PLL{unit}_READY', True)
+            for unit, channels in enabled_plls
+        ))
 
 
 
@@ -642,54 +602,54 @@ def system_configurize(Meta, parameterization):
 
 
 
-    TITLE = 'System Clock Generation Unit'
+    with Meta.section(title_of('System Clock Generation Unit')):
 
 
 
-    # Configure the SCGU registers.
+        # Configure the SCGU registers.
 
-    match target.mcu:
+        match target.mcu:
 
-        case 'STM32H7S3L8H6':
+            case 'STM32H7S3L8H6':
 
-            cmsis_set(
-                tuplize('CPU_DIVIDER'),
-                tuplize('AXI_AHB_DIVIDER'),
-                *(
-                    tuplize(f'APB{unit}_DIVIDER')
-                    for unit in parameterization('APBS')
-                ),
-            )
-
-
-
-        case 'STM32H533RET6':
-
-            cmsis_set(
-                tuplize('CPU_DIVIDER'),
-                *(
-                    tuplize(f'APB{unit}_DIVIDER')
-                    for unit in parameterization('APBS')
-                ),
-            )
+                CMSIS_SET(
+                    tuplize('CPU_DIVIDER'),
+                    tuplize('AXI_AHB_DIVIDER'),
+                    *(
+                        tuplize(f'APB{unit}_DIVIDER')
+                        for unit in parameterization('APBS')
+                    ),
+                )
 
 
 
-        case _: raise NotImplementedError
+            case 'STM32H533RET6':
+
+                CMSIS_SET(
+                    tuplize('CPU_DIVIDER'),
+                    *(
+                        tuplize(f'APB{unit}_DIVIDER')
+                        for unit in parameterization('APBS')
+                    ),
+                )
 
 
 
-    # Now switch system clock to the desired source.
-
-    cmsis_set(tuplize('SCGU_KERNEL_SOURCE'))
+            case _: raise NotImplementedError
 
 
 
-    # Wait until the desired source has been selected.
+        # Now switch system clock to the desired source.
 
-    cmsis_spinlock(
-        tuplize('EFFECTIVE_SCGU_KERNEL_SOURCE', parameterization('SCGU_KERNEL_SOURCE'))
-    )
+        CMSIS_SET(tuplize('SCGU_KERNEL_SOURCE'))
+
+
+
+        # Wait until the desired source has been selected.
+
+        CMSIS_SPINLOCK(
+            tuplize('EFFECTIVE_SCGU_KERNEL_SOURCE', parameterization('SCGU_KERNEL_SOURCE'))
+        )
 
 
 
@@ -703,17 +663,17 @@ def system_configurize(Meta, parameterization):
 
 
 
-    TITLE = 'SysTick'
+    with Meta.section(title_of('SysTick')):
 
-    if parameterization('SYSTICK_ENABLE'):
+        if parameterization('SYSTICK_ENABLE'):
 
-        cmsis_set(
-            tuplize('SYSTICK_RELOAD'                ),
-            tuplize('SYSTICK_USE_CPU_CK'            ),
-            tuplize('SYSTICK_COUNTER'         , 0   ),
-            tuplize('SYSTICK_INTERRUPT_ENABLE', True),
-            tuplize('SYSTICK_ENABLE'                ),
-        )
+            CMSIS_SET(
+                tuplize('SYSTICK_RELOAD'                ),
+                tuplize('SYSTICK_USE_CPU_CK'            ),
+                tuplize('SYSTICK_COUNTER'         , 0   ),
+                tuplize('SYSTICK_INTERRUPT_ENABLE', True),
+                tuplize('SYSTICK_ENABLE'                ),
+            )
 
 
 
@@ -726,13 +686,13 @@ def system_configurize(Meta, parameterization):
 
     for instances in parameterization('UXARTS', ()):
 
-        TITLE = ' / '.join(f'{peripheral}{unit}' for peripheral, unit in instances)
+        with Meta.section(title_of(' / '.join(f'{peripheral}{unit}' for peripheral, unit in instances))):
 
-        for peripheral, unit in instances:
-            define_if_exist(f'{peripheral}{unit}_KERNEL_SOURCE')
+            for peripheral, unit in instances:
+                define_if_exist(f'{peripheral}{unit}_KERNEL_SOURCE')
 
-        for peripheral, unit in instances:
-            define_if_exist(f'{peripheral}{unit}_BAUD_DIVIDER')
+            for peripheral, unit in instances:
+                define_if_exist(f'{peripheral}{unit}_BAUD_DIVIDER')
 
 
 
@@ -745,12 +705,12 @@ def system_configurize(Meta, parameterization):
 
     for unit in parameterization('I2CS', ()):
 
-        TITLE = f'I2C{unit}'
+        with Meta.section(title_of(f'I2C{unit}')):
 
-        define_if_exist(f'I2C{unit}_KERNEL_SOURCE')
-        define_if_exist(f'I2C{unit}_PRESC'        )
-        define_if_exist(f'I2C{unit}_SCLH'         )
-        define_if_exist(f'I2C{unit}_SCLL'         )
+            define_if_exist(f'I2C{unit}_KERNEL_SOURCE')
+            define_if_exist(f'I2C{unit}_PRESC'        )
+            define_if_exist(f'I2C{unit}_SCLH'         )
+            define_if_exist(f'I2C{unit}_SCLL'         )
 
 
 
@@ -761,14 +721,14 @@ def system_configurize(Meta, parameterization):
 
 
 
-    TITLE = 'Timers'
+    with Meta.section(title_of('Timers')):
 
-    define_if_exist(f'GLOBAL_TIMER_PRESCALER', undefined_ok = True)
+        define_if_exist(f'GLOBAL_TIMER_PRESCALER', undefined_ok = True)
 
-    for unit in parameterization('TIMERS', ()):
+        for unit in parameterization('TIMERS', ()):
 
-        define_if_exist(f'TIM{unit}_DIVIDER'   )
-        define_if_exist(f'TIM{unit}_MODULATION')
+            define_if_exist(f'TIM{unit}_DIVIDER'   )
+            define_if_exist(f'TIM{unit}_MODULATION')
 
 
 

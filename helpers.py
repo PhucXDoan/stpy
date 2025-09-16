@@ -53,7 +53,10 @@ def get_helpers(Meta):
             # >    CMSIS_SET(x for x in xs)
             # >
 
-            modifies = tuple(modifies)
+            if modifies is None:
+                modifies = ()
+            else:
+                modifies = tuple(modifies)
 
 
 
@@ -65,6 +68,13 @@ def get_helpers(Meta):
             if len(modifies) == 0:
                 return
 
+
+
+            modifies = [
+                modify
+                for modify in modifies
+                if modify is not None
+            ]
 
 
             # If multiple fields of the same register are to be modified,
@@ -297,6 +307,12 @@ def get_helpers(Meta):
         # >
         # >    while (CMSIS_GET(FLASH, ACR, LATENCY) != 0b1111);
         # >
+
+        spinlocks = [
+            spinlock
+            for spinlock in spinlocks
+            if spinlock is not None
+        ]
 
         for peripheral, register, field, value in spinlocks:
 
