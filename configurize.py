@@ -1,6 +1,6 @@
 import difflib
 from ..stpy.parameterization import TBD
-from ..stpy.helpers          import get_helpers
+from ..stpy.cmsis_tools      import get_cmsis_tools
 from ..stpy.mcus             import MCUS
 from ..pxd.utils             import c_repr, justify
 
@@ -34,10 +34,10 @@ def configurize(Meta, parameterization):
 
 
     target         = parameterization.target
-    helpers        = get_helpers(Meta)
-    CMSIS_SET      = helpers.CMSIS_SET
-    CMSIS_WRITE    = helpers.CMSIS_WRITE
-    CMSIS_SPINLOCK = helpers.CMSIS_SPINLOCK
+    cmsis_tools    = get_cmsis_tools(Meta)
+    CMSIS_SET      = cmsis_tools.CMSIS_SET
+    CMSIS_WRITE    = cmsis_tools.CMSIS_WRITE
+    CMSIS_SPINLOCK = cmsis_tools.CMSIS_SPINLOCK
     title_of       = lambda title: f'''
 
 

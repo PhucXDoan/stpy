@@ -4,7 +4,7 @@ from ..pxd.utils import coalesce, c_repr, justify
 
 
 
-def get_helpers(Meta):
+def get_cmsis_tools(Meta):
 
 
 
@@ -333,7 +333,7 @@ def get_helpers(Meta):
 
 
 
-    def CMSIS_TUPLE(mcu, key): # TODO How useful is this?
+    def CMSIS_TUPLE(mcu, key):
 
         peripheral, register, field = MCUS[mcu][key].location
 
