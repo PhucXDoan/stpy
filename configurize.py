@@ -2,7 +2,7 @@ import difflib
 from ..stpy.parameterization import TBD
 from ..stpy.helpers          import get_helpers
 from ..stpy.mcus             import MCUS
-from ..pxd.utils             import c_repr
+from ..pxd.utils             import c_repr, justify
 
 
 
@@ -730,3 +730,27 @@ def configurize(Meta, parameterization):
 
 
     ################################################################################
+    #
+    # Clock-tree Frequencies.
+    #
+
+
+
+    with Meta.section(title_of('Clock-Tree')):
+
+        for macro, expansion in justify(
+            (
+                ('<', f'STPY_{key}'),
+                ('>', f'{value :,}'.replace(',', "'")),
+            )
+            for key, value in parameterization.determined.items()
+            if value is not TBD
+            if MCUS[target.mcu].database[key].clocktree
+        ):
+            Meta.define(macro, f'({expansion})')
+
+
+
+    ################################################################################
+
+    Meta.line()

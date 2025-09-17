@@ -192,7 +192,7 @@ class MCU:
         for proper_key, entry in database_globals['SCHEMA'].items():
 
             self.database[proper_key] = types.SimpleNamespace(
-                frequency  = entry.pop('frequency' , False),
+                clocktree  = entry.pop('clocktree' , False),
                 location   = entry.pop('location'  , None ),
                 off_by_one = entry.pop('off_by_one', None ),
             )

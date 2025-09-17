@@ -481,13 +481,13 @@ SCHEMA = {
 
 
     0 : {
-        'frequency' : True,
+        'clocktree' : True,
         'value'     : 0,
     },
 
     **{
         key : {
-            'frequency' : True,
+            'clocktree' : True,
             'value'     : TBD,
         }
         for key in (
@@ -549,7 +549,7 @@ SCHEMA = {
 
     **{
         f'PLL{unit}{channel}_CK' : {
-            'frequency' : True,
+            'clocktree' : True,
             'value'     : TBD,
         }
         for unit, channels in PLLS
@@ -558,7 +558,7 @@ SCHEMA = {
 
     **{
         f'PLL{unit}_VCO_FREQ' : {
-            'frequency'  : True,
+            'clocktree'  : True,
             'constraint' : RealMinMax(192_000_000, 836_000_000),
             'value'      : TBD,
         }
@@ -656,7 +656,7 @@ SCHEMA = {
 
     **{
         f'APB{unit}_CK' : {
-            'frequency' : True,
+            'clocktree' : True,
             'value'     : TBD,
         }
         for unit in APBS

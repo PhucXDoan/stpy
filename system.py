@@ -1,7 +1,6 @@
 from ..stpy.mcus             import MCUS, TBD
 from ..stpy.parameterization import Parameterization
 from ..stpy.configurize      import configurize
-from ..pxd.utils             import justify
 
 
 
@@ -31,37 +30,22 @@ def do(Meta, target):
 
 
 
-    # Figure out how to configure the MCU
-    # based on the target's constraints.
+    # Figure out how to configure the target's
+    # MCU based on the given parameterization.
 
     parameterization = Parameterization(target)
 
 
 
-    # Generate the code to configure the MCU.
+    # Create the procedure that'll initialize
+    # most of the target's MCU.
 
     with Meta.enter('''
         extern void
-        SYSTEM_init(void)
+        STPY_init(void)
     '''):
 
         configurize(Meta, parameterization)
-
-
-
-    # Export the frequencies we found in the clock-tree.
-
-    for macro, expansion in justify(
-        (
-            ('<', f'CLOCK_TREE_FREQUENCY_OF_{key}'),
-            ('>', f'{parameterization.determined[key] :,}'.replace(',', "'")),
-        )
-        for key, value in MCUS[target.mcu].database.items()
-        if value.frequency
-        if key in parameterization.determined
-        if parameterization.determined[key] is not TBD
-    ):
-        Meta.define(macro, f'({expansion})')
 
 
 
