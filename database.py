@@ -1,4 +1,4 @@
-import pathlib, types, csv
+import pathlib, types, csv, difflib
 
 
 
@@ -36,47 +36,58 @@ TBD = TBD()
 
 
 
-def get_similars(given, options): # TODO Copy-pasta.
-
-    import difflib
-
-    return difflib.get_close_matches(
-        str(given),
-        [str(option) for option in options],
-        n      = 3,
-        cutoff = 0
-    )
-
-
-
 class SystemDatabase:
 
 
 
-    def __init__(self, dictionary):
+    # The system database for an MCU is just a
+    # dictionary with some nice helper methods.
 
+    def __init__(self, mcu, dictionary):
+
+        self.mcu         = mcu
         self.dictionary  = dictionary
         self.translation = {
-            pseudokey : proper_key
+            given_key : proper_key
             for proper_key, entry in self.dictionary.items()
-            for pseudokey in (proper_key, *entry.pseudokeys)
+            for given_key in (proper_key, *entry.pseudokeys)
         }
 
 
 
-    def __getitem__(self, key):
+    def __getitem__(self, given_key):
 
-        key = self.translation.get(key, key)
+        return self.dictionary[self.translate(given_key)]
 
-        if key not in self.dictionary:
 
-            raise RuntimeError(
-                f'No key {repr(key)} exists in the database for target '
-                f'{'TODO'} ({'TODO'}); '
-                f'close matches: {repr(get_similars(key, self.dictionary.keys()))}.'
+
+    # It's convenient to have some database entries to go by multiple
+    # keys, so we'll need to do some key mapping in order to do that.
+    # It's just a simple dictionary look-up, but we also provide a nice
+    # error message to make life easier.
+
+    def translate(self, given_key):
+
+        proper_key = self.translation.get(given_key, None)
+
+        if proper_key is None:
+            raise ValueError(
+                f'Undefined key {repr(given_key)} for database of MCU {repr(self.mcu)}; '
+                f'close matches: {
+                    repr(difflib.get_close_matches(
+                        str(given_key),
+                        map(str, self.translation.keys()),
+                        n      = 3,
+                        cutoff = 0,
+                    ))
+                }.'
             )
 
-        return self.dictionary[key]
+        return proper_key
+
+
+
+################################################################################
 
 
 
@@ -251,7 +262,7 @@ for mcu in MCUS:
                 f'Leftover schema entry properties: {repr(entry)}.'
             )
 
-    system_database[mcu] = SystemDatabase(system_database[mcu])
+    system_database[mcu] = SystemDatabase(mcu, system_database[mcu])
 
 
 
