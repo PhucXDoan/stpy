@@ -50,26 +50,38 @@ def system_configurize(Meta, parameterization):
 
 
 
-    def define_if_exist(key, *, undefined_ok = False):
+    # Not every register will be initialized by us
+    # because some of them should be done by the user.
+    # What we can do to help is just export the values
+    # that the user will need to properly configure
+    # their target.
 
-        if undefined_ok:
-            if (value := parameterization(key, when_undefined = TBD)) is not TBD:
+    def define_if_determined(given_key, *, undefined_ok = False):
 
-                if MCUS[target.mcu][key].off_by_one:
-                    formatting = '({} - 1)'
-                else:
-                    formatting = '{}'
 
-                Meta.define(f'{key}_init', formatting.format(c_repr(value)))
+
+        # If value is indeterminate, so we won't make a macro.
+
+        value = parameterization(
+            given_key,
+            when_undefined = TBD if undefined_ok else ...
+        )
+
+        if value is TBD:
+            return
+
+
+
+        # Export the parameterization value.
+
+        value = c_repr(value)
+
+        if MCUS[target.mcu][given_key].off_by_one:
+            expansion = f'({value} - 1)'
         else:
-            if (value := parameterization(key)) is not TBD:
+            expansion = f'{value}'
 
-                if MCUS[target.mcu][key].off_by_one:
-                    formatting = '({} - 1)'
-                else:
-                    formatting = '{}'
-
-                Meta.define(f'{key}_init', formatting.format(c_repr(value)))
+        Meta.define(f'STPY_{given_key}', expansion)
 
 
 
@@ -650,10 +662,10 @@ def system_configurize(Meta, parameterization):
         with Meta.section(title_of(' / '.join(f'{peripheral}{unit}' for peripheral, unit in instances))):
 
             for peripheral, unit in instances:
-                define_if_exist(f'{peripheral}{unit}_KERNEL_SOURCE')
+                define_if_determined(f'{peripheral}{unit}_KERNEL_SOURCE')
 
             for peripheral, unit in instances:
-                define_if_exist(f'{peripheral}{unit}_BAUD_DIVIDER')
+                define_if_determined(f'{peripheral}{unit}_BAUD_DIVIDER')
 
 
 
@@ -668,10 +680,10 @@ def system_configurize(Meta, parameterization):
 
         with Meta.section(title_of(f'I2C{unit}')):
 
-            define_if_exist(f'I2C{unit}_KERNEL_SOURCE')
-            define_if_exist(f'I2C{unit}_PRESC'        )
-            define_if_exist(f'I2C{unit}_SCLH'         )
-            define_if_exist(f'I2C{unit}_SCLL'         )
+            define_if_determined(f'I2C{unit}_KERNEL_SOURCE')
+            define_if_determined(f'I2C{unit}_PRESC'        )
+            define_if_determined(f'I2C{unit}_SCLH'         )
+            define_if_determined(f'I2C{unit}_SCLL'         )
 
 
 
@@ -684,12 +696,12 @@ def system_configurize(Meta, parameterization):
 
     with Meta.section(title_of('Timers')):
 
-        define_if_exist(f'GLOBAL_TIMER_PRESCALER', undefined_ok = True)
+        define_if_determined(f'GLOBAL_TIMER_PRESCALER', undefined_ok = True)
 
         for unit in parameterization('TIMERS', when_undefined = ()):
 
-            define_if_exist(f'TIM{unit}_DIVIDER'   )
-            define_if_exist(f'TIM{unit}_MODULATION')
+            define_if_determined(f'TIM{unit}_DIVIDER'   )
+            define_if_determined(f'TIM{unit}_MODULATION')
 
 
 
