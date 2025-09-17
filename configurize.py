@@ -239,32 +239,10 @@ def configurize(Meta, parameterization):
 
         # @/`Defining Interrupt Handlers`.
 
-        for interrupt in dict.fromkeys((
+        for interrupt in sorted(dict.fromkeys((
             *target.interrupts_that_must_be_defined,
-            *parameterization('INTERRUPTS'),
-        )):
-
-
-
-            # Skip reserved interrupts.
-
-            if interrupt is None:
-                continue
-
-
-
-            # Skip unused interrupts.
-
-            if interrupt not in (
-                *target.interrupts_that_must_be_defined,
-                *(name for name, niceness in target.interrupts)
-            ):
-                continue
-
-
-
-            # The macro will ensure only the
-            # expected ISRs can be defined.
+            *(name for name, niceness in target.interrupts)
+        ))):
 
             Meta.define(
                 f'INTERRUPT_{interrupt}',
@@ -735,3 +713,47 @@ def configurize(Meta, parameterization):
     ################################################################################
 
     Meta.line()
+
+
+
+################################################################################
+
+
+
+# @/`Defining Interrupt Handlers`:
+#
+# Most other applications use weak-symbols as a way to have
+# the user be able to declare their interrupt routines, but
+# also have a default routine to fallback on if the user didn't
+# do so.
+#
+# However, this leaves for a potential bug where the user makes
+# a typo and ends up declaring a useless function that the
+# linker then ignores and the intended ISR will still be
+# referring to the default interrupt handler.
+#
+# e.g:
+# >
+# >    extern void
+# >    INTERRUPT_I2C1_EB   <- Typo!
+# >    {
+# >        ...
+# >    }
+# >
+#
+# To address this, macros will be made specifically for only
+# expected ISRs to be defined by the target. If the macro
+# doesn't exist, then this ends up being a compilation error,
+# but otherwise the macro expands to the expected function
+# prototype.
+#
+# e.g:
+# >
+# >    INTERRUPT_I2C1_EB   <- Compile error!
+# >    {
+# >        ...
+# >    }
+# >
+#
+# Not only that, we can also prevent the user from trying to
+# define an ISR that's not expected to be used by the target.
