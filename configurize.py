@@ -10,25 +10,6 @@ from ..pxd.utils             import c_repr, justify
 
 
 
-# TODO Factor out.
-# These interrupt routines
-# will always be around even
-# if the target didn't explcitly
-# state their usage.
-
-INTERRUPTS_THAT_MUST_BE_DEFINED = (
-    'Default',
-    'MemManage',
-    'BusFault',
-    'UsageFault'
-)
-
-
-
-################################################################################
-
-
-
 def configurize(Meta, parameterization):
 
 
@@ -259,7 +240,7 @@ def configurize(Meta, parameterization):
         # @/`Defining Interrupt Handlers`.
 
         for interrupt in dict.fromkeys((
-            *INTERRUPTS_THAT_MUST_BE_DEFINED,
+            *target.interrupts_that_must_be_defined,
             *parameterization('INTERRUPTS'),
         )):
 
@@ -275,7 +256,7 @@ def configurize(Meta, parameterization):
             # Skip unused interrupts.
 
             if interrupt not in (
-                *INTERRUPTS_THAT_MUST_BE_DEFINED,
+                *target.interrupts_that_must_be_defined,
                 *(name for name, niceness in target.interrupts)
             ):
                 continue
