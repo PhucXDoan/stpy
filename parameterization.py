@@ -30,7 +30,7 @@ class Parameterization:
 
     def __str__(self):
         output = '\n'
-        for key, entry in self.database.items():
+        for key, entry in self.database.dictionary.items():
             output += f'{key :<40} | {str(entry.category) :<12} | {entry.value if entry.can_hold_value else ''}\n'
         output += '\n'
         return output
@@ -46,19 +46,16 @@ class Parameterization:
 
     def __setitem__(self, key, value):
 
-        if key in self.lookaside:
-            self[self.lookaside[key]] = value
-            return
 
 
         # Ensure the key exists.
 
-        if key not in self.database:
+        if key not in self.database.dictionary: # TODO Error message for pseudokeys.
 
             raise RuntimeError(
                 f'No key {repr(key)} exists in the database for target '
                 f'{repr(self.target.name)} ({repr(self.target.mcu)}); '
-                f'close matches: {repr(get_similars(key, self.database.keys()))}.'
+                f'close matches: {repr(get_similars(key, self.database.dictionary.keys()))}.'
             )
 
 
@@ -121,13 +118,11 @@ class Parameterization:
 
     def __call__(self, key, *default):
 
-        if key in self.lookaside:
-            return self(self.lookaside[key])
 
 
         # Get the database entry.
 
-        if key in self.database:
+        if key in self.database.dictionary or key in self.database.lookaside: # TODO.
 
             if not self.database[key].can_hold_value:
 
@@ -172,11 +167,6 @@ class Parameterization:
 
         self.target    = target
         self.database  = copy.deepcopy(system_database[self.target.mcu])
-        self.lookaside = {
-            pseudokey : key
-            for key, entry in self.database.items()
-            for pseudokey in entry.pseudokeys
-        }
 
 
 
@@ -194,7 +184,7 @@ class Parameterization:
 
         def sanity_check():
 
-            for key, entry in self.database.items():
+            for key, entry in self.database.dictionary.items():
 
                 if entry.constraint is None:
                     continue
@@ -1163,7 +1153,7 @@ class Parameterization:
         # to the actual underlying value to be used in the
         # generated code (e.g. the binary code).
 
-        for key, entry in self.database.items():
+        for key, entry in self.database.dictionary.items():
 
             if self.database[key].mapped:
                 continue

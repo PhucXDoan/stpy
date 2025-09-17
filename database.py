@@ -19,6 +19,37 @@ def get_similars(given, options): # TODO Copy-pasta.
 
 
 
+class SystemDatabase:
+
+
+
+    def __init__(self, dictionary):
+
+        self.dictionary = dictionary
+        self.lookaside  = {
+            pseudokey : key
+            for key, entry in self.dictionary.items()
+            for pseudokey in entry.pseudokeys
+        }
+
+
+
+    def __getitem__(self, key):
+
+        key = self.lookaside.get(key, key)
+
+        if key not in self.dictionary:
+
+            raise RuntimeError(
+                f'No key {repr(key)} exists in the database for target '
+                f'{'TODO'} ({'TODO'}); '
+                f'close matches: {repr(get_similars(key, self.dictionary.keys()))}.'
+            )
+
+        return self.dictionary[key]
+
+
+
 class TBD:
 
     def __bool__(self):
@@ -207,6 +238,8 @@ for mcu in MCUS:
             raise ValueError(
                 f'Leftover schema entry properties: {repr(entry)}.'
             )
+
+    system_database[mcu] = SystemDatabase(system_database[mcu])
 
 
 

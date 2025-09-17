@@ -51,21 +51,19 @@ def system_configurize(Meta, parameterization):
 
     def define_if_exist(key, *, undefined_ok = False):
 
-        actual_key = parameterization.lookaside.get(key, key)
-
         if undefined_ok:
-            if (value := parameterization(actual_key, TBD)) is not TBD:
+            if (value := parameterization(key, TBD)) is not TBD:
 
-                if parameterization.database[actual_key].off_by_one:
+                if parameterization.database[key].off_by_one:
                     formatting = '({} - 1)'
                 else:
                     formatting = '{}'
 
                 Meta.define(f'{key}_init', formatting.format(c_repr(value)))
         else:
-            if (value := parameterization(actual_key)) is not TBD:
+            if (value := parameterization(key)) is not TBD:
 
-                if parameterization.database[actual_key].off_by_one:
+                if parameterization.database[key].off_by_one:
                     formatting = '({} - 1)'
                 else:
                     formatting = '{}'

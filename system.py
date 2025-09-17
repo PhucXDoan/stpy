@@ -56,7 +56,7 @@ def do(Meta, target):
             ('<', f'CLOCK_TREE_FREQUENCY_OF_{key}'),
             ('>', f'{value.value :,}'.replace(',', "'")),
         )
-        for key, value in parameterization.database.items()
+        for key, value in parameterization.database.dictionary.items()
         if value.category == 'frequency'
         if value.value is not TBD
     ):
