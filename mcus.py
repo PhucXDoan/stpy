@@ -344,15 +344,25 @@ class MCU:
 
     def __getitem__(self, given_key):
 
-        return self.database[self.translate(given_key)]
+        return self.database[
+            self.translate(
+                given_key,
+                must_hold_value = False,
+                undefined_ok    = False,
+            )
+        ]
 
 
 
-    def translate(self, given_key):
+    def translate(self, given_key, *, must_hold_value, undefined_ok):
 
         proper_key = self.translation.get(given_key, None)
 
         if proper_key is None:
+
+            if undefined_ok:
+                return None
+
             raise ValueError(
                 f'Undefined key {repr(given_key)} for database of MCU {repr(self.name)}; '
                 f'close matches: {
@@ -363,6 +373,12 @@ class MCU:
                         cutoff = 0,
                     ))
                 }.'
+            )
+
+        if must_hold_value and not hasattr(self.database[proper_key], 'value'):
+            raise ValueError(
+                f'Key {repr(given_key)} for database of MCU {repr(self.name)} '
+                f'is not associated with or can hold a value.'
             )
 
         return proper_key

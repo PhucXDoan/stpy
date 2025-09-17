@@ -3,28 +3,11 @@ from ..stpy.mcus import MCUS, TBD, Mapping
 
 
 
-def get_similars(given, options): # TODO Copy-pasta.
-
-    import difflib
-
-    return difflib.get_close_matches(
-        str(given),
-        [str(option) for option in options],
-        n      = 3,
-        cutoff = 0
-    )
-
-
-
 class Parameterization:
 
 
 
     ################################################################################
-    #
-    # For easy print-debugging.
-    # TODO Improve.
-    #
 
 
 
@@ -39,146 +22,90 @@ class Parameterization:
 
 
     ################################################################################
-    #
-    # Shorthand to allow for updating values in the target's database.
-    #
 
 
 
-    def __setitem__(self, key, value):
-
-
-        key = MCUS[self.target.mcu].translation.get(key, key)
-
-        self.determined[key] = value
-
-        return
+    def __setitem__(self, given_key, value):
 
 
 
+        # Translate the given key.
 
-        # Ensure the key exists.
-
-        if key not in self.database.dictionary: # TODO Error message for pseudokeys.
-
-            raise RuntimeError(
-                f'No key {repr(key)} exists in the database for target '
-                f'{repr(self.target.name)} ({repr(self.target.mcu)}); '
-                f'close matches: {repr(get_similars(key, self.database.dictionary.keys()))}.'
-            )
+        proper_key = MCUS[self.target.mcu].translate(
+            given_key,
+            must_hold_value = True,
+            undefined_ok    = False,
+        )
 
 
 
-        # Ensure the key is meant to be parameterized.
+        # Ensure the new value fits the entry's constraint.
 
-        if not self.database[key].can_hold_value:
+        constraint = MCUS[self.target.mcu].database[proper_key].constraint
+
+        if constraint is not None and not constraint.check(value):
 
             raise RuntimeError(
-                f'Attempting to write to unparameterizable '
-                f'key {repr(key)} for target '
-                f'{repr(self.target.name)} ({repr(self.target.mcu)}).'
+                f'For target {repr(self.target.name)} ({repr(self.target.mcu)}), '
+                f'the key {repr(given_key)} was written with value {repr(value)}, '
+                f'but this does not satisfy the constraint: {constraint.show()}.'
             )
 
 
 
         # Ensure the key's value can be changed.
 
-        if self.database[key].pinned:
+        if proper_key in self.pinned:
 
             raise RuntimeError(
                 f'Attempting to write to pinned '
-                f'key {repr(key)} for target '
+                f'key {repr(given_key)} for target '
                 f'{repr(self.target.name)} ({repr(self.target.mcu)}).'
-            )
-
-
-
-        # Ensure the new value fits the entry's constraint.
-
-        if (
-            self.database[key].constraint is not None and
-            not self.database[key].constraint.check(value)
-        ):
-            raise RuntimeError(
-                f'For target {repr(self.target.name)} ({repr(self.target.mcu)}), '
-                f'the key {repr(key)} was written with value {repr(value)}, '
-                f'but this does not satisfy the constraint: '
-                f'{self.database[key].constraint.show()}.'
             )
 
 
 
         # Alright, update the value!
 
-        self.database[key].value = value
+        self.determined[proper_key] = value
 
 
 
     ################################################################################
-    #
-    # Shorthand to index for the value of a datbase entry.
-    # We are not using `__getitem__` here because there can
-    # be a default, and this also has the additional benefit
-    # of being easier to search for whenever we need to find
-    # where accesses to the database is done.
-    #
 
 
 
-    def __call__(self, key, *default):
-
-
-        key = MCUS[self.target.mcu].translation.get(key, key)
-
-        if key not in self.determined:
-            if key not in MCUS[self.target.mcu].database:
-                return default[0]
-            self.determined[key] = MCUS[self.target.mcu][key].value
-
-        return self.determined[key]
+    def __call__(self, given_key, *, when_undefined = ...):
 
 
 
-        # Get the database entry.
+        # Translate the given key.
 
-        if key in self.database.dictionary or key in self.database.translation: # TODO.
-
-            if not self.database[key].can_hold_value:
-
-                raise RuntimeError(
-                    f'Attempting to read key {repr(key)} which '
-                    f'is not associated with a value for target '
-                    f'{repr(self.target.name)} ({repr(self.target.mcu)}).'
-                )
-
-            return self.database[key].value
+        proper_key = MCUS[self.target.mcu].translate(
+            given_key,
+            must_hold_value = True,
+            undefined_ok    = when_undefined is not ...,
+        )
 
 
 
-        # Fallback to a default value.
+        # Sometimes we query for a key that may not exist in
+        # the MCU's database, but it might be defined in a
+        # different MCU's database, so to keep the code logic
+        # simple, we can allow for a fallback value.
 
-        elif default:
-
-            default, = default
-            return default
+        if proper_key is None:
+            return when_undefined
 
 
 
-        # Missing database entry!
+        # Got the value!
 
-        else:
-            raise RuntimeError(
-                f'No key {repr(key)} exists in the database for target '
-                f'{repr(self.target.name)} ({repr(self.target.mcu)}); '
-                f'close matches: {repr(get_similars(key, self.database.keys()))}.'
-            )
+        return self.determined[proper_key]
 
 
 
     ################################################################################
-    #
-    # Algorithm to brute-force the parameterization of the target.
-    #
 
 
 
@@ -186,42 +113,36 @@ class Parameterization:
 
         self.target     = target
         self.determined = {}
+        self.pinned     = set()
+
+
+
+        # We copy over keys in the database that can be
+        # associated with a value; for any that are already
+        # predefined, we can pin it so we avoid accidentally
+        # overwriting it.
+
+        for key, entry in MCUS[self.target.mcu].database.items():
+
+            if not hasattr(entry, 'value'):
+                continue
+
+            self.determined[key] = entry.value
+
+            if entry.value is not TBD:
+                self.pinned |= { key }
 
 
 
         # The target specifies part of the parameterization
         # that we then figure out the rest automatically.
+        # Since these are the things that the user want in
+        # the final parameterization, the values will be pinned.
 
         for key, value in self.target.clock_tree.items():
 
-            self[key]                 = value
-            # TODO: self.database[key].pinned = True
-
-
-
-        # Routine to ensure the parameterization is not in a conflicting state.
-
-        def sanity_check():
-
-            pass
-
-# TODO:
-#            for key, entry in self.database.dictionary.items():
-#
-#                if entry.constraint is None:
-#                    continue
-#
-#                if entry.value is TBD:
-#                    continue
-#
-#                if not entry.constraint.check(entry.value):
-#                    raise RuntimeError(
-#                        f'For target {repr(self.target.name)} ({repr(self.target.mcu)}), '
-#                        f'key {repr(key)} has value {repr(entry.value)} '
-#                        f'which does not satisfy the constraint: {entry.constraint.show()}.'
-#                    )
-
-        sanity_check()
+            self[key]    = value
+            self.pinned |= { key }
 
 
 
@@ -713,7 +634,7 @@ class Parameterization:
 
 
 
-        for instances in self('UXARTS', ()):
+        for instances in self('UXARTS', when_undefined = ()):
 
             @bruteforce
             def parameterize_uxarts():
@@ -759,7 +680,7 @@ class Parameterization:
 
 
 
-        for unit in self('I2CS', ()):
+        for unit in self('I2CS', when_undefined = ()):
 
 
 
@@ -904,7 +825,7 @@ class Parameterization:
 
             used_units = [
                 unit
-                for unit in self('TIMERS', ())
+                for unit in self('TIMERS', when_undefined = ())
                 if self(f'TIM{unit}_RATE') is not TBD
             ]
 
@@ -1164,27 +1085,22 @@ class Parameterization:
 
 
         ################################################################################
-
-
-
-        sanity_check()
-
-
-
+        #
         # Mapping constraints are a table of sematic names
         # to the actual underlying value to be used in the
         # generated code (e.g. the binary code).
+        #
 
-        for key, entry in self.determined.items():
 
-# TODO
-#            if MCUS[self.target.mcu][key].mapped:
-#                continue
 
-            if self.determined[key] is TBD:
+        for key, value in self.determined.items():
+
+            if value is TBD:
                 continue
 
-            if isinstance(MCUS[self.target.mcu][key].constraint, Mapping):
+            constraint = MCUS[self.target.mcu][key].constraint
 
-                self.determined[key] = MCUS[self.target.mcu][key].constraint.dictionary[self.determined[key]]
-                # TODO: self.determined[key].mapped = True
+            if not isinstance(constraint, Mapping):
+                continue
+
+            self.determined[key] = constraint.dictionary[value]

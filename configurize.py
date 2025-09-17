@@ -53,7 +53,7 @@ def system_configurize(Meta, parameterization):
     def define_if_exist(key, *, undefined_ok = False):
 
         if undefined_ok:
-            if (value := parameterization(key, TBD)) is not TBD:
+            if (value := parameterization(key, when_undefined = TBD)) is not TBD:
 
                 if MCUS[target.mcu][key].off_by_one:
                     formatting = '({} - 1)'
@@ -645,7 +645,7 @@ def system_configurize(Meta, parameterization):
 
 
 
-    for instances in parameterization('UXARTS', ()):
+    for instances in parameterization('UXARTS', when_undefined = ()):
 
         with Meta.section(title_of(' / '.join(f'{peripheral}{unit}' for peripheral, unit in instances))):
 
@@ -664,7 +664,7 @@ def system_configurize(Meta, parameterization):
 
 
 
-    for unit in parameterization('I2CS', ()):
+    for unit in parameterization('I2CS', when_undefined = ()):
 
         with Meta.section(title_of(f'I2C{unit}')):
 
@@ -686,7 +686,7 @@ def system_configurize(Meta, parameterization):
 
         define_if_exist(f'GLOBAL_TIMER_PRESCALER', undefined_ok = True)
 
-        for unit in parameterization('TIMERS', ()):
+        for unit in parameterization('TIMERS', when_undefined = ()):
 
             define_if_exist(f'TIM{unit}_DIVIDER'   )
             define_if_exist(f'TIM{unit}_MODULATION')
