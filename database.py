@@ -190,26 +190,7 @@ class Mapping(Constraint):
 
 
 
-MCUS = sorted(dict.fromkeys(
-    item.stem
-    for item in pathlib.Path(__file__).parent.joinpath('databases').iterdir()
-    if item.is_file()
-    if item.stem.isidentifier()
-    if item.stem.startswith('STM32')
-))
-
-
-
-################################################################################
-
-
-
-system_database = {
-    mcu : {}
-    for mcu in MCUS
-}
-
-for mcu in MCUS:
+def process_mcu(mcu):
 
 
 
@@ -252,9 +233,11 @@ for mcu in MCUS:
 
     # Process each entry of the database schema.
 
+    dictionary = {}
+
     for key, entry in database_globals['SCHEMA'].items():
 
-        system_database[mcu][key] = types.SimpleNamespace(
+        dictionary[key] = types.SimpleNamespace(
             category   = entry.pop('category'  , None),
             location   = entry.pop('location'  , None),
             off_by_one = entry.pop('off_by_one', None),
@@ -275,7 +258,7 @@ for mcu in MCUS:
                 f'has unknown constraint: {repr(constraint)}.'
             )
 
-        system_database[mcu][key].constraint = constraint
+        dictionary[key].constraint = constraint
 
 
 
@@ -286,10 +269,10 @@ for mcu in MCUS:
         # values can also be mapped to the actual
         # value to be used in the generated code.
 
-        system_database[mcu][key].can_hold_value = 'value' in entry
-        system_database[mcu][key].value          = entry.pop('value', None)
-        system_database[mcu][key].pinned         = system_database[mcu][key].value is not TBD
-        system_database[mcu][key].mapped         = False
+        dictionary[key].can_hold_value = 'value' in entry
+        dictionary[key].value          = entry.pop('value', None)
+        dictionary[key].pinned         = dictionary[key].value is not TBD
+        dictionary[key].mapped         = False
 
 
 
@@ -300,7 +283,24 @@ for mcu in MCUS:
                 f'Leftover schema entry properties: {repr(entry)}.'
             )
 
-    system_database[mcu] = SystemDatabase(mcu, system_database[mcu])
+
+
+    return SystemDatabase(mcu, dictionary)
+
+
+
+# We automatically determine the supported MCUs.
+
+MCUS = {
+    mcu : process_mcu(mcu)
+    for mcu in sorted(dict.fromkeys(
+        item.stem
+        for item in pathlib.Path(__file__).parent.joinpath('databases').iterdir()
+        if item.is_file()
+        if item.stem.isidentifier()
+        if item.stem.startswith('STM32')
+    ))
+}
 
 
 
@@ -315,7 +315,7 @@ for mcu in MCUS:
 
 GPIO_ALTERNATE_FUNCTION_CODES = {}
 
-for mcu in system_database:
+for mcu in MCUS:
 
     GPIO_ALTERNATE_FUNCTION_CODES[mcu] = {}
 

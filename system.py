@@ -1,4 +1,4 @@
-from ..stpy.database         import system_database, TBD
+from ..stpy.database         import MCUS, TBD
 from ..stpy.parameterization import Parameterization
 from ..stpy.configurize      import system_configurize
 from ..pxd.utils             import justify
@@ -25,7 +25,7 @@ def do(Meta, target):
         (
             (interrupt, f'{interrupt}_IRQn')
             for interrupt, niceness in target.interrupts
-            if system_database[target.mcu]['INTERRUPTS'].value.index(interrupt) >= 15
+            if MCUS[target.mcu]['INTERRUPTS'].value.index(interrupt) >= 15
         )
     )
 
@@ -56,7 +56,7 @@ def do(Meta, target):
             ('<', f'CLOCK_TREE_FREQUENCY_OF_{key}'),
             ('>', f'{parameterization.determined[key] :,}'.replace(',', "'")),
         )
-        for key, value in system_database[target.mcu].dictionary.items()
+        for key, value in MCUS[target.mcu].dictionary.items()
         if value.category == 'frequency'
         if key in parameterization.determined
         if parameterization.determined[key] is not TBD

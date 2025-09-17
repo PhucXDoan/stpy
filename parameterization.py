@@ -1,5 +1,5 @@
 import copy, types, collections
-from ..stpy.database import system_database, TBD, Mapping, GPIO_ALTERNATE_FUNCTION_CODES
+from ..stpy.database import MCUS, TBD, Mapping, GPIO_ALTERNATE_FUNCTION_CODES
 
 
 
@@ -48,7 +48,7 @@ class Parameterization:
     def __setitem__(self, key, value):
 
 
-        key = system_database[self.target.mcu].translation.get(key, key)
+        key = MCUS[self.target.mcu].translation.get(key, key)
 
         self.determined[key] = value
 
@@ -128,12 +128,12 @@ class Parameterization:
     def __call__(self, key, *default):
 
 
-        key = system_database[self.target.mcu].translation.get(key, key)
+        key = MCUS[self.target.mcu].translation.get(key, key)
 
         if key not in self.determined:
-            if key not in system_database[self.target.mcu].dictionary:
+            if key not in MCUS[self.target.mcu].dictionary:
                 return default[0]
-            self.determined[key] = system_database[self.target.mcu][key].value
+            self.determined[key] = MCUS[self.target.mcu][key].value
 
         return self.determined[key]
 
@@ -246,7 +246,7 @@ class Parameterization:
 
         def each(key):
 
-            for self[key] in system_database[self.target.mcu][key].constraint.iterate():
+            for self[key] in MCUS[self.target.mcu][key].constraint.iterate():
 
                 yield self(key)
 
@@ -260,7 +260,7 @@ class Parameterization:
 
         def checkout(key, value):
 
-            ok = system_database[self.target.mcu][key].constraint.check(value)
+            ok = MCUS[self.target.mcu][key].constraint.check(value)
 
             if ok:
                 self[key] = value
@@ -799,10 +799,10 @@ class Parameterization:
 
                         scl = round(kernel_frequency / (presc + 1) / needed_baud / 2)
 
-                        if not system_database[self.target.mcu][f'I2C{unit}_SCLH'].constraint.check(scl):
+                        if not MCUS[self.target.mcu][f'I2C{unit}_SCLH'].constraint.check(scl):
                             continue
 
-                        if not system_database[self.target.mcu][f'I2C{unit}_SCLL'].constraint.check(scl):
+                        if not MCUS[self.target.mcu][f'I2C{unit}_SCLL'].constraint.check(scl):
                             continue
 
 
@@ -1178,13 +1178,13 @@ class Parameterization:
         for key, entry in self.determined.items():
 
 # TODO
-#            if system_database[self.target.mcu][key].mapped:
+#            if MCUS[self.target.mcu][key].mapped:
 #                continue
 
             if self.determined[key] is TBD:
                 continue
 
-            if isinstance(system_database[self.target.mcu][key].constraint, Mapping):
+            if isinstance(MCUS[self.target.mcu][key].constraint, Mapping):
 
-                self.determined[key] = system_database[self.target.mcu][key].constraint.dictionary[self.determined[key]]
+                self.determined[key] = MCUS[self.target.mcu][key].constraint.dictionary[self.determined[key]]
                 # TODO: self.determined[key].mapped = True

@@ -1,5 +1,5 @@
 import collections, types
-from ..stpy.database import system_database
+from ..stpy.database import MCUS
 from ..pxd.utils     import coalesce, c_repr, justify
 
 
@@ -335,7 +335,7 @@ def get_helpers(Meta):
 
     def CMSIS_TUPLE(mcu, key): # TODO How useful is this?
 
-        peripheral, register, field = system_database[mcu][key].location
+        peripheral, register, field = MCUS[mcu][key].location
 
         return '(struct CMSISTuple) {{ {}, {}, {} }}'.format(
             f'&{peripheral}->{register}',
