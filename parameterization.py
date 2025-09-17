@@ -11,13 +11,30 @@ class Parameterization:
 
 
 
-    def __str__(self):
-        pass # TODO.
-        #output = '\n'
-        #for key, entry in self.database.dictionary.items():
-        #    output += f'{key :<40} | {str(entry.category) :<12} | {entry.value if entry.can_hold_value else ''}\n'
-        #output += '\n'
-        #return output
+    def __str__(self): # TODO Improve.
+
+        output = '\n'
+
+        output += f'{repr(self.target.name)} ({repr(self.target.mcu)}):\n'
+
+        for key, entry in MCUS[self.target.mcu].database.items():
+
+            if not hasattr(entry, 'value'):
+                continue
+
+            if entry.value is not TBD:
+                continue
+
+            value = self.determined[key]
+
+            if value is TBD:
+                continue
+
+            output += f'{key :<40} | {repr(value)}\n'
+
+        output += '\n'
+
+        return output
 
 
 
