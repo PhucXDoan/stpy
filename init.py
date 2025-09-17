@@ -8,7 +8,7 @@ from ..stpy.configurize      import configurize
 
 
 
-def do(Meta, target):
+def init(Meta, target):
 
 
 
