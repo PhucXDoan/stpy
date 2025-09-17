@@ -166,6 +166,7 @@ for mcu in MCUS:
             category   = entry.pop('category'  , None),
             location   = entry.pop('location'  , None),
             off_by_one = entry.pop('off_by_one', None),
+            pseudokeys = entry.pop('pseudokeys', ()  ),
         )
 
 
@@ -197,14 +198,6 @@ for mcu in MCUS:
         system_database[mcu][key].value          = entry.pop('value', None)
         system_database[mcu][key].pinned         = system_database[mcu][key].value is not TBD
         system_database[mcu][key].mapped         = False
-
-
-
-        # It's useful to have the same entry go by multiple keys.
-
-        for pseudokey in entry.pop('pseudokeys', ()):
-
-            system_database[mcu][pseudokey] = system_database[mcu][key]
 
 
 

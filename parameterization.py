@@ -46,6 +46,9 @@ class Parameterization:
 
     def __setitem__(self, key, value):
 
+        if key in self.lookaside:
+            self[self.lookaside[key]] = value
+            return
 
 
         # Ensure the key exists.
@@ -118,6 +121,8 @@ class Parameterization:
 
     def __call__(self, key, *default):
 
+        if key in self.lookaside:
+            return self(self.lookaside[key])
 
 
         # Get the database entry.
@@ -165,8 +170,13 @@ class Parameterization:
 
     def __init__(self, target):
 
-        self.target   = target
-        self.database = copy.deepcopy(system_database[self.target.mcu])
+        self.target    = target
+        self.database  = copy.deepcopy(system_database[self.target.mcu])
+        self.lookaside = {
+            pseudokey : key
+            for key, entry in self.database.items()
+            for pseudokey in entry.pseudokeys
+        }
 
 
 

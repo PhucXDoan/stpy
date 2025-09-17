@@ -335,6 +335,12 @@ def get_helpers(Meta):
 
     def CMSIS_TUPLE(mcu, key): # TODO How useful is this?
 
+        if key not in system_database[mcu]: # TMP.
+            for actual_key, entry in system_database[mcu].items():
+                if key in entry.pseudokeys:
+                    key = actual_key
+                    break
+
         peripheral, register, field = system_database[mcu][key].location
 
         return '(struct CMSISTuple) {{ {}, {}, {} }}'.format(
