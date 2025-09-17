@@ -25,18 +25,18 @@ class SystemDatabase:
 
     def __init__(self, dictionary):
 
-        self.dictionary = dictionary
-        self.lookaside  = {
-            pseudokey : key
-            for key, entry in self.dictionary.items()
-            for pseudokey in entry.pseudokeys
+        self.dictionary  = dictionary
+        self.translation = {
+            pseudokey : proper_key
+            for proper_key, entry in self.dictionary.items()
+            for pseudokey in (proper_key, *entry.pseudokeys)
         }
 
 
 
     def __getitem__(self, key):
 
-        key = self.lookaside.get(key, key)
+        key = self.translation.get(key, key)
 
         if key not in self.dictionary:
 

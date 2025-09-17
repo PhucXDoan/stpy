@@ -48,7 +48,7 @@ class Parameterization:
     def __setitem__(self, key, value):
 
 
-        key = system_database[self.target.mcu].lookaside.get(key, key)
+        key = system_database[self.target.mcu].translation.get(key, key)
 
         self.determined[key] = value
 
@@ -128,7 +128,7 @@ class Parameterization:
     def __call__(self, key, *default):
 
 
-        key = system_database[self.target.mcu].lookaside.get(key, key)
+        key = system_database[self.target.mcu].translation.get(key, key)
 
         if key not in self.determined:
             if key not in system_database[self.target.mcu].dictionary:
@@ -141,7 +141,7 @@ class Parameterization:
 
         # Get the database entry.
 
-        if key in self.database.dictionary or key in self.database.lookaside: # TODO.
+        if key in self.database.dictionary or key in self.database.translation: # TODO.
 
             if not self.database[key].can_hold_value:
 
