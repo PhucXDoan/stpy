@@ -29,7 +29,7 @@ INTERRUPTS_THAT_MUST_BE_DEFINED = (
 
 
 
-def system_configurize(Meta, parameterization):
+def configurize(Meta, parameterization):
 
 
 
@@ -144,8 +144,8 @@ def system_configurize(Meta, parameterization):
                 continue
 
             if gpio.mode in ('INPUT', 'ALTERNATE'):
-                Meta.define('_PORT_FOR_GPIO_READ'  , ('NAME'), gpio.port  , NAME = gpio.name)
-                Meta.define('_NUMBER_FOR_GPIO_READ', ('NAME'), gpio.number, NAME = gpio.name)
+                Meta.define('_PORT_FOR_GPIO_READ'   , ('NAME'), gpio.port  , NAME = gpio.name)
+                Meta.define('_NUMBER_FOR_GPIO_READ' , ('NAME'), gpio.number, NAME = gpio.name)
 
             if gpio.mode == 'OUTPUT':
                 Meta.define('_PORT_FOR_GPIO_WRITE'  , ('NAME'), gpio.port  , NAME = gpio.name)
@@ -242,7 +242,12 @@ def system_configurize(Meta, parameterization):
                 f'no such interrupt {repr(interrupt)} '
                 f'exists on {repr(target.mcu)}; '
                 f'did you mean any of the following? : '
-                f'{difflib.get_close_matches(interrupt, parameterization('INTERRUPTS').keys(), n = 5, cutoff = 0)}'
+                f'{difflib.get_close_matches(
+                    str(interrupt),
+                    map(str, parameterization('INTERRUPTS').keys()),
+                    n      = 5,
+                    cutoff = 0
+                )}'
             )
 
 
@@ -676,7 +681,9 @@ def system_configurize(Meta, parameterization):
 
     for instances in parameterization('UXARTS', when_undefined = ()):
 
-        with Meta.section(title_of(' / '.join(f'{peripheral}{unit}' for peripheral, unit in instances))):
+        with Meta.section(title_of(' / '.join(
+            f'{peripheral}{unit}' for peripheral, unit in instances
+        ))):
 
             for peripheral, unit in instances:
                 define_if_determined(f'{peripheral}{unit}_KERNEL_SOURCE')

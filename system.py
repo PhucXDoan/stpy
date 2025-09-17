@@ -1,6 +1,6 @@
 from ..stpy.mcus             import MCUS, TBD
 from ..stpy.parameterization import Parameterization
-from ..stpy.configurize      import system_configurize
+from ..stpy.configurize      import configurize
 from ..pxd.utils             import justify
 
 
@@ -45,7 +45,7 @@ def do(Meta, target):
         SYSTEM_init(void)
     '''):
 
-        system_configurize(Meta, parameterization)
+        configurize(Meta, parameterization)
 
 
 
