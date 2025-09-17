@@ -228,16 +228,12 @@ class MCU:
 
 
             # Some database entries can be assigned a
-            # value during parameterization. Entries
-            # can also be pinned to indicate that their
-            # value shouldn't be modified. Some entries'
-            # values can also be mapped to the actual
-            # value to be used in the generated code.
+            # value during parameterization. Most are
+            # TBD during parameterization, but some are
+            # already predefined.
 
-            self.database[proper_key].can_hold_value = 'value' in entry
-            self.database[proper_key].value          = entry.pop('value', None)
-            self.database[proper_key].pinned         = self.database[proper_key].value is not TBD
-            self.database[proper_key].mapped         = False
+            if 'value' in entry:
+                self.database[proper_key].value = entry.pop('value')
 
 
 
