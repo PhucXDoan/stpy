@@ -1,4 +1,4 @@
-import copy, types, collections
+import types, collections
 from ..stpy.mcus import MCUS, TBD, Mapping
 
 
