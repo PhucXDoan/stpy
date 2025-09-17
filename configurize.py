@@ -50,6 +50,48 @@ def system_configurize(Meta, parameterization):
 
 
 
+    # Routine to create a peripheral-register-field-value tuple.
+
+    def tuplize(given_key, value = ..., *, tbd_ok = False):
+
+
+
+        # We'll use the value that has been determined
+        # by the parameterization if the caller didn't
+        # give anything specific.
+
+        if value is ...:
+            value = parameterization(given_key)
+
+
+
+        # The caller can be aware that the key might
+        # not be associated with a parameterized value.
+
+        if value is TBD:
+
+            if tbd_ok:
+                return None
+
+            raise ValueError(
+                f'For target {repr(target.name)} ({repr(target.mcu)}), '
+                f'the value of key {repr(given_key)} '
+                f'has not been parameterized.'
+            )
+
+
+
+        # Give the caller the peripheral-register-field-value tuple.
+
+        value = c_repr(value)
+
+        if MCUS[target.mcu][given_key].off_by_one:
+            value = f'{value} - 1'
+
+        return (*MCUS[target.mcu][given_key].location, value)
+
+
+
     # Not every register will be initialized by us
     # because some of them should be done by the user.
     # What we can do to help is just export the values
@@ -77,34 +119,9 @@ def system_configurize(Meta, parameterization):
         value = c_repr(value)
 
         if MCUS[target.mcu][given_key].off_by_one:
-            expansion = f'({value} - 1)'
-        else:
-            expansion = f'{value}'
+            value = f'({value} - 1)'
 
-        Meta.define(f'STPY_{given_key}', expansion)
-
-
-
-    def tuplize(key, value = ..., *, tbd_ok = False):
-
-        if value is ...:
-            value = parameterization(key)
-
-        if value is TBD:
-            if tbd_ok:
-                return None
-            else:
-                assert False, key
-
-
-        if MCUS[target.mcu][key].off_by_one:
-            formatting = '({} - 1)'
-        else:
-            formatting = '{}'
-
-        value = formatting.format(c_repr(value))
-
-        return (*MCUS[target.mcu][key].location, value)
+        Meta.define(f'STPY_{given_key}', value)
 
 
 
