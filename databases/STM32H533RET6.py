@@ -517,14 +517,14 @@ SCHEMA = {
 
 
     0 : {
-        'category' : 'frequency',
-        'value'    : 0,
+        'frequency' : True,
+        'value'     : 0,
     },
 
     **{
         key : {
-            'category' : 'frequency',
-            'value'    : TBD,
+            'frequency' : True,
+            'value'     : TBD,
         }
         for key in (
             'CPU_CK',
@@ -585,8 +585,8 @@ SCHEMA = {
 
     **{
         f'PLL{unit}{channel}_CK' : {
-            'category' : 'frequency',
-            'value'    : TBD,
+            'frequency' : True,
+            'value'     : TBD,
         }
         for unit, channels in PLLS
         for channel in channels
@@ -594,7 +594,7 @@ SCHEMA = {
 
     **{
         f'PLL{unit}_VCO_FREQ' : {
-            'category'   : 'frequency',
+            'frequency'  : True,
             'constraint' : RealMinMax(128_000_000, 560_000_000),
             'value'      : TBD,
         }
@@ -695,8 +695,8 @@ SCHEMA = {
 
     **{
         f'APB{unit}_CK' : {
-            'category' : 'frequency',
-            'value'    : TBD,
+            'frequency' : True,
+            'value'     : TBD,
         }
         for unit in APBS
     },
@@ -758,8 +758,7 @@ SCHEMA = {
 
     **{
         f'{peripheral}{unit}_BAUD' : {
-            'category' : 'rate',
-            'value'    : TBD,
+            'value' : TBD,
         }
         for instances in UXARTS
         for peripheral, unit in instances
@@ -818,8 +817,7 @@ SCHEMA = {
 
     **{
         f'I2C{unit}_BAUD' : {
-            'category' : 'rate',
-            'value'    : TBD,
+            'value' : TBD,
         }
         for unit in I2CS
     },
@@ -907,8 +905,7 @@ SCHEMA = {
 
     **{
         f'TIM{unit}_RATE' : {
-            'category' : 'rate',
-            'value'    : TBD,
+            'value' : TBD,
         }
         for unit in TIMERS
     },

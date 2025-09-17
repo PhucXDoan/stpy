@@ -57,7 +57,7 @@ def do(Meta, target):
             ('>', f'{parameterization.determined[key] :,}'.replace(',', "'")),
         )
         for key, value in MCUS[target.mcu].database.items()
-        if value.category == 'frequency'
+        if value.frequency
         if key in parameterization.determined
         if parameterization.determined[key] is not TBD
     ):

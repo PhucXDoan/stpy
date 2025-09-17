@@ -179,8 +179,7 @@ class MCU:
                 continue
 
             database_globals['SCHEMA'][key] = {
-                'category' : 'constant',
-                'value'    : database_globals[key],
+                'value' : database_globals[key],
             }
 
 
@@ -193,9 +192,9 @@ class MCU:
         for proper_key, entry in database_globals['SCHEMA'].items():
 
             self.database[proper_key] = types.SimpleNamespace(
-                category   = entry.pop('category'  , None),
-                location   = entry.pop('location'  , None),
-                off_by_one = entry.pop('off_by_one', None),
+                frequency  = entry.pop('frequency' , False),
+                location   = entry.pop('location'  , None ),
+                off_by_one = entry.pop('off_by_one', None ),
             )
 
 
