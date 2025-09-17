@@ -1,6 +1,7 @@
 import difflib
 from ..stpy.parameterization import TBD
 from ..stpy.helpers          import get_helpers
+from ..stpy.database         import system_database
 from ..pxd.utils             import c_repr
 
 
@@ -54,7 +55,7 @@ def system_configurize(Meta, parameterization):
         if undefined_ok:
             if (value := parameterization(key, TBD)) is not TBD:
 
-                if parameterization.database[key].off_by_one:
+                if system_database[target.mcu][key].off_by_one:
                     formatting = '({} - 1)'
                 else:
                     formatting = '{}'
@@ -63,7 +64,7 @@ def system_configurize(Meta, parameterization):
         else:
             if (value := parameterization(key)) is not TBD:
 
-                if parameterization.database[key].off_by_one:
+                if system_database[target.mcu][key].off_by_one:
                     formatting = '({} - 1)'
                 else:
                     formatting = '{}'
@@ -84,14 +85,14 @@ def system_configurize(Meta, parameterization):
                 assert False, key
 
 
-        if parameterization.database[key].off_by_one:
+        if system_database[target.mcu][key].off_by_one:
             formatting = '({} - 1)'
         else:
             formatting = '{}'
 
         value = formatting.format(c_repr(value))
 
-        return (*parameterization.database[key].location, value)
+        return (*system_database[target.mcu][key].location, value)
 
 
 

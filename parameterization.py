@@ -29,11 +29,12 @@ class Parameterization:
 
 
     def __str__(self):
-        output = '\n'
-        for key, entry in self.database.dictionary.items():
-            output += f'{key :<40} | {str(entry.category) :<12} | {entry.value if entry.can_hold_value else ''}\n'
-        output += '\n'
-        return output
+        pass # TODO.
+        #output = '\n'
+        #for key, entry in self.database.dictionary.items():
+        #    output += f'{key :<40} | {str(entry.category) :<12} | {entry.value if entry.can_hold_value else ''}\n'
+        #output += '\n'
+        #return output
 
 
 
@@ -45,6 +46,14 @@ class Parameterization:
 
 
     def __setitem__(self, key, value):
+
+
+        key = system_database[self.target.mcu].lookaside.get(key, key)
+
+        self.determined[key] = value
+
+        return
+
 
 
 
@@ -119,6 +128,16 @@ class Parameterization:
     def __call__(self, key, *default):
 
 
+        key = system_database[self.target.mcu].lookaside.get(key, key)
+
+        if key not in self.determined:
+            if key not in system_database[self.target.mcu].dictionary:
+                return default[0]
+            self.determined[key] = system_database[self.target.mcu][key].value
+
+        return self.determined[key]
+
+
 
         # Get the database entry.
 
@@ -165,8 +184,8 @@ class Parameterization:
 
     def __init__(self, target):
 
-        self.target    = target
-        self.database  = copy.deepcopy(system_database[self.target.mcu])
+        self.target     = target
+        self.determined = {}
 
 
 
@@ -176,7 +195,7 @@ class Parameterization:
         for key, value in self.target.clock_tree.items():
 
             self[key]                 = value
-            self.database[key].pinned = True
+            # TODO: self.database[key].pinned = True
 
 
 
@@ -184,20 +203,23 @@ class Parameterization:
 
         def sanity_check():
 
-            for key, entry in self.database.dictionary.items():
+            pass
 
-                if entry.constraint is None:
-                    continue
-
-                if entry.value is TBD:
-                    continue
-
-                if not entry.constraint.check(entry.value):
-                    raise RuntimeError(
-                        f'For target {repr(self.target.name)} ({repr(self.target.mcu)}), '
-                        f'key {repr(key)} has value {repr(entry.value)} '
-                        f'which does not satisfy the constraint: {entry.constraint.show()}.'
-                    )
+# TODO:
+#            for key, entry in self.database.dictionary.items():
+#
+#                if entry.constraint is None:
+#                    continue
+#
+#                if entry.value is TBD:
+#                    continue
+#
+#                if not entry.constraint.check(entry.value):
+#                    raise RuntimeError(
+#                        f'For target {repr(self.target.name)} ({repr(self.target.mcu)}), '
+#                        f'key {repr(key)} has value {repr(entry.value)} '
+#                        f'which does not satisfy the constraint: {entry.constraint.show()}.'
+#                    )
 
         sanity_check()
 
@@ -224,7 +246,7 @@ class Parameterization:
 
         def each(key):
 
-            for self[key] in self.database[key].constraint.iterate():
+            for self[key] in system_database[self.target.mcu][key].constraint.iterate():
 
                 yield self(key)
 
@@ -238,7 +260,7 @@ class Parameterization:
 
         def checkout(key, value):
 
-            ok = self.database[key].constraint.check(value)
+            ok = system_database[self.target.mcu][key].constraint.check(value)
 
             if ok:
                 self[key] = value
@@ -777,10 +799,10 @@ class Parameterization:
 
                         scl = round(kernel_frequency / (presc + 1) / needed_baud / 2)
 
-                        if not self.database[f'I2C{unit}_SCLH'].constraint.check(scl):
+                        if not system_database[self.target.mcu][f'I2C{unit}_SCLH'].constraint.check(scl):
                             continue
 
-                        if not self.database[f'I2C{unit}_SCLL'].constraint.check(scl):
+                        if not system_database[self.target.mcu][f'I2C{unit}_SCLL'].constraint.check(scl):
                             continue
 
 
@@ -1153,15 +1175,16 @@ class Parameterization:
         # to the actual underlying value to be used in the
         # generated code (e.g. the binary code).
 
-        for key, entry in self.database.dictionary.items():
+        for key, entry in self.determined.items():
 
-            if self.database[key].mapped:
+# TODO
+#            if system_database[self.target.mcu][key].mapped:
+#                continue
+
+            if self.determined[key] is TBD:
                 continue
 
-            if self.database[key].value is TBD:
-                continue
+            if isinstance(system_database[self.target.mcu][key].constraint, Mapping):
 
-            if isinstance(self.database[key].constraint, Mapping):
-
-                entry.value  = self.database[key].constraint[entry.value]
-                entry.mapped = True
+                self.determined[key] = system_database[self.target.mcu][key].constraint[self.determined[key]]
+                # TODO: self.determined[key].mapped = True

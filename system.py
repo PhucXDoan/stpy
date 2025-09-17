@@ -54,11 +54,12 @@ def do(Meta, target):
     for macro, expansion in justify(
         (
             ('<', f'CLOCK_TREE_FREQUENCY_OF_{key}'),
-            ('>', f'{value.value :,}'.replace(',', "'")),
+            ('>', f'{parameterization.determined[key] :,}'.replace(',', "'")),
         )
-        for key, value in parameterization.database.dictionary.items()
+        for key, value in system_database[target.mcu].dictionary.items()
         if value.category == 'frequency'
-        if value.value is not TBD
+        if key in parameterization.determined
+        if parameterization.determined[key] is not TBD
     ):
         Meta.define(macro, f'({expansion})')
 
