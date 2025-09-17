@@ -211,29 +211,29 @@ def configurize(Meta, parameterization):
 
 
 
-    # Check to make sure the interrupts
-    # to be used by the target exists.
-
-    for interrupt, niceness in target.interrupts:
-
-        if interrupt not in parameterization('INTERRUPTS'):
-
-            raise ValueError(
-                f'For target {repr(target.name)}, '
-                f'no such interrupt {repr(interrupt)} '
-                f'exists on {repr(target.mcu)}; '
-                f'did you mean any of the following? : '
-                f'{difflib.get_close_matches(
-                    str(interrupt),
-                    map(str, parameterization('INTERRUPTS').keys()),
-                    n      = 5,
-                    cutoff = 0
-                )}'
-            )
-
-
-
     with Meta.section(title_of('Interrupts')):
+
+
+
+        # Check to make sure the interrupts
+        # to be used by the target exists.
+
+        for interrupt, niceness in target.interrupts:
+
+            if interrupt not in parameterization('INTERRUPTS'):
+
+                raise ValueError(
+                    f'For target {repr(target.name)}, '
+                    f'no such interrupt {repr(interrupt)} '
+                    f'exists on {repr(target.mcu)}; '
+                    f'did you mean any of the following? : '
+                    f'{difflib.get_close_matches(
+                        str(interrupt),
+                        map(str, parameterization('INTERRUPTS').keys()),
+                        n      = 5,
+                        cutoff = 0
+                    )}'
+                )
 
 
 
