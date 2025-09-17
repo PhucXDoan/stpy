@@ -1,5 +1,5 @@
 import copy, types, collections
-from ..stpy.database import MCUS, TBD, Mapping
+from ..stpy.mcus import MCUS, TBD, Mapping
 
 
 
@@ -131,7 +131,7 @@ class Parameterization:
         key = MCUS[self.target.mcu].translation.get(key, key)
 
         if key not in self.determined:
-            if key not in MCUS[self.target.mcu].dictionary:
+            if key not in MCUS[self.target.mcu].database:
                 return default[0]
             self.determined[key] = MCUS[self.target.mcu][key].value
 

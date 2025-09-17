@@ -1,4 +1,4 @@
-from ..stpy.database         import MCUS, TBD
+from ..stpy.mcus             import MCUS, TBD
 from ..stpy.parameterization import Parameterization
 from ..stpy.configurize      import system_configurize
 from ..pxd.utils             import justify
@@ -56,7 +56,7 @@ def do(Meta, target):
             ('<', f'CLOCK_TREE_FREQUENCY_OF_{key}'),
             ('>', f'{parameterization.determined[key] :,}'.replace(',', "'")),
         )
-        for key, value in MCUS[target.mcu].dictionary.items()
+        for key, value in MCUS[target.mcu].database.items()
         if value.category == 'frequency'
         if key in parameterization.determined
         if parameterization.determined[key] is not TBD

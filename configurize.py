@@ -1,7 +1,7 @@
 import difflib
 from ..stpy.parameterization import TBD
 from ..stpy.helpers          import get_helpers
-from ..stpy.database         import MCUS
+from ..stpy.mcus             import MCUS
 from ..pxd.utils             import c_repr
 
 
