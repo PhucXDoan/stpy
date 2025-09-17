@@ -43,11 +43,12 @@ class SystemDatabase:
     # The system database for an MCU is just a
     # dictionary with some nice helper methods.
 
-    def __init__(self, mcu, dictionary):
+    def __init__(self, mcu, dictionary, gpio_afsel_table):
 
-        self.mcu         = mcu
-        self.dictionary  = dictionary
-        self.translation = {
+        self.mcu              = mcu
+        self.dictionary       = dictionary
+        self.gpio_afsel_table = gpio_afsel_table
+        self.translation      = {
             given_key : proper_key
             for proper_key, entry in self.dictionary.items()
             for given_key in (proper_key, *entry.pseudokeys)
@@ -285,39 +286,11 @@ def process_mcu(mcu):
 
 
 
-    return SystemDatabase(mcu, dictionary)
+    # STM32CubeMX can generate a CSV file that'll detail all of the MCU's GPIO's
+    # alternate functions; when working a particular MCU, we should have this file
+    # generated already.
 
-
-
-# We automatically determine the supported MCUs.
-
-MCUS = {
-    mcu : process_mcu(mcu)
-    for mcu in sorted(dict.fromkeys(
-        item.stem
-        for item in pathlib.Path(__file__).parent.joinpath('databases').iterdir()
-        if item.is_file()
-        if item.stem.isidentifier()
-        if item.stem.startswith('STM32')
-    ))
-}
-
-
-
-################################################################################
-#
-# STM32CubeMX can generate a CSV file that'll detail all of the MCU's GPIO's
-# alternate functions; when working a particular MCU, we should have this file
-# generated already.
-#
-
-
-
-GPIO_ALTERNATE_FUNCTION_CODES = {}
-
-for mcu in MCUS:
-
-    GPIO_ALTERNATE_FUNCTION_CODES[mcu] = {}
+    gpio_afsel_table = {}
 
     for entry in csv.DictReader(
         pathlib.Path(__file__)
@@ -379,9 +352,9 @@ for mcu in MCUS:
 
                         key = (port, number, alternate_function)
 
-                        assert key not in GPIO_ALTERNATE_FUNCTION_CODES[mcu]
+                        assert key not in gpio_afsel_table
 
-                        GPIO_ALTERNATE_FUNCTION_CODES[mcu][key] = code
+                        gpio_afsel_table[key] = code
 
 
 
@@ -405,3 +378,22 @@ for mcu in MCUS:
 
             case _:
                 pass # TODO Warn.
+
+
+
+    return SystemDatabase(mcu, dictionary, gpio_afsel_table)
+
+
+
+# We automatically determine the supported MCUs.
+
+MCUS = {
+    mcu : process_mcu(mcu)
+    for mcu in sorted(dict.fromkeys(
+        item.stem
+        for item in pathlib.Path(__file__).parent.joinpath('databases').iterdir()
+        if item.is_file()
+        if item.stem.isidentifier()
+        if item.stem.startswith('STM32')
+    ))
+}

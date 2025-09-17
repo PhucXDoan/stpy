@@ -1,5 +1,5 @@
 import copy, types, collections
-from ..stpy.database import MCUS, TBD, Mapping, GPIO_ALTERNATE_FUNCTION_CODES
+from ..stpy.database import MCUS, TBD, Mapping
 
 
 
@@ -1066,7 +1066,7 @@ class Parameterization:
 
             if gpio.pin is not None and gpio.altfunc is not None:
 
-                gpio.afsel = GPIO_ALTERNATE_FUNCTION_CODES[target.mcu].get(
+                gpio.afsel = MCUS[target.mcu].gpio_afsel_table.get(
                     (gpio.port, gpio.number, gpio.altfunc),
                     None
                 )
