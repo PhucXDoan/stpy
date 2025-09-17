@@ -171,6 +171,7 @@ class Parameterization:
             success = function()
 
             if not success:
+
                 raise RuntimeError(
                     f'Failed to brute-force {repr(function.__name__)} '
                     f'for target {repr(self.target.name)}.'
@@ -868,7 +869,7 @@ class Parameterization:
 
 
 
-        def process_single_gpio(target, entry):
+        def process_single_gpio(entry):
 
             name, pin, mode, properties = entry
 
@@ -977,15 +978,15 @@ class Parameterization:
 
 
 
-                # A GPIO that's marked as "RESERVED" is often useful
-                # for marking a particular pin as something that
+                # A GPIO that's marked as `None` is often useful
+                # for denoting a particular pin as something that
                 # shouldn't be used because it has an important
                 # functionality (e.g. JTAG debug).
                 # We ignore any properties the reserved pin may have.
 
-                case 'RESERVED':
+                case None:
 
-                    properties = {}
+                    properties = {} # Ignore any properties there may have been.
 
 
 
@@ -993,9 +994,9 @@ class Parameterization:
 
                 case unknown:
 
-                    raise ValueError(
-                        f'GPIO {repr(name)} has unknown '
-                        f'mode: {repr(unknown)}.'
+                    raise RuntimeError(
+                        f'For target {repr(self.target.name)}, '
+                        f'GPIO {repr(name)} has unknown mode {repr(unknown)}.'
                     )
 
 
@@ -1004,16 +1005,17 @@ class Parameterization:
 
             if gpio.pin is not None and gpio.altfunc is not None:
 
-                gpio.afsel = MCUS[target.mcu].gpio_afsel_table.get(
+                gpio.afsel = MCUS[self.target.mcu].gpio_afsel_table.get(
                     (gpio.port, gpio.number, gpio.altfunc),
                     None
                 )
 
                 if gpio.afsel is None:
+
                     raise ValueError(
-                        f'GPIO pin {repr(gpio.pin)} '
-                        f'for {target.mcu} ({target.name}) '
-                        f'has no alternate function {repr(gpio.altfunc)}.'
+                        f'For target {repr(self.target.name)} ({repr(self.target.mcu)}), '
+                        f'GPIO pin {repr(gpio.pin)} has no support for '
+                        f'alternate function {repr(gpio.altfunc)}.'
                     )
 
 
@@ -1021,53 +1023,24 @@ class Parameterization:
             # Done processing this GPIO entry!
 
             if properties:
+
                 raise ValueError(
+                    f'For target {repr(self.target.name)}, '
                     f'GPIO {repr(name)} has leftover properties: {properties}.'
                 )
-
-
-
-            if gpio.pin is not None:
-
-                self[f'GPIO{gpio.port}_ENABLE'] = True
-
-                if gpio.open_drain is not None:
-                    self[f'GPIO{gpio.port}{gpio.number}_OPEN_DRAIN'] = gpio.open_drain
-
-
-                if gpio.initlvl is not None:
-                    self[f'GPIO{gpio.port}{gpio.number}_OUTPUT'] = gpio.initlvl
-
-
-                if gpio.speed is not None:
-                    self[f'GPIO{gpio.port}{gpio.number}_SPEED'] = gpio.speed
-
-
-                if gpio.pull is not None:
-                    self[f'GPIO{gpio.port}{gpio.number}_PULL'] = gpio.pull
-
-
-                if gpio.afsel is not None:
-
-                    self[f'GPIO{gpio.port}{gpio.number}_ALTERNATE_FUNCTION'] = gpio.afsel
-
-
-                if gpio.mode not in (None, 'RESERVED'):
-
-                    self[f'GPIO{gpio.port}{gpio.number}_MODE'] = gpio.mode
-
-
 
             return gpio
 
 
 
         self.gpios = tuple(
-            process_single_gpio(target, gpio)
-            for gpio in target.gpios
+            process_single_gpio(gpio)
+            for gpio in self.target.gpios
         )
 
 
+
+        # Ensure no duplicate names.
 
         if duplicate_names := [
             name
@@ -1085,6 +1058,8 @@ class Parameterization:
 
 
 
+        # Ensure no duplicate pin assignments.
+
         if duplicate_pins := [
             pin
             for pin, count in collections.Counter(
@@ -1098,6 +1073,40 @@ class Parameterization:
             raise ValueError(
                 f'GPIO pin {repr(duplicate_pin)} used more than once.'
             )
+
+
+
+        # Enable the ports.
+
+        for port in sorted(dict.fromkeys(gpio.port for gpio in self.gpios)):
+
+            self[f'GPIO{port}_ENABLE']  = True
+            self.pinned                |= { f'GPIO{port}_ENABLE' }
+
+
+
+        # Parameterize GPIOs.
+
+        for gpio in self.gpios:
+
+            if gpio.pin is None:
+                continue
+
+            for suffix, value in (
+                ('OPEN_DRAIN'        , gpio.open_drain),
+                ('OUTPUT'            , gpio.initlvl   ),
+                ('SPEED'             , gpio.speed     ),
+                ('PULL'              , gpio.pull      ),
+                ('ALTERNATE_FUNCTION', gpio.afsel     ),
+                ('MODE'              , gpio.mode      ),
+            ):
+
+                if value is None:
+                    continue
+
+                key          = f'GPIO{gpio.port}{gpio.number}_{suffix}'
+                self[key]    = value
+                self.pinned |= { key }
 
 
 
