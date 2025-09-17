@@ -3,6 +3,36 @@ import pathlib, types, csv
 
 
 ################################################################################
+#
+# The `TBD` stands for "To-Be-Determined" which acts like a `None`
+# in that it's a falsy singleton. It's mainly used by the database
+# indicate that a particular entry hasn't been assigned a value yet;
+# we could use `None` to indicate this, but sometimes `None` could
+# actually mean something meaningful for a particular database entry,
+# so we'll be clear and explicit by stating "To-Be-Determined" here.
+#
+
+
+
+class TBD:
+
+    def __bool__(self):
+        return False
+
+    def __repr__(self):
+        return '<TBD>'
+
+    def __str__(self):
+        return '<TBD>'
+
+    def __deepcopy__(self, memo):
+        return self
+
+TBD = TBD()
+
+
+
+################################################################################
 
 
 
@@ -47,24 +77,6 @@ class SystemDatabase:
             )
 
         return self.dictionary[key]
-
-
-
-class TBD:
-
-    def __bool__(self):
-        return False
-
-    def __repr__(self):
-        return '<TBD>'
-
-    def __str__(self):
-        return '<TBD>'
-
-    def __deepcopy__(self, memo):
-        return self
-
-TBD = TBD()
 
 
 
