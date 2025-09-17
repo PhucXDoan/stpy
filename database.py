@@ -88,65 +88,101 @@ class SystemDatabase:
 
 
 ################################################################################
+#
+# Database entries can have a constraint on them to specify
+# a certain set of values they can take on, if any.
+#
 
 
 
-class RealMinMax:
+class Constraint:
+    pass
+
+
+
+class RealMinMax(Constraint):
 
     def __init__(self, minimum, maximum):
+
         self.minimum = minimum
         self.maximum = maximum
 
+
+
     def check(self, value):
-        if isinstance(value, str): value = float(value)
+
+        if isinstance(value, str):
+            value = float(value)
+
         return self.minimum <= value <= self.maximum
 
+
+
     def show(self):
+
         return f'{type(self).__name__}({self.minimum}, {self.maximum})'
 
 
 
-class IntMinMax:
+class IntMinMax(Constraint):
 
     def __init__(self, minimum, maximum):
+
         self.minimum = minimum
         self.maximum = maximum
 
+
+
     def check(self, value):
-        if isinstance(value, str): value = int(value, 0)
+
+        if isinstance(value, str):
+            value = int(value, 0)
+
         return value.is_integer() and self.minimum <= value <= self.maximum
 
-    def iterate(self):
-        return iter(range(self.minimum, self.maximum + 1))
+
 
     def show(self):
+
         return f'{type(self).__name__}({self.minimum}, {self.maximum})'
 
 
 
-class Choices(tuple):
+    def iterate(self):
+
+        return iter(range(self.minimum, self.maximum + 1))
+
+
+
+class Choices(Constraint):
+
+    def __init__(self, *values):
+        self.values = tuple(values)
 
     def check(self, value):
-        return value in self
+        return value in self.values
 
     def iterate(self):
-        return iter(self)
+        return iter(self.values)
 
     def show(self):
-        return f'({', '.join(map(repr, self))})'
+        return f'({', '.join(map(repr, self.values))})'
 
 
 
-class Mapping(dict):
+class Mapping(Constraint):
+
+    def __init__(self, dictionary):
+        self.dictionary = dictionary
 
     def check(self, value):
-        return value in self
+        return value in self.dictionary
 
     def iterate(self):
-        return iter(self)
+        return iter(self.dictionary)
 
     def show(self):
-        return f'({', '.join(map(repr, self.keys()))})'
+        return f'({', '.join(map(repr, self.dictionary.keys()))})'
 
 
 
@@ -183,6 +219,8 @@ for mcu in MCUS:
         'TBD'        : TBD,
         'RealMinMax' : RealMinMax,
         'IntMinMax'  : IntMinMax,
+        'Choices'    : Choices,
+        'Mapping'    : Mapping,
     }
 
     initial_globals = list(database_globals.keys())
@@ -229,13 +267,13 @@ for mcu in MCUS:
         # on the set of values that the entry can take,
         # if any.
 
-        match constraint := entry.pop('constraint', None):
-            case None         : pass
-            case RealMinMax() : pass
-            case IntMinMax()  : pass
-            case tuple()      : constraint = Choices(constraint)
-            case dict()       : constraint = Mapping(constraint)
-            case unknown      : raise ValueError(unknown)
+        constraint = entry.pop('constraint', None)
+
+        if constraint is not None and not isinstance(constraint, Constraint):
+            raise ValueError(
+                f'Database entry {repr(key)} for MCU {repr(mcu)} '
+                f'has unknown constraint: {repr(constraint)}.'
+            )
 
         system_database[mcu][key].constraint = constraint
 

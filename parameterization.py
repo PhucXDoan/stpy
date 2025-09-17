@@ -1186,5 +1186,5 @@ class Parameterization:
 
             if isinstance(system_database[self.target.mcu][key].constraint, Mapping):
 
-                self.determined[key] = system_database[self.target.mcu][key].constraint[self.determined[key]]
+                self.determined[key] = system_database[self.target.mcu][key].constraint.dictionary[self.determined[key]]
                 # TODO: self.determined[key].mapped = True

@@ -281,7 +281,7 @@ UXART_KERNEL_SOURCE_TABLE = (
             ('USART3SEL' , (('USART', 3 ),)),
             ('USART2SEL' , (('USART', 2 ),)),
         ),
-        {
+        Mapping({
             'APB1_CK'  : '0b000',
             'PLL2Q_CK' : '0b001',
             'PLL3Q_CK' : '0b010',
@@ -289,13 +289,13 @@ UXART_KERNEL_SOURCE_TABLE = (
             'CSI_CK'   : '0b100',
             'LSE_CK'   : '0b101',
             0          : '0b110',
-        },
+        }),
     ),
     (
         (
             ('USART1SEL', (('USART', 1),)),
         ),
-        {
+        Mapping({
             'APB2_CK'  : '0b000',
             'PLL2Q_CK' : '0b001',
             'PLL3Q_CK' : '0b010',
@@ -303,7 +303,7 @@ UXART_KERNEL_SOURCE_TABLE = (
             'CSI_CK'   : '0b100',
             'LSE_CK'   : '0b101',
             0          : '0b110',
-        },
+        }),
     ),
 )
 
@@ -348,19 +348,19 @@ SCHEMA = {
 
     'SYSTICK_USE_CPU_CK' : {
         'location'   : ('SysTick', 'CTRL', 'CLKSOURCE'),
-        'constraint' : (False, True),
+        'constraint' : Choices(False, True),
         'value'      : TBD,
     },
 
     'SYSTICK_INTERRUPT_ENABLE' : {
         'location'   : ('SysTick', 'CTRL', 'TICKINT'),
-        'constraint' : (False, True),
+        'constraint' : Choices(False, True),
         'value'      : TBD,
     },
 
     'SYSTICK_ENABLE' : {
         'location'   : ('SysTick', 'CTRL', 'ENABLE'),
-        'constraint' : (False, True),
+        'constraint' : Choices(False, True),
         'value'      : TBD,
     },
 
@@ -376,7 +376,7 @@ SCHEMA = {
     **{
         f'GPIO{port}_ENABLE' : {
             'location'   : ('RCC', 'AHB2ENR', f'GPIO{port}EN'),
-            'constraint' : (False, True),
+            'constraint' : Choices(False, True),
             'value'      : TBD,
         }
         for port, numbers in GPIOS
@@ -385,7 +385,7 @@ SCHEMA = {
     **{
         f'GPIO{port}{number}_OPEN_DRAIN' : {
             'location'   : (f'GPIO{port}', 'OTYPER', f'OT{number}'),
-            'constraint' : (False, True),
+            'constraint' : Choices(False, True),
             'value'      : TBD,
         }
         for port, numbers in GPIOS
@@ -395,7 +395,7 @@ SCHEMA = {
     **{
         f'GPIO{port}{number}_OUTPUT' : {
             'location'   : (f'GPIO{port}', 'ODR', f'OD{number}'),
-            'constraint' : (False, True),
+            'constraint' : Choices(False, True),
             'value'      : TBD,
         }
         for port, numbers in GPIOS
@@ -405,12 +405,12 @@ SCHEMA = {
     **{
         f'GPIO{port}{number}_SPEED' : {
             'location'   : (f'GPIO{port}', 'OSPEEDR', f'OSPEED{number}'),
-            'constraint' : {
+            'constraint' : Mapping({
                 'LOW'       : '0b00',
                 'MEDIUM'    : '0b01',
                 'HIGH'      : '0b10',
                 'VERY_HIGH' : '0b11',
-            },
+            }),
             'value' : TBD,
         }
         for port, numbers in GPIOS
@@ -420,11 +420,11 @@ SCHEMA = {
     **{
         f'GPIO{port}{number}_PULL' : {
             'location'   : (f'GPIO{port}', 'PUPDR', f'PUPD{number}'),
-            'constraint' : {
+            'constraint' : Mapping({
                 None   : '0b00',
                 'UP'   : '0b01',
                 'DOWN' : '0b10',
-            },
+            }),
             'value' : TBD,
         }
         for port, numbers in GPIOS
@@ -443,12 +443,12 @@ SCHEMA = {
     **{
         f'GPIO{port}{number}_MODE' : {
             'location'   : (f'GPIO{port}', 'MODER', f'MODE{number}'),
-            'constraint' : {
+            'constraint' : Mapping({
                 'INPUT'     : '0b00',
                 'OUTPUT'    : '0b01',
                 'ALTERNATE' : '0b10',
                 'ANALOG'    : '0b11',
-            },
+            }),
             'value' : TBD,
         }
         for port, numbers in GPIOS
@@ -466,7 +466,7 @@ SCHEMA = {
 
     'FLASH_PROGRAMMING_DELAY' : {
         'location'   : ('FLASH', 'ACR', 'WRHIGHFREQ'),
-        'constraint' : ('0b00', '0b01', '0b10'),
+        'constraint' : Choices('0b00', '0b01', '0b10'),
         'value'      : TBD,
     },
 
@@ -478,12 +478,12 @@ SCHEMA = {
 
     'INTERNAL_VOLTAGE_SCALING' : {
         'location'   : ('PWR', 'VOSCR', 'VOS'),
-        'constraint' : {
+        'constraint' : Mapping({
             'VOS3': '0b00',
             'VOS2': '0b01',
             'VOS1': '0b10',
             'VOS0': '0b11'
-        },
+        }),
         'value' : TBD,
     },
 
@@ -497,13 +497,13 @@ SCHEMA = {
 
     'LDO_ENABLE' : {
         'location'   : ('PWR', 'SCCR', 'LDOEN'),
-        'constraint' : (False, True),
+        'constraint' : Choices(False, True),
         'value'      : TBD,
     },
 
     'POWER_MANAGEMENT_BYPASS' : {
         'location'   : ('PWR', 'SCCR', 'BYPASS'),
-        'constraint' : (False, True),
+        'constraint' : Choices(False, True),
         'value'      : TBD,
     },
 
@@ -542,7 +542,7 @@ SCHEMA = {
     **{
         f'{source}_ENABLE' : {
             'location'   : ('RCC', 'CR', f'{source}ON'),
-            'constraint' : (False, True),
+            'constraint' : Choices(False, True),
             'value'      : TBD,
         }
         for source in (
@@ -565,12 +565,12 @@ SCHEMA = {
 
     'PERIPHERAL_CLOCK_OPTION' : {
         'location'   : ('RCC', 'CCIPR5', 'CKPERSEL'),
-        'constraint' : {
+        'constraint' : Mapping({
             'HSI_CK' : '0b00',
             'CSI_CK' : '0b01',
             'HSE_CK' : '0b10',
             0        : '0b11'
-        },
+        }),
         'value' : TBD,
     },
 
@@ -604,7 +604,7 @@ SCHEMA = {
     **{
         f'PLL{unit}_ENABLE' : {
             'location'   : ('RCC', 'CR', f'PLL{unit}ON'),
-            'constraint' : (False, True),
+            'constraint' : Choices(False, True),
             'value'      : TBD,
         }
         for unit, channels in PLLS
@@ -613,7 +613,7 @@ SCHEMA = {
     **{
         f'PLL{unit}{channel}_ENABLE' : {
             'location'   : ('RCC', f'PLL{unit}CFGR', f'PLL{unit}{channel}EN'),
-            'constraint' : (False, True),
+            'constraint' : Choices(False, True),
             'value'      : TBD,
         }
         for unit, channels in PLLS
@@ -630,12 +630,12 @@ SCHEMA = {
     **{
         f'PLL{unit}_KERNEL_SOURCE' : {
             'location'   : ('RCC', f'PLL{unit}CFGR', f'PLL{unit}SRC'),
-            'constraint' : {
+            'constraint' : Mapping({
                 0        : '0b00',
                 'HSI_CK' : '0b01',
                 'CSI_CK' : '0b10',
                 'HSE_CK' : '0b11',
-            },
+            }),
             'value' : TBD,
         }
         for unit, channels in PLLS
@@ -644,11 +644,11 @@ SCHEMA = {
     **{
         f'PLL{unit}_INPUT_RANGE' : {
             'location'   : ('RCC', f'PLL{unit}CFGR', f'PLL{unit}RGE'),
-            'constraint' : {
+            'constraint' : Mapping({
                 (2_000_000,  4_000_000) : 1,
                 (4_000_000,  8_000_000) : 2,
                 (8_000_000, 16_000_000) : 3,
-            },
+            }),
             'value' : TBD,
         }
         for unit, channels in PLLS
@@ -708,25 +708,25 @@ SCHEMA = {
 
     'SCGU_KERNEL_SOURCE' : {
         'location'   : ('RCC', 'CFGR1', 'SW'),
-        'constraint' : {
+        'constraint' : Mapping({
             'HSI_CK'   : '0b000',
             'CSI_CK'   : '0b001',
             'HSE_CK'   : '0b010',
             'PLL1P_CK' : '0b011'
-        },
+        }),
         'value' : TBD,
     },
 
     **{
         f'APB{unit}_DIVIDER' : {
             'location'   : ('RCC', 'CFGR2', f'PPRE{unit}'),
-            'constraint' : {
+            'constraint' : Mapping({
                 1  : '0b000',
                 2  : '0b100',
                 4  : '0b101',
                 8  : '0b110',
                 16 : '0b111',
-            },
+            }),
             'value' : TBD,
         }
         for unit in APBS
@@ -734,7 +734,7 @@ SCHEMA = {
 
     'CPU_DIVIDER' : {
         'location'   : ('RCC', 'CFGR2', 'HPRE'),
-        'constraint' : {
+        'constraint' : Mapping({
             1   : '0b0000', # Low three bits are don't-care.
             2   : '0b1000',
             4   : '0b1001',
@@ -744,7 +744,7 @@ SCHEMA = {
             128 : '0b1101',
             256 : '0b1110',
             512 : '0b1111',
-        },
+        }),
         'value' : TBD,
     },
 
@@ -768,7 +768,7 @@ SCHEMA = {
     **{
         f'{peripheral}{unit}_ENABLE' : {
             'location'   : ('RCC', 'APB1LENR', f'{peripheral}{unit}EN'),
-            'constraint' : (False, True),
+            'constraint' : Choices(False, True),
             'value'      : TBD,
         }
         for instances in UXARTS
@@ -831,18 +831,18 @@ SCHEMA = {
             'value'      : TBD,
         }
         for units, constraint in(
-            ((1, 2), {
+            ((1, 2), Mapping({
                 'APB1_CK'  : '0b00',
                 'PLL3R_CK' : '0b01',
                 'HSI_CK'   : '0b10',
                 'CSI_CK'   : '0b11'
-            }),
-            ((3,), {
+            })),
+            ((3,), Mapping({
                 'APB3_CK'  : '0b00',
                 'PLL3R_CK' : '0b01',
                 'HSI_CK'   : '0b10',
                 'CSI_CK'   : '0b11',
-            }),
+            })),
         )
         for unit in units
     },
@@ -857,7 +857,7 @@ SCHEMA = {
     **{
         f'I2C{unit}_ENABLE' : {
             'location'   : ('RCC', 'APB1LENR', f'I2C{unit}EN'),
-            'constraint' : (False, True),
+            'constraint' : Choices(False, True),
             'value'      : TBD,
         }
         for unit in I2CS
@@ -901,7 +901,7 @@ SCHEMA = {
 
     'GLOBAL_TIMER_PRESCALER' : {
         'location'   : ('RCC', 'CFGR1', 'TIMPRE'),
-        'constraint' : (False, True),
+        'constraint' : Choices(False, True),
         'value'      : TBD,
     },
 
