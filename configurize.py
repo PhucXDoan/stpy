@@ -239,28 +239,23 @@ def configurize(Meta, parameterization):
 
 
 
-            # Set the Arm-specific interrupts' priorities.
+            # Set the interrupt in the Arm core or within NVIC.
 
-            if parameterization('INTERRUPTS').index(interrupt) <= 14:
+            interrupt_number = parameterization('INTERRUPTS').index(interrupt) - 15
 
-                assert interrupt in (
-                    'Reset',
-                    'MemoryManagement',
-                    'BusFault',
-                    'UsageFault',
-                    'SVCall',
-                    'DebugMonitor',
-                    'PendSV',
-                    'SysTick',
-                ), interrupt
+            if interrupt_number <= -13:
+
+                raise ValueError(
+                    f'For target {repr(target.name)} ({repr(target.mcu)}), '
+                    f'the priority of interrupt {repr(interrupt)} is fixed; '
+                    f'please specify it as `None`.'
+                )
+
+            elif interrupt_number <= -1:
 
                 Meta.line(f'''
                     SCB->SHPR[{interrupt}_IRQn + 12] = {niceness} << __NVIC_PRIO_BITS;
                 ''')
-
-
-
-            # Set the MCU-specific interrupts' priorities within NVIC.
 
             else:
 
