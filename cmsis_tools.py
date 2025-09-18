@@ -272,6 +272,8 @@ def get_cmsis_tools(Meta):
         if len(spinlocks) == 1:
             spinlocks, = spinlocks
 
+        spinlocks = tuple(spinlocks)
+
 
 
         # Spinlocking on multiple fields.
