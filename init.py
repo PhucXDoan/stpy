@@ -6,29 +6,60 @@ from ..pxd.utils             import justify
 
 
 
-def init(Meta, target):
+def init(
+    *,
+    Meta,
+    target,
+    mcu,
+    schema,
+    gpios,
+    interrupts,
+):
 
 
 
     ################################################################################
+    #
+    # Parameterization.
+    #
+
+
+
+    # Figure out how to configure the target's
+    # MCU based on the given parameterization.
+
+    parameterization = Parameterization(
+        target,
+        mcu,
+        schema,
+        gpios,
+        interrupts,
+    )
+
+
+
+    ################################################################################
+    #
+    # Interrupts.
+    #
 
 
 
     # Check to make sure the interrupts
     # to be used by the target exists.
 
-    for interrupt, niceness, properties in target.interrupts:
+    for interrupt, niceness, properties in parameterization.interrupts:
 
-        if interrupt not in MCUS[target.mcu]['INTERRUPTS'].value:
+        if interrupt not in MCUS[parameterization.mcu]['INTERRUPTS'].value:
 
             raise ValueError(
-                f'For target {repr(target.name)}, '
+                f'For target {repr(parameterization.target)}, '
                 f'no such interrupt {repr(interrupt)} '
-                f'exists on {repr(target.mcu)}; '
+                f'exists on {repr(parameterization.mcu)}; '
                 f'did you mean any of the following? : '
                 f'{difflib.get_close_matches(
                     str(interrupt),
-                    map(str, MCUS[target.mcu]['INTERRUPTS'].value),
+                    map(str, MCUS[parameterization.mcu]['INTERRUPTS'].value),
                     n      = 5,
                     cutoff = 0
                 )}'
@@ -47,8 +78,8 @@ def init(Meta, target):
         'u32',
         (
             (interrupt, f'{interrupt}_IRQn')
-            for interrupt, niceness, properties in target.interrupts
-            if MCUS[target.mcu]['INTERRUPTS'].value.index(interrupt) >= 15
+            for interrupt, niceness, properties in parameterization.interrupts
+            if MCUS[parameterization.mcu]['INTERRUPTS'].value.index(interrupt) >= 15
         )
     )
 
@@ -59,7 +90,10 @@ def init(Meta, target):
 
     for name in sorted((
         'INTERRUPT_Default',
-        *(properties.get('symbol_name', f'INTERRUPT_{name}') for name, niceness, properties in target.interrupts)
+        *(
+            properties.get('symbol_name', f'INTERRUPT_{name}')
+            for name, niceness, properties in parameterization.interrupts
+        )
     )):
 
         Meta.line(f'''
@@ -88,7 +122,7 @@ def init(Meta, target):
         # Fill in the addresses of the interrupt routines
         # for the remainder of the interrupt vector table.
 
-        for interrupt_i, interrupt in enumerate(MCUS[target.mcu]['INTERRUPTS'].value):
+        for interrupt_i, interrupt in enumerate(MCUS[parameterization.mcu]['INTERRUPTS'].value):
 
             word = None
 
@@ -99,7 +133,7 @@ def init(Meta, target):
 
             elif (symbol_name := {
                 name : properties['symbol_name']
-                for name, niceness, properties in target.interrupts
+                for name, niceness, properties in parameterization.interrupts
                 if 'symbol_name' in properties
             }.get(interrupt, None)) is not None:
 
@@ -108,7 +142,7 @@ def init(Meta, target):
 
             elif interrupt in (
                 'Default',
-                *(name for name, niceness, properties in target.interrupts)
+                *(name for name, niceness, properties in parameterization.interrupts)
             ):
 
                 # This interrupt will be defined by the user.
@@ -145,7 +179,10 @@ def init(Meta, target):
 
     for interrupt in sorted((
         'Default',
-        *(name for name, niceness, properties in target.interrupts)
+        *(
+            name
+            for name, niceness, properties in parameterization.interrupts
+        )
     )):
 
         Meta.define(
@@ -156,18 +193,11 @@ def init(Meta, target):
 
 
     ################################################################################
+    #
+    # Configurization.
+    #
 
 
-
-    # Figure out how to configure the target's
-    # MCU based on the given parameterization.
-
-    parameterization = Parameterization(target)
-
-
-
-    # Create the procedure that'll initialize
-    # most of the target's MCU.
 
     with Meta.enter('''
         extern void

@@ -15,9 +15,9 @@ class Parameterization:
 
         output = '\n'
 
-        output += f'{repr(self.target.name)} ({repr(self.target.mcu)}):\n'
+        output += f'{repr(self.name)} ({repr(self.mcu)}):\n'
 
-        for key, entry in MCUS[self.target.mcu].database.items():
+        for key, entry in MCUS[self.mcu].database.items():
 
             if not hasattr(entry, 'value'):
                 continue
@@ -48,7 +48,7 @@ class Parameterization:
 
         # Translate the given key.
 
-        proper_key = MCUS[self.target.mcu].translate(
+        proper_key = MCUS[self.mcu].translate(
             given_key,
             must_hold_value = True,
             undefined_ok    = False,
@@ -58,12 +58,12 @@ class Parameterization:
 
         # Ensure the new value fits the entry's constraint.
 
-        constraint = MCUS[self.target.mcu].database[proper_key].constraint
+        constraint = MCUS[self.mcu].database[proper_key].constraint
 
         if constraint is not None and not constraint.check(value):
 
             raise RuntimeError(
-                f'For target {repr(self.target.name)} ({repr(self.target.mcu)}), '
+                f'For target {repr(self.name)} ({repr(self.mcu)}), '
                 f'the key {repr(given_key)} was written with value {repr(value)}, '
                 f'but this does not satisfy the constraint: {constraint.show()}.'
             )
@@ -77,7 +77,7 @@ class Parameterization:
             raise RuntimeError(
                 f'Attempting to write to pinned '
                 f'key {repr(given_key)} for target '
-                f'{repr(self.target.name)} ({repr(self.target.mcu)}).'
+                f'{repr(self.name)} ({repr(self.mcu)}).'
             )
 
 
@@ -98,7 +98,7 @@ class Parameterization:
 
         # Translate the given key.
 
-        proper_key = MCUS[self.target.mcu].translate(
+        proper_key = MCUS[self.mcu].translate(
             given_key,
             must_hold_value = True,
             undefined_ok    = when_undefined is not ...,
@@ -126,9 +126,13 @@ class Parameterization:
 
 
 
-    def __init__(self, target):
+    def __init__(self, target, mcu, schema, gpios, interrupts):
 
         self.target     = target
+        self.mcu        = mcu
+        self.schema     = schema
+        self.gpios      = gpios
+        self.interrupts = interrupts
         self.determined = {}
         self.pinned     = set()
 
@@ -139,7 +143,7 @@ class Parameterization:
         # predefined, we can pin it so we avoid accidentally
         # overwriting it.
 
-        for key, entry in MCUS[self.target.mcu].database.items():
+        for key, entry in MCUS[self.mcu].database.items():
 
             if not hasattr(entry, 'value'):
                 continue
@@ -156,7 +160,7 @@ class Parameterization:
         # Since these are the things that the user want in
         # the final parameterization, the values will be pinned.
 
-        for key, value in self.target.clock_tree.items():
+        for key, value in self.schema.items():
 
             self[key]    = value
             self.pinned |= { key }
@@ -174,7 +178,7 @@ class Parameterization:
 
                 raise RuntimeError(
                     f'Failed to brute-force {repr(function.__name__)} '
-                    f'for target {repr(self.target.name)}.'
+                    f'for target {repr(self.target)}.'
                 )
 
 
@@ -185,7 +189,7 @@ class Parameterization:
 
         def each(key):
 
-            for self[key] in MCUS[self.target.mcu][key].constraint.iterate():
+            for self[key] in MCUS[self.mcu][key].constraint.iterate():
 
                 yield self(key)
 
@@ -199,7 +203,7 @@ class Parameterization:
 
         def checkout(key, value):
 
-            ok = MCUS[self.target.mcu][key].constraint.check(value)
+            ok = MCUS[self.mcu][key].constraint.check(value)
 
             if ok:
                 self[key] = value
@@ -221,7 +225,7 @@ class Parameterization:
 
 
 
-        match self.target.mcu:
+        match self.mcu:
 
 
 
@@ -261,7 +265,7 @@ class Parameterization:
 
 
 
-        match self.target.mcu:
+        match self.mcu:
 
 
 
@@ -443,7 +447,7 @@ class Parameterization:
         @bruteforce
         def parameterize_plls():
 
-            match self.target.mcu:
+            match self.mcu:
 
 
 
@@ -511,7 +515,7 @@ class Parameterization:
 
                 # AXI/AHB busses.
 
-                match self.target.mcu:
+                match self.mcu:
 
 
 
@@ -604,7 +608,7 @@ class Parameterization:
 
                 else:
 
-                    match self.target.mcu:
+                    match self.mcu:
 
 
 
@@ -738,10 +742,10 @@ class Parameterization:
 
                         scl = round(kernel_frequency / (presc + 1) / needed_baud / 2)
 
-                        if not MCUS[self.target.mcu][f'I2C{unit}_SCLH'].constraint.check(scl):
+                        if not MCUS[self.mcu][f'I2C{unit}_SCLH'].constraint.check(scl):
                             continue
 
-                        if not MCUS[self.target.mcu][f'I2C{unit}_SCLL'].constraint.check(scl):
+                        if not MCUS[self.mcu][f'I2C{unit}_SCLL'].constraint.check(scl):
                             continue
 
 
@@ -786,7 +790,7 @@ class Parameterization:
 
             # Determine the kernel frequency.
 
-            match self.target.mcu:
+            match self.mcu:
 
 
 
@@ -995,7 +999,7 @@ class Parameterization:
                 case unknown:
 
                     raise RuntimeError(
-                        f'For target {repr(self.target.name)}, '
+                        f'For target {repr(self.name)}, '
                         f'GPIO {repr(name)} has unknown mode {repr(unknown)}.'
                     )
 
@@ -1005,7 +1009,7 @@ class Parameterization:
 
             if gpio.pin is not None and gpio.altfunc is not None:
 
-                gpio.afsel = MCUS[self.target.mcu].gpio_afsel_table.get(
+                gpio.afsel = MCUS[self.mcu].gpio_afsel_table.get(
                     (gpio.port, gpio.number, gpio.altfunc),
                     None
                 )
@@ -1013,7 +1017,7 @@ class Parameterization:
                 if gpio.afsel is None:
 
                     raise ValueError(
-                        f'For target {repr(self.target.name)} ({repr(self.target.mcu)}), '
+                        f'For target {repr(self.target)} ({repr(self.mcu)}), '
                         f'GPIO pin {repr(gpio.pin)} has no support for '
                         f'alternate function {repr(gpio.altfunc)}.'
                     )
@@ -1025,7 +1029,7 @@ class Parameterization:
             if properties:
 
                 raise ValueError(
-                    f'For target {repr(self.target.name)}, '
+                    f'For target {repr(self.target)}, '
                     f'GPIO {repr(name)} has leftover properties: {properties}.'
                 )
 
@@ -1035,7 +1039,7 @@ class Parameterization:
 
         self.gpios = tuple(
             process_single_gpio(gpio)
-            for gpio in self.target.gpios
+            for gpio in self.gpios
         )
 
 
@@ -1054,7 +1058,7 @@ class Parameterization:
 
             raise ValueError(
                 f'GPIO name {repr(duplicate_name)} used more than once '
-                f'for target {repr(self.target.name)}.'
+                f'for target {repr(self.target)}.'
             )
 
 
@@ -1073,7 +1077,7 @@ class Parameterization:
 
             raise ValueError(
                 f'GPIO pin {repr(duplicate_pin)} used more than once '
-                f'for target {repr(self.target.name)}.'
+                f'for target {repr(self.target)}.'
             )
 
 
@@ -1126,7 +1130,7 @@ class Parameterization:
             if value is TBD:
                 continue
 
-            constraint = MCUS[self.target.mcu][key].constraint
+            constraint = MCUS[self.mcu][key].constraint
 
             if not isinstance(constraint, Mapping):
                 continue

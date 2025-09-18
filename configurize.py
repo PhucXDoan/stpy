@@ -14,7 +14,6 @@ def configurize(Meta, parameterization):
 
 
 
-    target         = parameterization.target
     cmsis_tools    = get_cmsis_tools(Meta)
     CMSIS_SET      = cmsis_tools.CMSIS_SET
     CMSIS_WRITE    = cmsis_tools.CMSIS_WRITE
@@ -55,7 +54,7 @@ def configurize(Meta, parameterization):
                 return None
 
             raise ValueError(
-                f'For target {repr(target.name)} ({repr(target.mcu)}), '
+                f'For target {repr(parameterization.target)} ({repr(parameterization.mcu)}), '
                 f'the value of key {repr(given_key)} '
                 f'has not been parameterized.'
             )
@@ -66,10 +65,10 @@ def configurize(Meta, parameterization):
 
         value = c_repr(value)
 
-        if MCUS[target.mcu][given_key].off_by_one:
+        if MCUS[parameterization.mcu][given_key].off_by_one:
             value = f'{value} - 1'
 
-        return (*MCUS[target.mcu][given_key].location, value)
+        return (*MCUS[parameterization.mcu][given_key].location, value)
 
 
 
@@ -99,7 +98,7 @@ def configurize(Meta, parameterization):
 
         value = c_repr(value)
 
-        if MCUS[target.mcu][given_key].off_by_one:
+        if MCUS[parameterization.mcu][given_key].off_by_one:
             value = f'({value} - 1)'
 
         Meta.define(f'STPY_{given_key}', value)
@@ -217,7 +216,7 @@ def configurize(Meta, parameterization):
 
         # Configure the interrupt priorities.
 
-        for interrupt, niceness, properties in target.interrupts:
+        for interrupt, niceness, properties in parameterization.interrupts:
 
 
 
@@ -246,7 +245,7 @@ def configurize(Meta, parameterization):
             if interrupt_number <= -13:
 
                 raise ValueError(
-                    f'For target {repr(target.name)} ({repr(target.mcu)}), '
+                    f'For target {repr(parameterization.target)} ({repr(parameterization.mcu)}), '
                     f'the priority of interrupt {repr(interrupt)} is fixed; '
                     f'please specify it as `None`.'
                 )
@@ -328,7 +327,7 @@ def configurize(Meta, parameterization):
         # before configuring VOS or the system clock frequency.
         # @/pg 323/sec 6.8.4/`H7S3rm`.
 
-        match target.mcu:
+        match parameterization.mcu:
 
             case 'STM32H7S3L8H6':
                 CMSIS_SET(
@@ -450,7 +449,7 @@ def configurize(Meta, parameterization):
 
         # Set the clock source shared for all PLLs.
 
-        match target.mcu:
+        match parameterization.mcu:
             case 'STM32H7S3L8H6':
                 sets += [tuplize('PLL_KERNEL_SOURCE')]
 
@@ -464,7 +463,7 @@ def configurize(Meta, parameterization):
 
             # Set the clock source for the specific PLL unit.
 
-            match target.mcu:
+            match parameterization.mcu:
                 case 'STM32H533RET6':
                     sets += [tuplize(f'PLL{unit}_KERNEL_SOURCE')]
 
@@ -529,7 +528,7 @@ def configurize(Meta, parameterization):
 
         # Configure the SCGU registers.
 
-        match target.mcu:
+        match parameterization.mcu:
 
             case 'STM32H7S3L8H6':
 
@@ -671,7 +670,7 @@ def configurize(Meta, parameterization):
             )
             for key, value in parameterization.determined.items()
             if value is not TBD
-            if MCUS[target.mcu].database[key].clocktree
+            if MCUS[parameterization.mcu].database[key].clocktree
         ):
             Meta.define(macro, f'({expansion})')
 
