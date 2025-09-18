@@ -15,7 +15,7 @@ class Parameterization:
 
         output = '\n'
 
-        output += f'{repr(self.name)} ({repr(self.mcu)}):\n'
+        output += f'{repr(self.target)} ({repr(self.mcu)}):\n'
 
         for key, entry in MCUS[self.mcu].database.items():
 
@@ -63,7 +63,7 @@ class Parameterization:
         if constraint is not None and not constraint.check(value):
 
             raise RuntimeError(
-                f'For target {repr(self.name)} ({repr(self.mcu)}), '
+                f'For target {repr(self.target)} ({repr(self.mcu)}), '
                 f'the key {repr(given_key)} was written with value {repr(value)}, '
                 f'but this does not satisfy the constraint: {constraint.show()}.'
             )
@@ -77,7 +77,7 @@ class Parameterization:
             raise RuntimeError(
                 f'Attempting to write to pinned '
                 f'key {repr(given_key)} for target '
-                f'{repr(self.name)} ({repr(self.mcu)}).'
+                f'{repr(self.target)} ({repr(self.mcu)}).'
             )
 
 
