@@ -17,7 +17,7 @@ def init(Meta, target):
     # Check to make sure the interrupts
     # to be used by the target exists.
 
-    for interrupt, niceness in target.interrupts:
+    for interrupt, niceness, properties in target.interrupts:
 
         if interrupt not in MCUS[target.mcu]['INTERRUPTS'].value:
 
@@ -47,7 +47,7 @@ def init(Meta, target):
         'u32',
         (
             (interrupt, f'{interrupt}_IRQn')
-            for interrupt, niceness in target.interrupts
+            for interrupt, niceness, properties in target.interrupts
             if MCUS[target.mcu]['INTERRUPTS'].value.index(interrupt) >= 15
         )
     )
@@ -57,10 +57,13 @@ def init(Meta, target):
     # We forward-declare the prototype of
     # the interrupt service routines.
 
-    for interrupt in sorted(('Default', *(name for name, niceness in target.interrupts))):
+    for name in sorted((
+        'INTERRUPT_Default',
+        *(properties.get('symbol_name', f'INTERRUPT_{name}') for name, niceness, properties in target.interrupts)
+    )):
 
         Meta.line(f'''
-            extern void INTERRUPT_{interrupt}(void);
+            extern void {name}(void);
         ''')
 
 
@@ -68,7 +71,7 @@ def init(Meta, target):
     # We create the interrupt vector table.
 
     with Meta.enter('''
-        void (* const INTERRUPT_VECTOR_TABLE[])(void)__attribute__((used, section(".INTERRUPT_VECTOR_TABLE"))) =
+        void (* const INTERRUPT_VECTOR_TABLE[])(void) __attribute__((used, section(".INTERRUPT_VECTOR_TABLE"))) =
     ''', '{', '};', indented = True):
 
 
@@ -94,12 +97,19 @@ def init(Meta, target):
                 # No interrupt handler here.
                 word = f'INTERRUPT_Default'
 
-            elif target.use_freertos and interrupt in MCUS[target.mcu].freertos_interrupts:
+            elif (symbol_name := {
+                name : properties['symbol_name']
+                for name, niceness, properties in target.interrupts
+                if 'symbol_name' in properties
+            }.get(interrupt, None)) is not None:
 
-                # This interrupt will be supplied by FreeRTOS.
-                word = f'{MCUS[target.mcu].freertos_interrupts[interrupt]}'
+                # This interrupt will go by an alternative symbol name.
+                word = symbol_name
 
-            elif interrupt in ('Default', *(name for name, niceness in target.interrupts)):
+            elif interrupt in (
+                'Default',
+                *(name for name, niceness, properties in target.interrupts)
+            ):
 
                 # This interrupt will be defined by the user.
                 word = f'INTERRUPT_{interrupt}'
@@ -133,7 +143,10 @@ def init(Meta, target):
 
     # @/`Defining Interrupt Handlers`.
 
-    for interrupt in sorted(('Default', *(name for name, niceness in target.interrupts))):
+    for interrupt in sorted((
+        'Default',
+        *(name for name, niceness, properties in target.interrupts)
+    )):
 
         Meta.define(
             f'INTERRUPT_{interrupt}',

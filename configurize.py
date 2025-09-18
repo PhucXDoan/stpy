@@ -217,7 +217,7 @@ def configurize(Meta, parameterization):
 
         # Configure the interrupt priorities.
 
-        for interrupt, niceness in target.interrupts:
+        for interrupt, niceness, properties in target.interrupts:
 
 
 
