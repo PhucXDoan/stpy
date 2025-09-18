@@ -96,32 +96,24 @@ def init(
 
 
 
-        # Fill in the addresses of the interrupt routines
-        # for the remainder of the interrupt vector table.
+        # For interrupts that the target will be using,
+        # we put those interrupts into their corresponding
+        # slots in the interrupt vector table; everything
+        # else will be to the default interrupt handler.
 
-        for interrupt_i, interrupt in enumerate(MCUS[parameterization.mcu]['INTERRUPTS'].value):
-
-            word = None
-
-            if interrupt is None:
-
-                # No interrupt handler here.
-                word = f'INTERRUPT_Default'
-
-            elif interrupt in parameterization.interrupts:
-
-                # This interrupt will be defined by the user.
-                word = parameterization.interrupts[interrupt].symbol
-
-            else:
-
-                # This interrupt isn't expected to be used by the target.
-                word = f'INTERRUPT_Default'
+        for table_interrupt_i, table_interrupt in enumerate(MCUS[parameterization.mcu]['INTERRUPTS'].value):
 
             rows += [(
-                word,
-                interrupt_i - 15,
-                'Reserved' if interrupt is None else interrupt,
+                next(
+                    (
+                        target_interrupt.symbol
+                        for target_interrupt in parameterization.interrupts.values()
+                        if target_interrupt.name == table_interrupt
+                    ),
+                    f'INTERRUPT_Default'
+                ),
+                table_interrupt_i - 15,
+                'Reserved' if table_interrupt is None else table_interrupt,
             )]
 
 
