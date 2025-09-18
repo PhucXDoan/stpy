@@ -468,7 +468,12 @@ class Parameterization:
 
         def process_single_interrupt(entry):
 
-            name, niceness, properties = entry
+            name, niceness, *properties = entry
+
+            if properties:
+                properties, = properties
+            else:
+                properties = {}
 
             interrupt = types.SimpleNamespace(
                 name     = name,
