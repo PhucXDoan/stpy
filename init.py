@@ -1,4 +1,3 @@
-import difflib
 from ..stpy.mcus             import MCUS, TBD
 from ..stpy.parameterization import Parameterization
 from ..stpy.configurize      import configurize
@@ -42,28 +41,6 @@ def init(
     #
     # Interrupts.
     #
-
-
-
-    # Check to make sure the interrupts
-    # to be used by the target exists.
-
-    for interrupt in parameterization.interrupts.values():
-
-        if interrupt.name not in MCUS[parameterization.mcu]['INTERRUPTS'].value:
-
-            raise ValueError(
-                f'For target {repr(parameterization.target)}, '
-                f'no such interrupt {repr(interrupt.name)} '
-                f'exists on {repr(parameterization.mcu)}; '
-                f'did you mean any of the following? : '
-                f'{difflib.get_close_matches(
-                    str(interrupt.name),
-                    map(str, MCUS[parameterization.mcu]['INTERRUPTS'].value),
-                    n      = 5,
-                    cutoff = 0
-                )}'
-            )
 
 
 

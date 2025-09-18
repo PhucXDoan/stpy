@@ -1,4 +1,4 @@
-import types, collections
+import types, collections, difflib
 from ..stpy.mcus import MCUS, TBD, Mapping
 
 
@@ -480,6 +480,26 @@ class Parameterization:
                 raise ValueError(
                     f'For target {repr(self.target)}, '
                     f'interrupt {repr(name)} is listed more than once.'
+                )
+
+
+
+            # Check to make sure the interrupts
+            # to be used by the target exists.
+
+            if name not in MCUS[self.mcu]['INTERRUPTS'].value:
+
+                raise ValueError(
+                    f'For target {repr(self.target)}, '
+                    f'no such interrupt {repr(name)} '
+                    f'exists on {repr(self.mcu)}; '
+                    f'did you mean any of the following? : '
+                    f'{difflib.get_close_matches(
+                        str(name),
+                        map(str, MCUS[self.mcu]['INTERRUPTS'].value),
+                        n      = 5,
+                        cutoff = 0
+                    )}'
                 )
 
 
