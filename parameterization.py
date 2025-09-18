@@ -1053,7 +1053,8 @@ class Parameterization:
             duplicate_name, *_ = duplicate_names
 
             raise ValueError(
-                f'GPIO name {repr(duplicate_name)} used more than once.'
+                f'GPIO name {repr(duplicate_name)} used more than once '
+                f'for target {repr(self.target.name)}.'
             )
 
 
@@ -1071,7 +1072,8 @@ class Parameterization:
             duplicate_pin, *_ = duplicate_pins
 
             raise ValueError(
-                f'GPIO pin {repr(duplicate_pin)} used more than once.'
+                f'GPIO pin {repr(duplicate_pin)} used more than once '
+                f'for target {repr(self.target.name)}.'
             )
 
 
