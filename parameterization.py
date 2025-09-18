@@ -219,7 +219,12 @@ class Parameterization:
 
         def process_single_gpio(entry):
 
-            name, pin, mode, properties = entry
+            name, pin, mode, *properties = entry
+
+            if properties:
+                properties, = properties
+            else:
+                properties = {}
 
 
 
