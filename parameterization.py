@@ -504,7 +504,8 @@ class Parameterization:
 
                 raise ValueError(
                     f'For target {repr(self.target)}, '
-                    f'interrupt {repr(name)} has leftover properties: {repr(properties)}.'
+                    f'interrupt {repr(name)} has leftover '
+                    f'properties: {repr(properties)}.'
                 )
 
             return interrupt
