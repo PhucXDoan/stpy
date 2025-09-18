@@ -1,7 +1,7 @@
 from ..stpy.mcus             import MCUS, TBD
 from ..stpy.parameterization import Parameterization
 from ..stpy.configurize      import configurize
-from ..pxd.utils             import justify
+from ..stpy.pxd.utils        import justify
 
 
 

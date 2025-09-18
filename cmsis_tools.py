@@ -1,6 +1,6 @@
 import collections, types
-from ..stpy.mcus import MCUS
-from ..pxd.utils import coalesce, c_repr, justify
+from ..stpy.mcus      import MCUS
+from ..stpy.pxd.utils import coalesce, c_repr, justify
 
 
 

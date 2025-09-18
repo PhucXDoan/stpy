@@ -2,7 +2,7 @@ import difflib
 from ..stpy.parameterization import TBD
 from ..stpy.cmsis_tools      import get_cmsis_tools
 from ..stpy.mcus             import MCUS
-from ..pxd.utils             import c_repr, justify
+from ..stpy.pxd.utils        import c_repr, justify
 
 
 
