@@ -131,7 +131,6 @@ class Parameterization:
         self.target     = target
         self.mcu        = mcu
         self.schema     = schema
-        self.interrupts = interrupts
         self.determined = {}
         self.pinned     = set()
 
@@ -470,19 +469,39 @@ class Parameterization:
 
         self.interrupts = {}
 
-        #for interrupt in interrupts:
-
-        #    if interrupt in self.interrupts:
-
-        #        raise ValueError(
-        #            f'For target {repr(self.target)} ({repr(self.mcu)}), '
-        #            f'interrupt {repr(interrupt)} is listed more than once.'
-        #        )
+        for name, niceness, properties in interrupts:
 
 
 
+            # Check for duplication.
 
-        self.interrupts = interrupts
+            if name in self.interrupts:
+
+                raise ValueError(
+                    f'For target {repr(self.target)}, '
+                    f'interrupt {repr(name)} is listed more than once.'
+                )
+
+
+
+            # Done processing the interrupt entry!
+
+            self.interrupts[name] = types.SimpleNamespace(
+                name     = name,
+                niceness = niceness,
+                symbol   = properties.pop('symbol', f'INTERRUPT_{name}'),
+            )
+
+
+
+            # There shouldn't be any leftover properties.
+
+            if properties:
+
+                raise ValueError(
+                    f'For target {repr(self.target)}, '
+                    f'interrupt {repr(name)} has leftover properties: {repr(properties)}.'
+                )
 
 
 

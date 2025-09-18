@@ -48,17 +48,17 @@ def init(
     # Check to make sure the interrupts
     # to be used by the target exists.
 
-    for interrupt, niceness, properties in parameterization.interrupts:
+    for interrupt in parameterization.interrupts.values():
 
-        if interrupt not in MCUS[parameterization.mcu]['INTERRUPTS'].value:
+        if interrupt.name not in MCUS[parameterization.mcu]['INTERRUPTS'].value:
 
             raise ValueError(
                 f'For target {repr(parameterization.target)}, '
-                f'no such interrupt {repr(interrupt)} '
+                f'no such interrupt {repr(interrupt.name)} '
                 f'exists on {repr(parameterization.mcu)}; '
                 f'did you mean any of the following? : '
                 f'{difflib.get_close_matches(
-                    str(interrupt),
+                    str(interrupt.name),
                     map(str, MCUS[parameterization.mcu]['INTERRUPTS'].value),
                     n      = 5,
                     cutoff = 0
@@ -78,7 +78,7 @@ def init(
         'u32',
         (
             (interrupt, f'{interrupt}_IRQn')
-            for interrupt, niceness, properties in parameterization.interrupts
+            for interrupt in parameterization.interrupts
             if MCUS[parameterization.mcu]['INTERRUPTS'].value.index(interrupt) >= 15
         )
     )
@@ -91,8 +91,8 @@ def init(
     for name in sorted((
         'INTERRUPT_Default',
         *(
-            properties.get('symbol_name', f'INTERRUPT_{name}')
-            for name, niceness, properties in parameterization.interrupts
+            interrupt.symbol
+            for interrupt in parameterization.interrupts.values()
         )
     )):
 
@@ -131,22 +131,10 @@ def init(
                 # No interrupt handler here.
                 word = f'INTERRUPT_Default'
 
-            elif (symbol_name := {
-                name : properties['symbol_name']
-                for name, niceness, properties in parameterization.interrupts
-                if 'symbol_name' in properties
-            }.get(interrupt, None)) is not None:
-
-                # This interrupt will go by an alternative symbol name.
-                word = symbol_name
-
-            elif interrupt in (
-                'Default',
-                *(name for name, niceness, properties in parameterization.interrupts)
-            ):
+            elif interrupt in parameterization.interrupts:
 
                 # This interrupt will be defined by the user.
-                word = f'INTERRUPT_{interrupt}'
+                word = parameterization.interrupts[interrupt].symbol
 
             else:
 
@@ -179,10 +167,7 @@ def init(
 
     for interrupt in sorted((
         'Default',
-        *(
-            name
-            for name, niceness, properties in parameterization.interrupts
-        )
+        *parameterization.interrupts.keys()
     )):
 
         Meta.define(

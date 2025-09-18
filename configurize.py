@@ -216,13 +216,13 @@ def configurize(Meta, parameterization):
 
         # Configure the interrupt priorities.
 
-        for interrupt, niceness, properties in parameterization.interrupts:
+        for interrupt in parameterization.interrupts.values():
 
 
 
             # Skip interrupts that don't need to have their priority set.
 
-            if niceness is None:
+            if interrupt.niceness is None:
                 continue
 
 
@@ -233,33 +233,33 @@ def configurize(Meta, parameterization):
             # @/pg 86/sec B3.9/`Armv8-M`.
 
             Meta.line(f'''
-                static_assert(0 <= {niceness} && {niceness} < (1 << __NVIC_PRIO_BITS));
+                static_assert(0 <= {interrupt.niceness} && {interrupt.niceness} < (1 << __NVIC_PRIO_BITS));
             ''')
 
 
 
             # Set the interrupt in the Arm core or within NVIC.
 
-            interrupt_number = parameterization('INTERRUPTS').index(interrupt) - 15
+            interrupt_number = parameterization('INTERRUPTS').index(interrupt.name) - 15
 
             if interrupt_number <= -13:
 
                 raise ValueError(
                     f'For target {repr(parameterization.target)} ({repr(parameterization.mcu)}), '
-                    f'the priority of interrupt {repr(interrupt)} is fixed; '
+                    f'the priority of interrupt {repr(interrupt.name)} is fixed; '
                     f'please specify it as `None`.'
                 )
 
             elif interrupt_number <= -1:
 
                 Meta.line(f'''
-                    SCB->SHPR[{interrupt}_IRQn + 12] = {niceness} << __NVIC_PRIO_BITS;
+                    SCB->SHPR[{interrupt.name}_IRQn + 12] = {interrupt.niceness} << __NVIC_PRIO_BITS;
                 ''')
 
             else:
 
                 Meta.line(f'''
-                    NVIC->IPR[NVICInterrupt_{interrupt}] = {niceness} << __NVIC_PRIO_BITS;
+                    NVIC->IPR[NVICInterrupt_{interrupt.name}] = {interrupt.niceness} << __NVIC_PRIO_BITS;
                 ''')
 
 
