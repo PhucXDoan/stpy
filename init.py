@@ -56,7 +56,7 @@ def init(
         (
             (interrupt.name, f'{interrupt.name}_IRQn')
             for interrupt in parameterization.interrupts
-            if MCUS[parameterization.mcu]['INTERRUPTS'].value.index(interrupt.name) >= 15
+            if interrupt.number >= 0
         )
     )
 

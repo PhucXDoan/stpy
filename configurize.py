@@ -240,9 +240,7 @@ def configurize(Meta, parameterization):
 
             # Set the interrupt in the Arm core or within NVIC.
 
-            interrupt_number = parameterization('INTERRUPTS').index(interrupt.name) - 15
-
-            if interrupt_number <= -13:
+            if interrupt.number <= -13:
 
                 raise ValueError(
                     f'For target {repr(parameterization.target)} ({repr(parameterization.mcu)}), '
@@ -250,7 +248,7 @@ def configurize(Meta, parameterization):
                     f'please specify it as `None`.'
                 )
 
-            elif interrupt_number <= -1:
+            elif interrupt.number <= -1:
 
                 Meta.line(f'''
                     SCB->SHPR[{interrupt.name}_IRQn + 12] = {interrupt.niceness} << __NVIC_PRIO_BITS;

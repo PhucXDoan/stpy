@@ -496,6 +496,8 @@ class Parameterization:
                     )}'
                 )
 
+            interrupt.number = MCUS[self.mcu]['INTERRUPTS'].value.index(interrupt.name) - 15
+
 
 
             # Done processing the interrupt entry!
