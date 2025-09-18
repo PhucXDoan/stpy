@@ -1,3 +1,4 @@
+import difflib
 from ..stpy.mcus             import MCUS, TBD
 from ..stpy.parameterization import Parameterization
 from ..stpy.configurize      import configurize
@@ -27,7 +28,7 @@ def init(Meta, target):
                 f'did you mean any of the following? : '
                 f'{difflib.get_close_matches(
                     str(interrupt),
-                    map(str, MCUS[target.mcu]['INTERRUPTS'].value.keys()),
+                    map(str, MCUS[target.mcu]['INTERRUPTS'].value),
                     n      = 5,
                     cutoff = 0
                 )}'
@@ -56,10 +57,7 @@ def init(Meta, target):
     # We forward-declare the prototype of
     # the interrupt service routines.
 
-    for interrupt in sorted(dict.fromkeys((
-        *target.interrupts_that_must_be_defined,
-        *(name for name, niceness in target.interrupts)
-    ))):
+    for interrupt in sorted(('Default', *(name for name, niceness in target.interrupts))):
 
         Meta.line(f'''
             extern void INTERRUPT_{interrupt}(void);
@@ -101,10 +99,7 @@ def init(Meta, target):
                 # This interrupt will be supplied by FreeRTOS.
                 word = f'{MCUS[target.mcu].freertos_interrupts[interrupt]}'
 
-            elif interrupt in (
-                *target.interrupts_that_must_be_defined,
-                *(name for name, niceness in target.interrupts)
-            ):
+            elif interrupt in ('Default', *(name for name, niceness in target.interrupts)):
 
                 # This interrupt will be defined by the user.
                 word = f'INTERRUPT_{interrupt}'
@@ -138,10 +133,7 @@ def init(Meta, target):
 
     # @/`Defining Interrupt Handlers`.
 
-    for interrupt in sorted(dict.fromkeys((
-        *target.interrupts_that_must_be_defined,
-        *(name for name, niceness in target.interrupts)
-    ))):
+    for interrupt in sorted(('Default', *(name for name, niceness in target.interrupts))):
 
         Meta.define(
             f'INTERRUPT_{interrupt}',

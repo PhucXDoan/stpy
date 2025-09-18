@@ -221,6 +221,13 @@ def configurize(Meta, parameterization):
 
 
 
+            # Skip interrupts that don't need to have their priority set.
+
+            if niceness is None:
+                continue
+
+
+
             # The amount of bits that can be used to specify
             # the priorities vary between implementations.
             # @/pg 526/sec B1.5.4/`Armv7-M`.
@@ -237,6 +244,7 @@ def configurize(Meta, parameterization):
             if parameterization('INTERRUPTS').index(interrupt) <= 14:
 
                 assert interrupt in (
+                    'Reset',
                     'MemoryManagement',
                     'BusFault',
                     'UsageFault',
@@ -244,7 +252,7 @@ def configurize(Meta, parameterization):
                     'DebugMonitor',
                     'PendSV',
                     'SysTick',
-                )
+                ), interrupt
 
                 Meta.line(f'''
                     SCB->SHPR[{interrupt}_IRQn + 12] = {niceness} << __NVIC_PRIO_BITS;
