@@ -54,9 +54,9 @@ def init(
         'NVICInterrupt',
         'u32',
         (
-            (interrupt, f'{interrupt}_IRQn')
+            (interrupt.name, f'{interrupt.name}_IRQn')
             for interrupt in parameterization.interrupts
-            if MCUS[parameterization.mcu]['INTERRUPTS'].value.index(interrupt) >= 15
+            if MCUS[parameterization.mcu]['INTERRUPTS'].value.index(interrupt.name) >= 15
         )
     )
 
@@ -69,7 +69,7 @@ def init(
         'INTERRUPT_Default',
         *(
             interrupt.symbol
-            for interrupt in parameterization.interrupts.values()
+            for interrupt in parameterization.interrupts
         )
     )):
 
@@ -107,7 +107,7 @@ def init(
                 next(
                     (
                         target_interrupt.symbol
-                        for target_interrupt in parameterization.interrupts.values()
+                        for target_interrupt in parameterization.interrupts
                         if target_interrupt.name == table_interrupt
                     ),
                     f'INTERRUPT_Default'
@@ -136,7 +136,10 @@ def init(
 
     for interrupt in sorted((
         'Default',
-        *parameterization.interrupts.keys()
+        *(
+            interrupt.name
+            for interrupt in parameterization.interrupts
+        )
     )):
 
         Meta.define(

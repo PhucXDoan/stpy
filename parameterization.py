@@ -466,36 +466,30 @@ class Parameterization:
         #
 
 
+        def process_single_interrupt(entry):
 
-        self.interrupts = {}
+            name, niceness, properties = entry
 
-        for name, niceness, properties in interrupts:
-
-
-
-            # Check for duplication.
-
-            if name in self.interrupts:
-
-                raise ValueError(
-                    f'For target {repr(self.target)}, '
-                    f'interrupt {repr(name)} is listed more than once.'
-                )
+            interrupt = types.SimpleNamespace(
+                name     = name,
+                niceness = niceness,
+                symbol   = properties.pop('symbol', f'INTERRUPT_{name}'),
+            )
 
 
 
             # Check to make sure the interrupts
             # to be used by the target exists.
 
-            if name not in MCUS[self.mcu]['INTERRUPTS'].value:
+            if interrupt.name not in MCUS[self.mcu]['INTERRUPTS'].value:
 
                 raise ValueError(
                     f'For target {repr(self.target)}, '
-                    f'no such interrupt {repr(name)} '
+                    f'no such interrupt {repr(interrupt.name)} '
                     f'exists on {repr(self.mcu)}; '
                     f'did you mean any of the following? : '
                     f'{difflib.get_close_matches(
-                        str(name),
+                        str(interrupt.name),
                         map(str, MCUS[self.mcu]['INTERRUPTS'].value),
                         n      = 5,
                         cutoff = 0
@@ -506,22 +500,40 @@ class Parameterization:
 
             # Done processing the interrupt entry!
 
-            self.interrupts[name] = types.SimpleNamespace(
-                name     = name,
-                niceness = niceness,
-                symbol   = properties.pop('symbol', f'INTERRUPT_{name}'),
-            )
-
-
-
-            # There shouldn't be any leftover properties.
-
             if properties:
 
                 raise ValueError(
                     f'For target {repr(self.target)}, '
                     f'interrupt {repr(name)} has leftover properties: {repr(properties)}.'
                 )
+
+            return interrupt
+
+
+
+        self.interrupts = tuple(
+            process_single_interrupt(interrupt)
+            for interrupt in interrupts
+        )
+
+
+
+        # Ensure no duplicate interrupts.
+
+        if duplicate_names := [
+            name
+            for name, count in collections.Counter(
+                interrupt.name for interrupt in self.interrupts
+            ).items()
+            if count >= 2
+        ]:
+
+            duplicate_name, *_ = duplicate_names
+
+            raise ValueError(
+                f'For target {repr(self.target)}, '
+                f'interrupt {repr(duplicate_name)} is listed more than once.'
+            )
 
 
 
