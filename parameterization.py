@@ -1205,11 +1205,6 @@ class Parameterization:
 
 
         ################################################################################
-        #
-        # Mapping constraints are a table of sematic names
-        # to the actual underlying value to be used in the
-        # generated code (e.g. the binary code).
-        #
 
 
 
@@ -1217,6 +1212,25 @@ class Parameterization:
 
             if value is TBD:
                 continue
+
+
+
+            # For any numeric calculations involving non-integers,
+            # floats might appear but result in an as an integer.
+            # To prevent something like "3.0" from being outputted,
+            # we manually cost those float values to an integer to
+            # just get "3".
+
+            if isinstance(value, float) and value.is_integer():
+
+                value                = int(value)
+                self.determined[key] = value
+
+
+
+            # Mapping constraints are a table of sematic names
+            # to the actual underlying value to be used in the
+            # generated code (e.g. the binary code).
 
             constraint = MCUS[self.mcu][key].constraint
 
