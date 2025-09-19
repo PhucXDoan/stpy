@@ -17,13 +17,6 @@ def init(
 
 
 
-    ################################################################################
-    #
-    # Parameterization.
-    #
-
-
-
     # Figure out how to configure the target's
     # MCU based on the given parameterization.
 
@@ -37,131 +30,144 @@ def init(
 
 
 
-    ################################################################################
-    #
-    # Interrupts.
-    #
+    # TODO This is here for the niche reasons...
+
+    with Meta.enter('#if STPY_IMPLEMENTATION'):
 
 
 
-    # For interrupts used by the target that
-    # are in NVIC, we create an enumeration so
-    # that the user can only enable those specific
-    # interrupts. Note that some interrupts, like
-    # SysTick, are not a part of NVIC.
+        # For interrupts used by the target that
+        # are in NVIC, we create an enumeration so
+        # that the user can only enable those specific
+        # interrupts. Note that some interrupts, like
+        # SysTick, are not a part of NVIC.
 
-    Meta.enums(
-        'NVICInterrupt',
-        'u32',
-        (
-            (interrupt.name, f'{interrupt.name}_IRQn')
-            for interrupt in parameterization.interrupts
-            if interrupt.number >= 0
-        )
-    )
-
-
-
-    # We forward-declare the prototype of
-    # the interrupt service routines.
-
-    for name in sorted((
-        'INTERRUPT_Default',
-        *(
-            interrupt.symbol
-            for interrupt in parameterization.interrupts
-        )
-    )):
-
-        Meta.line(f'''
-            extern void {name}(void);
-        ''')
-
-
-
-    # We create the interrupt vector table.
-
-    with Meta.enter('''
-        void (* const INTERRUPT_VECTOR_TABLE[])(void) __attribute__((used, section(".INTERRUPT_VECTOR_TABLE"))) =
-    ''', '{', '};', indented = True):
-
-
-
-        # The first entry in the Arm IVT is actually the
-        # initial value of $SP after a reset of the CPU.
-
-        rows = [
-            (f'(void*) INITIAL_STACK_ADDRESS', -16, 'Initial Stack Address'),
-        ]
-
-
-
-        # For interrupts that the target will be using,
-        # we put those interrupts into their corresponding
-        # slots in the interrupt vector table; everything
-        # else will be to the default interrupt handler.
-
-        for table_interrupt_i, table_interrupt in enumerate(MCUS[parameterization.mcu]['INTERRUPTS'].value):
-
-            rows += [(
-                next(
-                    (
-                        target_interrupt.symbol
-                        for target_interrupt in parameterization.interrupts
-                        if target_interrupt.name == table_interrupt
-                    ),
-                    f'INTERRUPT_Default'
-                ),
-                table_interrupt_i - 15,
-                'Reserved' if table_interrupt is None else table_interrupt,
-            )]
-
-
-
-        # Output a nice looking table.
-
-        for word, number, name in justify(
+        Meta.enums(
+            'NVICInterrupt',
+            'u32',
             (
-                ('<' , word  ),
-                ('>' , number),
-                (None, name  ),
+                (interrupt.name, f'{interrupt.name}_IRQn')
+                for interrupt in parameterization.interrupts
+                if interrupt.number >= 0
             )
-            for word, number, name in rows
-        ):
-            Meta.line(f'{word}, // [{number}] {name}')
-
-
-
-    # @/`Defining Interrupt Handlers`.
-
-    for interrupt in sorted((
-        'Default',
-        *(
-            interrupt.name
-            for interrupt in parameterization.interrupts
-        )
-    )):
-
-        Meta.define(
-            f'INTERRUPT_{interrupt}',
-            f'extern void INTERRUPT_{interrupt}(void)'
         )
 
 
 
-    ################################################################################
-    #
-    # Configurization.
-    #
+        # We forward-declare the prototype of
+        # the interrupt service routines.
+
+        for name in sorted((
+            'INTERRUPT_Default',
+            *(
+                interrupt.symbol
+                for interrupt in parameterization.interrupts
+            )
+        )):
+
+            Meta.line(f'''
+                extern void {name}(void);
+            ''')
 
 
 
-    with Meta.enter('''
-        extern void
-        STPY_init(void)
-    '''):
+        # We create the interrupt vector table.
 
-        configurize(Meta, parameterization)
+        with Meta.enter('''
+            void (* const INTERRUPT_VECTOR_TABLE[])(void) __attribute__((used, section(".INTERRUPT_VECTOR_TABLE"))) =
+        ''', '{', '};', indented = True):
+
+
+
+            # The first entry in the Arm IVT is actually the
+            # initial value of $SP after a reset of the CPU.
+
+            rows = [
+                (f'(void*) INITIAL_STACK_ADDRESS', -16, 'Initial Stack Address'),
+            ]
+
+
+
+            # For interrupts that the target will be using,
+            # we put those interrupts into their corresponding
+            # slots in the interrupt vector table; everything
+            # else will be to the default interrupt handler.
+
+            for table_interrupt_i, table_interrupt in enumerate(MCUS[parameterization.mcu]['INTERRUPTS'].value):
+
+                rows += [(
+                    next(
+                        (
+                            target_interrupt.symbol
+                            for target_interrupt in parameterization.interrupts
+                            if target_interrupt.name == table_interrupt
+                        ),
+                        f'INTERRUPT_Default'
+                    ),
+                    table_interrupt_i - 15,
+                    'Reserved' if table_interrupt is None else table_interrupt,
+                )]
+
+
+
+            # Output a nice looking table.
+
+            for word, number, name in justify(
+                (
+                    ('<' , word  ),
+                    ('>' , number),
+                    (None, name  ),
+                )
+                for word, number, name in rows
+            ):
+                Meta.line(f'{word}, // [{number}] {name}')
+
+
+
+        # @/`Defining Interrupt Handlers`.
+
+        for interrupt in sorted((
+            'Default',
+            *(
+                interrupt.name
+                for interrupt in parameterization.interrupts
+            )
+        )):
+
+            Meta.define(
+                f'INTERRUPT_{interrupt}',
+                f'extern void INTERRUPT_{interrupt}(void)'
+            )
+
+
+
+        # Configurization.
+
+        with Meta.enter('''
+            extern void
+            STPY_init(void)
+        '''):
+
+            configurize(Meta, parameterization)
+
+
+
+    Meta.line('#undef STPY_IMPLEMENTATION')
+
+
+
+    # Clock-tree frequencies.
+
+    for macro, expansion in justify(
+        (
+            ('<', f'STPY_{key}'),
+            ('>', f'{value :,}'.replace(',', "'")),
+        )
+        for key, value in parameterization.determined.items()
+        if value is not TBD
+        if MCUS[parameterization.mcu].database[key].clocktree
+    ):
+        Meta.define(macro, f'({expansion})')
 
 
 
