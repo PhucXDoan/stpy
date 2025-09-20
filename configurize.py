@@ -661,7 +661,7 @@ def configurize(Meta, parameterization):
 
     for unit in parameterization('SPIS', when_undefined = ()):
 
-        with Meta.section(title_of(f'I2C{unit}')):
+        with Meta.section(title_of(f'SPI{unit}')):
 
             define_if_determined(f'SPI{unit}_KERNEL_SOURCE' )
             define_if_determined(f'SPI{unit}_BYPASS_DIVIDER')
