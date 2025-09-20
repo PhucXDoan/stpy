@@ -1045,7 +1045,7 @@ class Parameterization:
 
 
             @bruteforce
-            def parameterize():
+            def parameterize_i2c():
 
 
 
