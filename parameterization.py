@@ -1063,7 +1063,26 @@ class Parameterization:
                 # to try every single possibility and find the one with the least
                 # amount of error.
 
-                best_baud_error = None
+                best = None
+
+                def keep_best(*, kernel_source, presc, scl, baud):
+
+                    nonlocal best
+
+                    if (
+                        best is None or
+                        abs(needed_baud - baud) < abs(needed_baud - best.baud)
+                    ):
+                        best = types.SimpleNamespace(
+                            kernel_source = kernel_source,
+                            presc         = presc,
+                            scl           = scl,
+                            baud          = baud,
+                        )
+
+
+
+                # Find the best approximation.
 
                 for kernel_source in each(f'I2C{unit}_KERNEL_SOURCE'):
 
@@ -1074,10 +1093,6 @@ class Parameterization:
 
                     for presc in each(f'I2C{unit}_PRESC'):
 
-
-
-                        # Determine the SCL.
-
                         scl = round(kernel_frequency / (presc + 1) / needed_baud / 2)
 
                         if not MCUS[self.mcu][f'I2C{unit}_SCLH'].constraint.check(scl):
@@ -1086,30 +1101,26 @@ class Parameterization:
                         if not MCUS[self.mcu][f'I2C{unit}_SCLL'].constraint.check(scl):
                             continue
 
-
-
-                        # Determine the baud error.
-
-                        actual_baud       = kernel_frequency / (scl * 2 * (presc + 1) + 1)
-                        actual_baud_error = abs(1 - actual_baud / needed_baud)
-
-
-
-                        # Keep the best so far.
-
-                        if best_baud_error is None or actual_baud_error < best_baud_error:
-
-                            best_baud_error                  = actual_baud_error
-                            self[f'I2C{unit}_KERNEL_SOURCE'] = kernel_source
-                            self[f'I2C{unit}_PRESC'        ] = presc
-                            self[f'I2C{unit}_SCLH'         ] = scl
-                            self[f'I2C{unit}_SCLL'         ] = scl
+                        keep_best(
+                            kernel_source = kernel_source,
+                            presc         = presc,
+                            scl           = scl,
+                            baud          = kernel_frequency / (scl * 2 * (presc + 1) + 1),
+                        )
 
 
 
-                # We are only successful if we are within tolerance.
+                # See if we got it.
 
-                return best_baud_error is not None and best_baud_error <= 0.01 # TODO Ad-hoc tolerance.
+                success = best is not None and abs(1 - best.baud / needed_baud) < 0.01 # TODO Ad-hoc tolerance.
+
+                if success:
+                    self[f'I2C{unit}_KERNEL_SOURCE'] = best.kernel_source
+                    self[f'I2C{unit}_PRESC'        ] = best.presc
+                    self[f'I2C{unit}_SCLH'         ] = best.scl
+                    self[f'I2C{unit}_SCLL'         ] = best.scl
+
+                return success
 
 
 
