@@ -42,6 +42,16 @@ I2CS = (
 
 
 
+global SPIS
+SPIS = (
+    1,
+    2,
+    3,
+    4,
+)
+
+
+
 global TIMERS
 TIMERS = (
     1,
@@ -928,6 +938,54 @@ SCHEMA = {
             'off_by_one' : True,
         }
         for unit in TIMERS
+    },
+
+
+
+    ################################################################################
+    #
+    # SPIs.
+    #
+
+
+
+    **{
+        f'SPI{unit}_BAUD' : {
+            'value' : TBD,
+        }
+        for unit in SPIS
+    },
+
+    **{
+        f'SPI{unit}_ENABLE' : {
+            'location' : (
+                'RCC',
+                { # TODO Less redundancy.
+                    1 : 'APB2ENR',
+                    2 : 'APB1LENR',
+                    3 : 'APB1LENR',
+                    4 : 'APB2ENR',
+                }[unit],
+                f'SPI{unit}EN'
+            ),
+        }
+        for unit in SPIS
+    },
+
+    **{
+        f'SPI{unit}_RESET' : {
+            'location' : (
+                'RCC',
+                { # TODO Less redundancy.
+                    1 : 'APB2RSTR',
+                    2 : 'APB1LRSTR',
+                    3 : 'APB1LRSTR',
+                    4 : 'APB2RSTR',
+                }[unit],
+                f'SPI{unit}RST'
+            ),
+        }
+        for unit in SPIS
     },
 
 
