@@ -988,6 +988,61 @@ SCHEMA = {
         for unit in SPIS
     },
 
+    **{
+        f'SPI{unit}_KERNEL_SOURCE' : {
+            'location'   : ('RCC', 'CCIPR3', f'SPI{unit}SEL'),
+            'constraint' : kernel_source,
+            'value'      : TBD,
+        }
+        for units, kernel_source in (
+            ((1, 2, 3), Mapping({
+                'PLL1Q_CK' : '0b000',
+                'PLL2P_CK' : '0b001',
+                'PLL3P_CK' : '0b010',
+                0          : '0b011', # TODO: 'AUDIOCLK'.
+                'PER_CK'   : '0b100',
+                0          : '0b101',
+            })),
+            ((4,), Mapping({
+                'APB2_CK'  : '0b000',
+                'PLL2Q_CK' : '0b001',
+                'PLL3Q_CK' : '0b010',
+                'HSI_CK'   : '0b011',
+                'CSI_CK'   : '0b100',
+                'HSE_CK'   : '0b101',
+                0          : '0b110',
+            })),
+        )
+        for unit in units
+    },
+
+    **{
+        f'SPI{unit}_BYPASS_DIVIDER' : {
+            'location'   : (f'SPI{unit}', 'CFG1', 'BPASS'),
+            'constraint' : Choices(False, True),
+            'value'      : TBD,
+        }
+        for unit in SPIS
+    },
+
+    **{
+        f'SPI{unit}_DIVIDER' : {
+            'location'   : (f'SPI{unit}', 'CFG1', 'MBR'),
+            'constraint' : Mapping({
+                2   : '0b000',
+                4   : '0b001',
+                8   : '0b010',
+                16  : '0b011',
+                32  : '0b100',
+                64  : '0b101',
+                128 : '0b110',
+                256 : '0b111',
+            }),
+            'value' : TBD,
+        }
+        for unit in SPIS
+    },
+
 
 
     ################################################################################

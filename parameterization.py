@@ -1216,6 +1216,103 @@ class Parameterization:
 
 
         ################################################################################
+        #
+        # SPIs.
+        #
+
+
+
+        for unit in self('SPIS', when_undefined = ()):
+
+
+
+
+            @bruteforce
+            def parameterize_spi():
+
+
+
+                # See if the unit is even used.
+
+                needed_baud = self(f'SPI{unit}_BAUD')
+
+                if needed_baud is TBD:
+                    return True
+
+
+
+                # We'll approximate for the desired baud.
+
+                best = None
+
+                def keep_best(*, kernel_source, bypass_divider, divider, baud):
+
+                    nonlocal best
+
+                    if (
+                        best is None or
+                        abs(needed_baud - baud) < abs(needed_baud - best.baud)
+                    ):
+                        best = types.SimpleNamespace(
+                            kernel_source  = kernel_source,
+                            bypass_divider = bypass_divider,
+                            divider        = divider,
+                            baud           = baud,
+                        )
+
+
+
+                # Determine the kernel frequency to use.
+
+                for kernel_source in each(f'SPI{unit}_KERNEL_SOURCE'):
+
+                    kernel_frequency = self(kernel_source)
+
+                    if kernel_frequency is TBD:
+                        continue
+
+
+
+                    # See whether or not we need the divider.
+
+                    for bypass_divider in each(f'SPI{unit}_BYPASS_DIVIDER'):
+
+                        if bypass_divider:
+
+                            keep_best(
+                                kernel_source  = kernel_source,
+                                bypass_divider = bypass_divider,
+                                divider        = divider,
+                                baud           = kernel_frequency,
+                            )
+
+                        else:
+
+                            for divider in each(f'SPI{unit}_DIVIDER'):
+
+                                keep_best(
+                                    kernel_source  = kernel_source,
+                                    bypass_divider = bypass_divider,
+                                    divider        = divider,
+                                    baud           = kernel_frequency / divider,
+                                )
+
+
+
+                # See if we got it.
+
+                success = best is not None and abs(1 - best.baud / needed_baud) < 0.01 # TODO Ad-hoc tolerance.
+
+                if success:
+                    self[f'SPI{unit}_KERNEL_SOURCE' ] = best.kernel_source
+                    self[f'SPI{unit}_BYPASS_DIVIDER'] = best.bypass_divider
+                    self[f'SPI{unit}_DIVIDER'       ] = best.divider
+
+                return success
+
+
+
+        ################################################################################
 
 
 
