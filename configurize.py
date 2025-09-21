@@ -131,6 +131,9 @@ def configurize(Meta, parameterization):
                 Meta.define('_PORT_FOR_GPIO_WRITE'  , ('NAME'), gpio.port  , NAME = gpio.name)
                 Meta.define('_NUMBER_FOR_GPIO_WRITE', ('NAME'), gpio.number, NAME = gpio.name)
 
+            if gpio.active is not None:
+                Meta.define('_ACTIVE_FOR_GPIO_READ', ('NAME'), ('' if gpio.active else '!'), NAME = gpio.name)
+
 
 
         # Enable GPIO ports that have defined pins.

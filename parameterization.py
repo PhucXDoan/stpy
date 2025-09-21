@@ -238,6 +238,7 @@ class Parameterization:
                 number     = None,
                 speed      = None,
                 pull       = None,
+                active     = None,
                 open_drain = None,
                 initlvl    = None,
                 altfunc    = None,
@@ -275,6 +276,14 @@ class Parameterization:
                     # prevent accidentally defining a floating GPIO pin.
 
                     gpio.pull = properties.pop('pull')
+
+
+
+                    # The activation level can be specified to make it
+                    # easier to read what the logic level of the input is.
+                    # That is, whether or not the GPIO is active-low or active-high.
+
+                    gpio.active = properties.pop('active', None)
 
 
 
@@ -317,6 +326,7 @@ class Parameterization:
 
                     gpio.speed      = properties.pop('speed'     , None)
                     gpio.pull       = properties.pop('pull'      , None)
+                    gpio.active     = properties.pop('active'    , None)
                     gpio.open_drain = properties.pop('open_drain', None)
 
 
