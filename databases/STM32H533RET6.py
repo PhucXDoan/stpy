@@ -984,6 +984,13 @@ SCHEMA = {
     },
 
     **{
+        f'TIM{unit}_FORCE_UPDATE' : {
+            'location' : (f'TIM{unit}', 'EGR', 'UG'),
+        }
+        for unit in TIMERS
+    },
+
+    **{
         f'TIM{unit}_COUNTER_WIDTH' : {
             'value' : 32 if unit in (2, 5) else 16,
         }
