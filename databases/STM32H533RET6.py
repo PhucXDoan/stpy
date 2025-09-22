@@ -976,6 +976,13 @@ SCHEMA = {
         for unit in TIMERS
     },
 
+    **{
+        f'TIM{unit}_COUNTER' : {
+            'location' : (f'TIM{unit}', 'CNT', 'CNT'),
+        }
+        for unit in TIMERS
+    },
+
 
 
     ################################################################################
