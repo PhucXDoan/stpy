@@ -341,8 +341,8 @@ def get_cmsis_tools(Meta):
 
         return '(struct CMSISTuple) {{ {}, {}, {} }}'.format(
             f'&{peripheral}->{register}',
-            f'{peripheral}_{register}_{field}_Pos',
-            f'{peripheral}_{register}_{field}_Msk',
+            f'CONCAT({peripheral}_, {register}_{field}_Pos)',
+            f'CONCAT({peripheral}_, {register}_{field}_Msk)',
         )
 
 
