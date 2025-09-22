@@ -248,15 +248,15 @@ HSI_DEFAULT_FREQUENCY = 32_000_000
 
 global APB_PERIPHERALS
 APB_PERIPHERALS = {
+    'TIM1'  : 2,
     'TIM2'  : 1,
     'TIM3'  : 1,
     'TIM4'  : 1,
     'TIM5'  : 1,
     'TIM6'  : 1,
     'TIM7'  : 1,
-    'TIM12' : 1,
-    'TIM1'  : 2,
     'TIM8'  : 2,
+    'TIM12' : 1,
     'TIM15' : 2,
 }
 
@@ -931,9 +931,27 @@ SCHEMA = {
         f'TIM{unit}_ENABLE' : {
             'location' : (
                 'RCC',
-                f'APB{APB_PERIPHERALS[f'TIM{unit}']}ENR',
+                { # TODO Remove redundancy.
+                    'TIM1'  : 'APB2ENR' ,
+                    'TIM2'  : 'APB1LENR',
+                    'TIM3'  : 'APB1LENR',
+                    'TIM4'  : 'APB1LENR',
+                    'TIM5'  : 'APB1LENR',
+                    'TIM6'  : 'APB1LENR',
+                    'TIM7'  : 'APB1LENR',
+                    'TIM8'  : 'APB2ENR' ,
+                    'TIM12' : 'APB1LENR',
+                    'TIM15' : 'APB2ENR' ,
+                }[f'TIM{unit}'],
                 f'TIM{unit}EN'
             ),
+        }
+        for unit in TIMERS
+    },
+
+    **{
+        f'TIM{unit}_COUNTER_ENABLE' : {
+            'location' : (f'TIM{unit}', 'CR1', 'CEN'),
         }
         for unit in TIMERS
     },
