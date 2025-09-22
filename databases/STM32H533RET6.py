@@ -914,6 +914,13 @@ SCHEMA = {
     },
 
     **{
+        f'TIM{unit}_COUNTER_RATE' : {
+            'value' : TBD,
+        }
+        for unit in TIMERS
+    },
+
+    **{
         f'TIM{unit}_UPDATE_RATE' : {
             'value' : TBD,
         }

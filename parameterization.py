@@ -1145,7 +1145,8 @@ class Parameterization:
 
         def parameterize_timer(unit):
 
-            needed_rate = self(f'TIM{unit}_UPDATE_RATE')
+            needed_counter_rate = self(f'TIM{unit}_COUNTER_RATE')
+            needed_update_rate  = self(f'TIM{unit}_UPDATE_RATE' )
 
 
 
@@ -1173,7 +1174,22 @@ class Parameterization:
 
             for divider in each(f'TIM{unit}_DIVIDER'):
 
-                counter_frequency = kernel_frequency / divider
+                counter_rate = kernel_frequency / divider
+
+
+
+                #
+
+                if needed_counter_rate is not TBD and counter_rate != needed_counter_rate:
+                    continue
+
+
+
+                # If the target doesn't care about the timer's update,
+                # no need to compute the modulation value.
+
+                if needed_update_rate is TBD:
+                    return True
 
 
 
@@ -1181,7 +1197,7 @@ class Parameterization:
 
                 if not checkout(
                     f'TIM{unit}_MODULATION',
-                    round(counter_frequency / needed_rate)
+                    round(counter_rate / needed_update_rate)
                 ):
                     continue
 
@@ -1189,8 +1205,8 @@ class Parameterization:
 
                 # See if things are within tolerance.
 
-                actual_rate  = counter_frequency / self(f'TIM{unit}_MODULATION')
-                actual_error = abs(1 - actual_rate / needed_rate)
+                actual_update_rate = counter_rate / self(f'TIM{unit}_MODULATION')
+                actual_error       = abs(1 - actual_update_rate / needed_update_rate)
 
                 if actual_error <= 0.001: # TODO Ad-hoc.
                     return True
@@ -1209,7 +1225,10 @@ class Parameterization:
             used_units = [
                 unit
                 for unit in self('TIMERS', when_undefined = ())
-                if self(f'TIM{unit}_UPDATE_RATE') is not TBD
+                if (
+                    self(f'TIM{unit}_COUNTER_RATE') is not TBD or
+                    self(f'TIM{unit}_UPDATE_RATE' ) is not TBD
+                )
             ]
 
             if not used_units:
