@@ -928,6 +928,17 @@ SCHEMA = {
     },
 
     **{
+        f'TIM{unit}_ENABLE' : {
+            'location' : (
+                'RCC',
+                f'APB{APB_PERIPHERALS[f'TIM{unit}']}ENR',
+                f'TIM{unit}EN'
+            ),
+        }
+        for unit in TIMERS
+    },
+
+    **{
         f'TIM{unit}_DIVIDER' : {
             'location'   : (f'TIM{unit}', 'PSC', 'PSC'),
             'constraint' : IntMinMax(1, 1 << 16),
