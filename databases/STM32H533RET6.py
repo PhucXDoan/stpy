@@ -914,7 +914,7 @@ SCHEMA = {
     },
 
     **{
-        f'TIM{unit}_RATE' : {
+        f'TIM{unit}_UPDATE_RATE' : {
             'value' : TBD,
         }
         for unit in TIMERS

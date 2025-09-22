@@ -1145,7 +1145,7 @@ class Parameterization:
 
         def parameterize_timer(unit):
 
-            needed_rate = self(f'TIM{unit}_RATE')
+            needed_rate = self(f'TIM{unit}_UPDATE_RATE')
 
 
 
@@ -1209,7 +1209,7 @@ class Parameterization:
             used_units = [
                 unit
                 for unit in self('TIMERS', when_undefined = ())
-                if self(f'TIM{unit}_RATE') is not TBD
+                if self(f'TIM{unit}_UPDATE_RATE') is not TBD
             ]
 
             if not used_units:
