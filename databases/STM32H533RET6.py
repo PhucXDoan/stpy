@@ -1103,5 +1103,26 @@ SCHEMA = {
 
 
     ################################################################################
+    #
+    # SDMMCs.
+    #
+
+
+
+    'SDMMC_WAITRESP' : {
+        'value' : {
+            None  : '0b00', # No response packet will be sent back.
+            'r1'  : '0b01', # For 48-bit response packets.
+            'r1b' : '0b01', # "
+            'r6'  : '0b01', # "
+            'r7'  : '0b01', # "
+            'r3'  : '0b10', # For 48-bit response packets with no CRC.
+            'r2'  : '0b11', # For 136-bit response packets.
+        },
+    }
+
+
+
+    ################################################################################
 
 }
