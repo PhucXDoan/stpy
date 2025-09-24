@@ -673,5 +673,25 @@ def configurize(Meta, parameterization):
 
 
     ################################################################################
+    #
+    # SDMMCs.
+    #
+
+
+
+    for unit in parameterization('SDMMCS', when_undefined = ()):
+
+        with Meta.section(title_of(f'SDMMC{unit}')):
+
+            define_if_determined(f'SDMMC{unit}_KERNEL_SOURCE')
+
+            for mode in ('INITIAL', 'FULL'):
+
+                define_if_determined(f'SDMMC{unit}_{mode}_DIVIDER' )
+                define_if_determined(f'SDMMC{unit}_{mode}_DATATIME')
+
+
+
+    ################################################################################
 
     Meta.line()

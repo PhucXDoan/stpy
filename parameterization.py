@@ -1347,6 +1347,55 @@ class Parameterization:
 
 
         ################################################################################
+        #
+        # SDMMCs.
+        #
+
+
+
+        def parameterize_sdmmc_mode(unit, mode, kernel_frequency):
+
+            if kernel_frequency is TBD:
+                return False
+
+            needed_baud = self(f'SDMMC{unit}_{mode}_BAUD')
+
+            if not checkout(f'SDMMC{unit}_{mode}_DIVIDER', kernel_frequency / needed_baud):
+                return False
+
+            if not checkout(f'SDMMC{unit}_{mode}_DATATIME', self(f'SDMMC{unit}_TIMEOUT') * needed_baud):
+                return False
+
+            return True
+
+
+
+        def parameterize_sdmmc(unit):
+
+            for kernel_source in each(f'SDMMC{unit}_KERNEL_SOURCE'):
+
+                every_mode_satisfied = all(
+                    parameterize_sdmmc_mode(unit, mode, self(kernel_source))
+                    for mode in ('INITIAL', 'FULL')
+                )
+
+                if every_mode_satisfied:
+                    return True
+
+
+
+        @bruteforce
+        def parameterize_sdmmcs():
+
+            return all(
+                parameterize_sdmmc(unit)
+                for unit in self('SDMMCS', when_undefined = ())
+                if self(f'SDMMC{unit}_INITIAL_BAUD') is not TBD
+            )
+
+
+
+        ################################################################################
 
 
 

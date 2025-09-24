@@ -67,6 +67,13 @@ TIMERS = (
 )
 
 
+
+global SDMMCS
+SDMMCS = (
+    1,
+)
+
+
 global INTERRUPTS
 INTERRUPTS = (
     'Reset',
@@ -1105,9 +1112,76 @@ SCHEMA = {
     ################################################################################
     #
     # SDMMCs.
+    # TODO Remove duplication.
     #
 
 
+
+    **{
+        f'SDMMC{unit}_INITIAL_BAUD' : {
+            'value' : TBD,
+        }
+        for unit in SDMMCS
+    },
+
+    **{
+        f'SDMMC{unit}_FULL_BAUD' : {
+            'value' : TBD,
+        }
+        for unit in SDMMCS
+    },
+
+    **{
+        f'SDMMC{unit}_TIMEOUT' : {
+            'value' : TBD,
+        }
+        for unit in SDMMCS
+    },
+
+    'SDMMC1_KERNEL_SOURCE' : {
+        'location'   : ('RCC', 'CCIPR4', 'SDMMC1SEL'),
+        'constraint' : Mapping({
+            'PLL1Q_CK' : '0b0',
+            'PLL2R_CK' : '0b1',
+        }),
+        'value' : TBD,
+    },
+
+    'SDMMC1_INITIAL_DIVIDER' : {
+        'location'   : ('SDMMC1', 'CLKCR', 'CLKDIV'),
+        'constraint' : Mapping({
+            1 : '0x000',
+            **{
+                i * 2 : f'0x{i :03x}'
+                for i in range(0x001, 0x3FF+1)
+            }
+        }),
+        'value' : TBD,
+    },
+
+    'SDMMC1_FULL_DIVIDER' : {
+        'location'   : ('SDMMC1', 'CLKCR', 'CLKDIV'),
+        'constraint' : Mapping({
+            1 : '0x000',
+            **{
+                i * 2 : f'0x{i :03x}'
+                for i in range(0x001, 0x3FF+1)
+            }
+        }),
+        'value' : TBD,
+    },
+
+    'SDMMC1_INITIAL_DATATIME' : {
+        'location'   : ('SDMMC1', 'DTIMER', 'DATATIME'),
+        'constraint' : IntMinMax(0, (1 << 32) - 1),
+        'value'      : TBD,
+    },
+
+    'SDMMC1_FULL_DATATIME' : {
+        'location'   : ('SDMMC1', 'DTIMER', 'DATATIME'),
+        'constraint' : IntMinMax(0, (1 << 32) - 1),
+        'value'      : TBD,
+    },
 
     'SDMMC_WAITRESP' : {
         'value' : {
