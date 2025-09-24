@@ -1138,6 +1138,14 @@ SCHEMA = {
         for unit in SDMMCS
     },
 
+    'SDMMC1_ENABLE' : {
+        'location' : ('RCC', 'AHB4ENR', 'SDMMC1EN'),
+    },
+
+    'SDMMC1_RESET' : {
+        'location' : ('RCC', 'AHB4RSTR', 'SDMMC1RST'),
+    },
+
     'SDMMC1_KERNEL_SOURCE' : {
         'location'   : ('RCC', 'CCIPR4', 'SDMMC1SEL'),
         'constraint' : Mapping({
