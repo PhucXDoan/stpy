@@ -758,6 +758,11 @@ class Parameterization:
 
 
 
+            if kernel_frequency is TBD:
+                return False
+
+
+
             used_channels = [
                 channel
                 for channel in channels
@@ -807,7 +812,6 @@ class Parameterization:
                         all(
                             parameterize_pll(unit, channels, self(kernel_source))
                             for unit, channels in self('PLLS')
-                            if self(kernel_source) is not TBD
                         )
                         for kernel_source in each('PLL_KERNEL_SOURCE')
                     )
@@ -822,7 +826,6 @@ class Parameterization:
                         any(
                             parameterize_pll(unit, channels, self(kernel_source))
                             for kernel_source in each(f'PLL{unit}_KERNEL_SOURCE')
-                            if self(kernel_source) is not TBD
                         )
                         for unit, channels in self('PLLS')
                     )
