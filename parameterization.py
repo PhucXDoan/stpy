@@ -209,7 +209,7 @@ class Parameterization:
                     # easier to read what the logic level of the input is.
                     # That is, whether or not the GPIO is active-low or active-high.
 
-                    gpio.active = properties.pop('active', None)
+                    gpio.active = properties.pop('active', True)
 
 
 
@@ -230,7 +230,7 @@ class Parameterization:
 
                     gpio.speed      = properties.pop('speed'     , None)
                     gpio.open_drain = properties.pop('open_drain', None)
-
+                    gpio.active     = properties.pop('active'    , True)
 
 
 
@@ -252,7 +252,7 @@ class Parameterization:
 
                     gpio.speed      = properties.pop('speed'     , None)
                     gpio.pull       = properties.pop('pull'      , None)
-                    gpio.active     = properties.pop('active'    , None)
+                    gpio.active     = properties.pop('active'    , True)
                     gpio.open_drain = properties.pop('open_drain', None)
 
 

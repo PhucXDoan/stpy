@@ -124,15 +124,15 @@ def configurize(Meta, parameterization):
                 continue
 
             if gpio.mode in ('INPUT', 'ALTERNATE'):
-                Meta.define('_PORT_FOR_GPIO_READ'   , ('NAME'), gpio.port  , NAME = gpio.name)
-                Meta.define('_NUMBER_FOR_GPIO_READ' , ('NAME'), gpio.number, NAME = gpio.name)
+                Meta.define('_PORT_FOR_GPIO_READ'  , ('NAME'), gpio.port  , NAME = gpio.name)
+                Meta.define('_NUMBER_FOR_GPIO_READ', ('NAME'), gpio.number, NAME = gpio.name)
+                Meta.define('_ACTIVE_FOR_GPIO_READ', ('NAME'), ('' if gpio.active else '!'), NAME = gpio.name)
 
             if gpio.mode == 'OUTPUT':
-                Meta.define('_PORT_FOR_GPIO_WRITE'  , ('NAME'), gpio.port  , NAME = gpio.name)
-                Meta.define('_NUMBER_FOR_GPIO_WRITE', ('NAME'), gpio.number, NAME = gpio.name)
-
-            if gpio.active is not None:
-                Meta.define('_ACTIVE_FOR_GPIO_READ', ('NAME'), ('' if gpio.active else '!'), NAME = gpio.name)
+                Meta.define('_LOCATION_FOR_GPIO_HIGH', ('NAME'), ('GPIO_BSRR_BS' if gpio.active else 'GPIO_BSRR_BR'), NAME = gpio.name)
+                Meta.define('_LOCATION_FOR_GPIO_LOW' , ('NAME'), ('GPIO_BSRR_BR' if gpio.active else 'GPIO_BSRR_BS'), NAME = gpio.name)
+                Meta.define('_PORT_FOR_GPIO_WRITE'   , ('NAME'), gpio.port  , NAME = gpio.name)
+                Meta.define('_NUMBER_FOR_GPIO_WRITE' , ('NAME'), gpio.number, NAME = gpio.name)
 
 
 
