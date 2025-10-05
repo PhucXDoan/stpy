@@ -136,83 +136,9 @@ class Parameterization:
 
 
 
-        # We copy over keys in the database that can be
-        # associated with a value; for any that are already
-        # predefined, we can pin it so we avoid accidentally
-        # overwriting it.
-
-        for key, entry in MCUS[self.mcu].database.items():
-
-            if not hasattr(entry, 'value'):
-                continue
-
-            self.determined[key] = entry.value
-
-            if entry.value is not TBD:
-                self.pinned |= { key }
-
-
-
-        # The target specifies part of the parameterization
-        # that we then figure out the rest automatically.
-        # Since these are the things that the user want in
-        # the final parameterization, the values will be pinned.
-
-        for key, value in self.schema.items():
-
-            self[key]    = value
-            self.pinned |= { key }
-
-
-
-        # Decorater to indicate the entry-point
-        # to when we are starting to brute-force.
-
-        def bruteforce(function):
-
-            success = function()
-
-            if not success:
-
-                raise RuntimeError(
-                    f'Failed to brute-force {repr(function.__name__)} '
-                    f'for target {repr(self.target)}.'
-                )
-
-
-
-        # Shorthand to update the value of a database entry
-        # by iterating over all the possible valid values
-        # it can be.
-
-        def each(key):
-
-            for self[key] in MCUS[self.mcu][key].constraint.iterate():
-
-                yield self(key)
-
-
-
-        # Shorthand to update the value of a database
-        # entry if it satisfies the constraint.
-        # As of now, the constraint is something
-        # simple that we can check the membership of;
-        # things like tuples, dictionaries, or ranges.
-
-        def checkout(key, value):
-
-            ok = MCUS[self.mcu][key].constraint.check(value)
-
-            if ok:
-                self[key] = value
-
-            return ok
-
-
-
         ################################################################################
         #
-        # GPIOs.
+        # Process GPIOs.
         #
 
 
@@ -441,44 +367,11 @@ class Parameterization:
 
 
 
-        # Enable the ports.
-
-        for port in sorted(dict.fromkeys(gpio.port for gpio in self.gpios)):
-
-            self[f'GPIO{port}_ENABLE']  = True
-            self.pinned                |= { f'GPIO{port}_ENABLE' }
-
-
-
-        # Parameterize GPIOs.
-
-        for gpio in self.gpios:
-
-            if gpio.pin is None:
-                continue
-
-            for suffix, value in (
-                ('OPEN_DRAIN'        , gpio.open_drain),
-                ('OUTPUT'            , gpio.initlvl   ),
-                ('SPEED'             , gpio.speed     ),
-                ('PULL'              , gpio.pull      ),
-                ('ALTERNATE_FUNCTION', gpio.afsel     ),
-                ('MODE'              , gpio.mode      ),
-            ):
-
-                if value is None:
-                    continue
-
-                key          = f'GPIO{gpio.port}{gpio.number}_{suffix}'
-                self[key]    = value
-                self.pinned |= { key }
-
-
-
         ################################################################################
         #
-        # Interrupts.
+        # Process interrupts.
         #
+
 
 
         def process_single_interrupt(entry):
@@ -557,6 +450,137 @@ class Parameterization:
                 f'For target {repr(self.target)}, '
                 f'interrupt {repr(duplicate_name)} is listed more than once.'
             )
+
+
+
+        ################################################################################
+        #
+        # Set stuff up for proper parameterization.
+        #
+
+
+
+        # If no schema was given, then we were only here
+        # just for verifying the target's other parameters
+        # like GPIOs.
+
+        if self.schema is None:
+            return
+
+
+
+        # We copy over keys in the database that can be
+        # associated with a value; for any that are already
+        # predefined, we can pin it so we avoid accidentally
+        # overwriting it.
+
+        for key, entry in MCUS[self.mcu].database.items():
+
+            if not hasattr(entry, 'value'):
+                continue
+
+            self.determined[key] = entry.value
+
+            if entry.value is not TBD:
+                self.pinned |= { key }
+
+
+
+        # The target specifies part of the parameterization
+        # that we then figure out the rest automatically.
+        # Since these are the things that the user want in
+        # the final parameterization, the values will be pinned.
+
+        for key, value in self.schema.items():
+
+            self[key]    = value
+            self.pinned |= { key }
+
+
+
+        # Decorater to indicate the entry-point
+        # to when we are starting to brute-force.
+
+        def bruteforce(function):
+
+            success = function()
+
+            if not success:
+
+                raise RuntimeError(
+                    f'Failed to brute-force {repr(function.__name__)} '
+                    f'for target {repr(self.target)}.'
+                )
+
+
+
+        # Shorthand to update the value of a database entry
+        # by iterating over all the possible valid values
+        # it can be.
+
+        def each(key):
+
+            for self[key] in MCUS[self.mcu][key].constraint.iterate():
+
+                yield self(key)
+
+
+
+        # Shorthand to update the value of a database
+        # entry if it satisfies the constraint.
+        # As of now, the constraint is something
+        # simple that we can check the membership of;
+        # things like tuples, dictionaries, or ranges.
+
+        def checkout(key, value):
+
+            ok = MCUS[self.mcu][key].constraint.check(value)
+
+            if ok:
+                self[key] = value
+
+            return ok
+
+
+
+        ################################################################################
+        #
+        # Parameterize GPIOs.
+        #
+
+
+
+        # Enable the ports.
+
+        for port in sorted(dict.fromkeys(gpio.port for gpio in self.gpios)):
+
+            self[f'GPIO{port}_ENABLE']  = True
+            self.pinned                |= { f'GPIO{port}_ENABLE' }
+
+
+
+        # Parameterize GPIOs.
+
+        for gpio in self.gpios:
+
+            if gpio.pin is None:
+                continue
+
+            for suffix, value in (
+                ('OPEN_DRAIN'        , gpio.open_drain),
+                ('OUTPUT'            , gpio.initlvl   ),
+                ('SPEED'             , gpio.speed     ),
+                ('PULL'              , gpio.pull      ),
+                ('ALTERNATE_FUNCTION', gpio.afsel     ),
+                ('MODE'              , gpio.mode      ),
+            ):
+
+                if value is None:
+                    continue
+
+                key          = f'GPIO{gpio.port}{gpio.number}_{suffix}'
+                self[key]    = value
+                self.pinned |= { key }
 
 
 

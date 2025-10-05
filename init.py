@@ -30,9 +30,17 @@ def init(
 
 
 
-    # TODO This is here for the niche reasons...
+    # When the schema is None, the parameterization
+    # process just verifies the correctness of the
+    # other parameters like GPIOs without focusing
+    # on the code generation.
 
-    with Meta.enter('#if STPY_IMPLEMENTATION'):
+    if parameterization.schema is None:
+        return
+
+
+
+    with Meta.enter('#if STPY_IMPLEMENTATION'): # TODO This is here for the niche reasons...
 
 
 
