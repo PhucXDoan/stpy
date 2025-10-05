@@ -246,11 +246,12 @@ class MCU:
 
 
         # STM32CubeMX can generate a CSV file that'll detail
-        # all of the MCU's GPIO's alternate functions; when
+        # all of the MCU's pins (e.g. alternate functions); when
         # working a particular MCU, we should have this file
         # generated already.
 
-        self.gpio_afsel_table = {}
+        self.pinouts          = {}
+        self.gpio_afsel_table = {} # TODO Combine with `self.pinouts`.
 
         for entry in csv.DictReader(
             pathlib.Path(__file__)
@@ -259,6 +260,10 @@ class MCU:
                 .read_text()
                 .splitlines()
         ):
+
+
+
+            pin_name = entry['Name']
 
             match entry['Type']:
 
@@ -281,14 +286,13 @@ class MCU:
                     # >     PC2_C                   -> PC2
                     # >
 
-                    pin    = entry['Name']
-                    pin    = pin.split('-', 1)[0]
-                    pin    = pin.split('(', 1)[0]
-                    pin    = pin.split('_', 1)[0]
-                    port   = pin[1]
-                    number = int(pin[2:])
+                    pin_name = pin_name.split('-', 1)[0]
+                    pin_name = pin_name.split('(', 1)[0]
+                    pin_name = pin_name.split('_', 1)[0]
+                    port     = pin_name[1]
+                    number   = int(pin_name[2:])
 
-                    assert pin.startswith('P') and ('A' <= port <= 'Z')
+                    assert pin_name.startswith('P') and ('A' <= port <= 'Z')
 
 
 
@@ -338,6 +342,14 @@ class MCU:
 
                 case _:
                     pass # TODO Warn.
+
+
+
+            assert entry['Position'] not in self.pinouts
+            self.pinouts[entry['Position']] = types.SimpleNamespace(
+                type = entry['Type'],
+                name = pin_name,
+            )
 
 
 
