@@ -781,23 +781,19 @@ SCHEMA = {
         for peripheral, unit in instances
     },
 
-    **{
-        f'{peripheral}{unit}_ENABLE' : {
-            'location'   : ('RCC', 'APB1LENR', f'{peripheral}{unit}EN'),
-            'constraint' : Choices(False, True),
-            'value'      : TBD,
-        }
-        for instances in UXARTS
-        for peripheral, unit in instances
-    },
+    'USART1_ENABLE' : { 'location' : ('RCC', 'APB2ENR'  , 'USART1EN' ) },
+    'USART2_ENABLE' : { 'location' : ('RCC', 'APB1LENR' , 'USART2EN' ) },
+    'USART3_ENABLE' : { 'location' : ('RCC', 'APB1LENR' , 'USART3EN' ) },
+    'UART4_ENABLE'  : { 'location' : ('RCC', 'APB1LENR' , 'UART4EN'  ) },
+    'UART5_ENABLE'  : { 'location' : ('RCC', 'APB1LENR' , 'UART5EN'  ) },
+    'USART6_ENABLE' : { 'location' : ('RCC', 'APB1LENR' , 'USART6EN' ) },
 
-    **{
-        f'{peripheral}{unit}_RESET' : {
-            'location' : ('RCC', 'APB1LRSTR', f'{peripheral}{unit}RST'),
-        }
-        for instances in UXARTS
-        for peripheral, unit in instances
-    },
+    'USART1_RESET'  : { 'location' : ('RCC', 'APB2RSTR' , 'USART1RST') },
+    'USART2_RESET'  : { 'location' : ('RCC', 'APB1LRSTR', 'USART2RST') },
+    'USART3_RESET'  : { 'location' : ('RCC', 'APB1LRSTR', 'USART3RST') },
+    'UART4_RESET'   : { 'location' : ('RCC', 'APB1LRSTR', 'UART4RST' ) },
+    'UART5_RESET'   : { 'location' : ('RCC', 'APB1LRSTR', 'UART5RST' ) },
+    'USART6_RESET'  : { 'location' : ('RCC', 'APB1LRSTR', 'USART6RST') },
 
     **{
         f'UXART_{instances}_KERNEL_SOURCE' : {
