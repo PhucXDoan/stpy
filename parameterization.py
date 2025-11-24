@@ -1058,6 +1058,9 @@ class Parameterization:
 
                 for kernel_source in each(f'UXART_{instances}_KERNEL_SOURCE'):
 
+                    if self(kernel_source) is TBD:
+                        continue
+
                     every_instance_satisfied = all(
                         checkout(
                             f'{peripheral}{unit}_BAUD_DIVIDER',
