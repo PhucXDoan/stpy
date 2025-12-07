@@ -354,6 +354,7 @@ class Parameterization:
             pin
             for pin, count in collections.Counter(
                 gpio.pin for gpio in self.gpios
+                if gpio.pin is not None
             ).items()
             if count >= 2
         ]:
