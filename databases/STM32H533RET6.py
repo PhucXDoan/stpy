@@ -1000,6 +1000,48 @@ SCHEMA = {
         for unit in TIMERS
     },
 
+    **{
+        f'TIM{unit}_CAPTURE_COMPARE_ENABLE_1' : {
+            'location' : (f'TIM{unit}', 'CCER', 'CC1E'),
+        }
+        for unit in TIMERS
+    },
+
+    **{
+        f'TIM{unit}_CAPTURE_COMPARE_ENABLE_2' : {
+            'location' : (f'TIM{unit}', 'CCER', 'CC2E'),
+        }
+        for unit in TIMERS
+    },
+
+    **{
+        f'TIM{unit}_CAPTURE_COMPARE_VALUE_1' : {
+            'location' : (f'TIM{unit}', 'CCR1', 'CCR1'),
+        }
+        for unit in TIMERS
+    },
+
+    **{
+        f'TIM{unit}_CAPTURE_COMPARE_VALUE_2' : {
+            'location' : (f'TIM{unit}', 'CCR2', 'CCR2'),
+        }
+        for unit in TIMERS
+    },
+
+    **{
+        f'TIM{unit}_CAPTURE_COMPARE_MODE_1' : {
+            'location' : (f'TIM{unit}', 'CCMR1', 'OC1M'),
+        }
+        for unit in TIMERS
+    },
+
+    **{
+        f'TIM{unit}_CAPTURE_COMPARE_MODE_2' : {
+            'location' : (f'TIM{unit}', 'CCMR1', 'OC2M'),
+        }
+        for unit in TIMERS
+    },
+
 
 
     ################################################################################
