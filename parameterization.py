@@ -1204,6 +1204,13 @@ class Parameterization:
 
 
 
+            # The tolerance can be specified if desired.
+
+            if self(f'TIM{unit}_MAX_UPDATE_RATE_ERROR') is TBD:
+                self[f'TIM{unit}_MAX_UPDATE_RATE_ERROR'] = 0.001
+
+
+
             # Find the pair of divider and modulation values to
             # get an output frequency that's within tolerance.
 
@@ -1243,7 +1250,7 @@ class Parameterization:
                 actual_update_rate = counter_rate / self(f'TIM{unit}_MODULATION')
                 actual_error       = abs(1 - actual_update_rate / needed_update_rate)
 
-                if actual_error <= 0.001: # TODO Ad-hoc.
+                if actual_error <= self(f'TIM{unit}_MAX_UPDATE_RATE_ERROR'):
                     return True
 
 

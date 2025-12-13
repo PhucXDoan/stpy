@@ -931,6 +931,14 @@ SCHEMA = {
     },
 
     **{
+        f'TIM{unit}_MAX_UPDATE_RATE_ERROR' : {
+            'value'      : TBD,
+            'constraint' : RealMinMax(0, 1),
+        }
+        for unit in TIMERS
+    },
+
+    **{
         f'TIM{unit}_ENABLE' : {
             'location' : (
                 'RCC',
