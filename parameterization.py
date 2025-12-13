@@ -553,7 +553,11 @@ class Parameterization:
 
         # Enable the ports.
 
-        for port in sorted(dict.fromkeys(gpio.port for gpio in self.gpios)):
+        for port in sorted(dict.fromkeys(
+            gpio.port
+            for gpio in self.gpios
+            if gpio.port is not None
+        )):
 
             self[f'GPIO{port}_ENABLE']  = True
             self.pinned                |= { f'GPIO{port}_ENABLE' }
