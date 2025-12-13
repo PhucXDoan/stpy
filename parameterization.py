@@ -1213,7 +1213,7 @@ class Parameterization:
 
 
 
-                #
+                # Ensure we match the specified counter rate, if one was given.
 
                 if needed_counter_rate is not TBD and counter_rate != needed_counter_rate:
                     continue
