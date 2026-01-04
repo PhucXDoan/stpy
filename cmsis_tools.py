@@ -1,6 +1,6 @@
 import collections, types
-from ..stpy.mcus      import MCUS
-from ..stpy.pxd.utils import coalesce, c_repr, justify
+import deps.stpy.pxd.pxd as pxd
+from ..stpy.mcus import MCUS
 
 
 
@@ -135,8 +135,8 @@ def get_cmsis_tools(Meta):
             # >    )
             # >
 
-            modifies = dict(coalesce(
-                ((peripheral, register), (field, c_repr(value)))
+            modifies = dict(pxd.coalesce(
+                ((peripheral, register), (field, pxd.c_repr(value)))
                 for peripheral, register, field, value in modifies
             ))
 
@@ -209,7 +209,7 @@ def get_cmsis_tools(Meta):
 
                         with Meta.enter(self.macro, '(', ');'):
 
-                            for lhs, rhs in justify(
+                            for lhs, rhs in pxd.justify(
                                 (
                                     ('<', lhs),
                                     ('<', rhs),
@@ -322,7 +322,7 @@ def get_cmsis_tools(Meta):
 
         for peripheral, register, field, value in spinlocks:
 
-            value = c_repr(value)
+            value = pxd.c_repr(value)
 
             match value:
                 case 'true'  : Meta.line(f'while (!CMSIS_GET({peripheral}, {register}, {field}));')

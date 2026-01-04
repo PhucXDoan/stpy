@@ -1,7 +1,7 @@
+import deps.stpy.pxd.pxd as pxd
 from ..stpy.mcus             import MCUS, TBD
 from ..stpy.parameterization import Parameterization
 from ..stpy.configurize      import configurize
-from ..stpy.pxd.utils        import justify
 
 
 
@@ -120,7 +120,7 @@ def init(
 
             # Output a nice looking table.
 
-            for word, number, name in justify(
+            for word, number, name in pxd.justify(
                 (
                     ('<' , word  ),
                     ('>' , number),
@@ -166,7 +166,7 @@ def init(
 
     # Clock-tree frequencies.
 
-    for macro, expansion in justify(
+    for macro, expansion in pxd.justify(
         (
             ('<', f'STPY_{key}'),
             ('>', f'{value :,}'.replace(',', "'")),

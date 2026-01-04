@@ -1,8 +1,8 @@
 import difflib
+import deps.stpy.pxd.pxd as pxd
 from ..stpy.parameterization import TBD
 from ..stpy.cmsis_tools      import get_cmsis_tools
 from ..stpy.mcus             import MCUS
-from ..stpy.pxd.utils        import c_repr, justify
 
 
 
@@ -63,7 +63,7 @@ def configurize(Meta, parameterization):
 
         # Give the caller the peripheral-register-field-value tuple.
 
-        value = c_repr(value)
+        value = pxd.c_repr(value)
 
         if MCUS[parameterization.mcu][given_key].off_by_one:
             value = f'{value} - 1'
@@ -96,7 +96,7 @@ def configurize(Meta, parameterization):
 
         # Export the parameterization value.
 
-        value = c_repr(value)
+        value = pxd.c_repr(value)
 
         if MCUS[parameterization.mcu][given_key].off_by_one:
             value = f'({value} - 1)'
