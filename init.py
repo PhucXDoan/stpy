@@ -149,6 +149,65 @@ def init(
 
 
 
+        # Forward-declare the interrupt callback for GPIOs with EXTI.
+
+        for gpio in parameterization.gpios:
+
+            if gpio.interrupt is None:
+                continue
+
+            Meta.line(f'''
+                static void
+                INTERRUPT_EXTIx_{gpio.name}(void);
+            ''')
+
+
+
+        # When the EXTI interrupt is called,
+        # we invoke the callback of the GPIOs associated with it
+        # if their interrupt flag is pending.
+
+        for exti_number, gpios in pxd.coalesce(
+            (gpio.number, gpio)
+            for gpio in parameterization.gpios
+            if gpio.interrupt is not None
+        ):
+
+            with Meta.enter(f'INTERRUPT_EXTI{exti_number}'):
+
+                for gpio in gpios:
+
+                    peripheral, register, field = ( # TODO Dumbest way to do this.
+                        MCUS
+                            [parameterization.mcu]
+                            [f'EXTI{exti_number}_PENDING_{gpio.interrupt}_INTERRUPT']
+                    ).location
+
+                    Meta.line(f'''
+                        if (CMSIS_GET({peripheral}, {register}, {field}))
+                        {{
+                            CMSIS_SET({peripheral}, {register}, {field}, true);
+                            INTERRUPT_EXTIx_{gpio.name}();
+                        }}
+                    ''')
+
+
+
+        # Make the EXTI interrupt callback macro to ensure
+        # no extraneous declarations are made.
+
+        for gpio in parameterization.gpios:
+
+            if gpio.interrupt is None:
+                continue
+
+            Meta.define(
+                f'INTERRUPT_EXTIx_{gpio.name}',
+                f'static void INTERRUPT_EXTIx_{gpio.name}(void)'
+            )
+
+
+
         # Configurization.
 
         with Meta.enter('''

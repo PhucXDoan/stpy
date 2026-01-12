@@ -15,9 +15,11 @@ PLLS = (
 )
 
 
+global GPIO_MAX_PIN_NUMBER
+GPIO_MAX_PIN_NUMBER = 16
 
 global GPIOS
-GPIOS = tuple((port, tuple(range(0, 16))) for port in 'ABCDEFGHI')
+GPIOS = tuple((port, tuple(range(GPIO_MAX_PIN_NUMBER))) for port in 'ABCDEFGHI')
 
 
 
@@ -1247,7 +1249,56 @@ SCHEMA = {
             'r3'  : '0b10', # For 48-bit response packets with no CRC.
             'r2'  : '0b11', # For 136-bit response packets.
         },
-    }
+    },
+
+
+
+    ################################################################################
+    #
+    # EXTI.
+    #
+
+
+
+    **{
+        f'EXTI{n}_{edge}_TRIGGER_SELECTION' : {
+            'location'   : ('EXTI', f'{edge[0]}TSR1', f'{edge[0]}T{n}'),
+            'constraint' : Choices(False, True),
+            'value'      : TBD,
+        }
+        for edge in ('RISING', 'FALLING')
+        for n in range(GPIO_MAX_PIN_NUMBER)
+    },
+
+    **{
+        f'EXTI{n}_INTERRUPT_ENABLE' : {
+            'location'   : ('EXTI', f'IMR{n}', f'IM{n}'),
+            'constraint' : Choices(False, True),
+            'value'      : TBD,
+        }
+        for edge in ('RISING', 'FALLING')
+        for n in range(GPIO_MAX_PIN_NUMBER)
+    },
+
+    **{
+        f'EXTI{n}_PORT_SELECTION' : {
+            'location'   : (f'EXTI_EXTICR{n // 4 + 1}', f'EXTI->EXTICR[{n // 4}]', f'EXTI{n}'),
+            'constraint' : Mapping({
+                port : f'0x{port_i :02X}'
+                for port_i, port in enumerate('ABCDEFGH')
+            }),
+            'value' : TBD,
+        }
+        for n in range(GPIO_MAX_PIN_NUMBER)
+    },
+
+    **{
+        f'EXTI{n}_PENDING_{edge}_INTERRUPT' : {
+            'location' : ('EXTI', f'{edge[0]}PR1', f'{edge[0]}PIF{n}'),
+        }
+        for edge in ('RISING', 'FALLING')
+        for n in range(GPIO_MAX_PIN_NUMBER)
+    },
 
 
 

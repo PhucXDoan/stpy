@@ -206,6 +206,52 @@ def configurize(Meta, parameterization):
 
 
 
+        # TODO Due to not all databases not currently supporting EXTI.
+
+        if parameterization('GPIO_MAX_PIN_NUMBER', when_undefined = None):
+
+
+
+            # Set the EXTI line to use the desired GPIO port.
+
+            CMSIS_WRITE(
+                tuplize(f'EXTI{n}_PORT_SELECTION', tbd_ok = True)
+                for n in range(parameterization('GPIO_MAX_PIN_NUMBER'))
+            )
+
+
+
+            # Enable rising/falling edge detection.
+
+            CMSIS_SET(
+                tuplize(f'EXTI{n}_{edge}_TRIGGER_SELECTION', tbd_ok = True)
+                for edge in ('RISING', 'FALLING')
+                for n in range(parameterization('GPIO_MAX_PIN_NUMBER'))
+            )
+
+
+
+            # Enable interrupts for the used EXTI lines.
+
+            CMSIS_SET(
+                tuplize(f'EXTI{n}_INTERRUPT_ENABLE', tbd_ok = True)
+                for n in range(parameterization('GPIO_MAX_PIN_NUMBER'))
+            )
+
+
+
+            # Enable the used EXTI interrupts by default.
+
+            for n in range(parameterization('GPIO_MAX_PIN_NUMBER')):
+
+                if parameterization(f'EXTI{n}_INTERRUPT_ENABLE'):
+
+                    Meta.line(f'''
+                        NVIC_ENABLE(EXTI{n});
+                    ''')
+
+
+
     ################################################################################
     #
     # Interrupts.

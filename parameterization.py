@@ -169,6 +169,7 @@ class Parameterization:
                 initlvl    = None,
                 altfunc    = None,
                 afsel      = None,
+                interrupt  = None,
             )
 
 
@@ -210,6 +211,13 @@ class Parameterization:
                     # That is, whether or not the GPIO is active-low or active-high.
 
                     gpio.active = properties.pop('active', True)
+
+
+
+                    # The input GPIO can be the trigger
+                    # for an external interrupt.
+
+                    gpio.interrupt = properties.pop('interrupt', None)
 
 
 
@@ -586,6 +594,11 @@ class Parameterization:
                 key          = f'GPIO{gpio.port}{gpio.number}_{suffix}'
                 self[key]    = value
                 self.pinned |= { key }
+
+            if gpio.interrupt is not None:
+                self[f'EXTI{gpio.number}_{gpio.interrupt}_TRIGGER_SELECTION'] = True
+                self[f'EXTI{gpio.number}_INTERRUPT_ENABLE'                  ] = True
+                self[f'EXTI{gpio.number}_PORT_SELECTION'                    ] = gpio.port
 
 
 
