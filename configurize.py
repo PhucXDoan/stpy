@@ -376,15 +376,6 @@ def configurize(Meta, parameterization):
 
         match parameterization.mcu:
 
-            case 'STM32H7S3L8H6':
-                CMSIS_SET(
-                    tuplize('SMPS_OUTPUT_LEVEL'      , tbd_ok = True),
-                    tuplize('SMPS_FORCED_ON'         , tbd_ok = True),
-                    tuplize('SMPS_ENABLE'            , tbd_ok = True),
-                    tuplize('LDO_ENABLE'             , tbd_ok = True),
-                    tuplize('POWER_MANAGEMENT_BYPASS', tbd_ok = True),
-                )
-
             case 'STM32H533RET6':
                 CMSIS_SET(
                     tuplize('LDO_ENABLE'             , tbd_ok = True),
@@ -494,14 +485,6 @@ def configurize(Meta, parameterization):
 
 
 
-        # Set the clock source shared for all PLLs.
-
-        match parameterization.mcu:
-            case 'STM32H7S3L8H6':
-                sets += [tuplize('PLL_KERNEL_SOURCE')]
-
-
-
         # Configure each PLL.
 
         for unit, channels in enabled_plls:
@@ -576,19 +559,6 @@ def configurize(Meta, parameterization):
         # Configure the SCGU registers.
 
         match parameterization.mcu:
-
-            case 'STM32H7S3L8H6':
-
-                CMSIS_SET(
-                    tuplize('CPU_DIVIDER'),
-                    tuplize('AXI_AHB_DIVIDER'),
-                    *(
-                        tuplize(f'APB{unit}_DIVIDER')
-                        for unit in parameterization('APBS')
-                    ),
-                )
-
-
 
             case 'STM32H533RET6':
 

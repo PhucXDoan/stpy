@@ -619,16 +619,6 @@ class Parameterization:
 
 
 
-            # @/pg 211/tbl 29/`H7S3rm`.
-            # @/pg 327/sec 6.8.6/`H7S3rm`.
-
-            case 'STM32H7S3L8H6':
-                self['FLASH_LATENCY'           ] = '0x7'
-                self['FLASH_PROGRAMMING_DELAY' ] = '0b11'
-                self['INTERNAL_VOLTAGE_SCALING'] = 'high'
-
-
-
             # @/pg 252/tbl 45/`H533rm`.
             # @/pg 438/sec 10.11.4/`H533rm`.
 
@@ -656,16 +646,6 @@ class Parameterization:
 
 
         match self.mcu:
-
-
-
-            # @/pg 285/fig 21/`H7S3rm`.
-            # @/pg 286/tbl 44/`H7S3rm`.
-
-            case 'STM32H7S3L8H6':
-                self['SMPS_ENABLE'            ] = False
-                self['LDO_ENABLE'             ] = True
-                self['POWER_MANAGEMENT_BYPASS'] = False
 
 
 
@@ -846,20 +826,6 @@ class Parameterization:
 
 
 
-                # All of the PLL units share the same kernel clock source.
-
-                case 'STM32H7S3L8H6':
-
-                    return any(
-                        all(
-                            parameterize_pll(unit, channels, self(kernel_source))
-                            for unit, channels in self('PLLS')
-                        )
-                        for kernel_source in each('PLL_KERNEL_SOURCE')
-                    )
-
-
-
                 # Each PLL unit have their own clock source.
 
                 case 'STM32H533RET6':
@@ -911,18 +877,6 @@ class Parameterization:
                 # AXI/AHB busses.
 
                 match self.mcu:
-
-
-
-                    # There's a divider to configure.
-
-                    case 'STM32H7S3L8H6':
-
-                        if not checkout(
-                            'AXI_AHB_DIVIDER',
-                            self('CPU_CK') / self('AXI_AHB_CK')
-                        ):
-                            continue
 
 
 
@@ -1004,16 +958,6 @@ class Parameterization:
                 else:
 
                     match self.mcu:
-
-
-
-                        # @/pg 378/fig 51/`H7S3rm`.
-
-                        case 'STM32H7S3L8H6':
-
-                            kernel_frequencies = [
-                                self('CPU_CK') / 8
-                            ]
 
 
 

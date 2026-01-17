@@ -118,7 +118,7 @@ CMSIS_PUT(struct CMSISTuple tuple, uint32_t value)
 
 
 
-#if TARGET_MCU_IS_STM32H7S3L8H6 || TARGET_MCU_IS_STM32H533RET6
+#if TARGET_MCU_IS_STM32H533RET6
 
     #define USART_BRR_BRR_Pos 0                             // For the full contiguous field.
     #define USART_BRR_BRR_Msk (0xFFFF << USART_BRR_BRR_Pos) // "
