@@ -140,7 +140,8 @@ def init(
 
         Meta.define(
             f'INTERRUPT_{interrupt}',
-            f'extern void INTERRUPT_{interrupt}(void)'
+            ('...'),
+            f'extern void INTERRUPT_{interrupt}(__VA_ARGS__)'
         )
 
 
@@ -169,7 +170,7 @@ def init(
         if gpio.interrupt is not None
     ):
 
-        with Meta.enter(f'INTERRUPT_EXTI{exti_number}'):
+        with Meta.enter(f'INTERRUPT_EXTI{exti_number}(void)'):
 
             for gpio in gpios:
 
@@ -199,7 +200,8 @@ def init(
 
         Meta.define(
             f'INTERRUPT_EXTIx_{gpio.name}',
-            f'static void INTERRUPT_EXTIx_{gpio.name}(void)'
+            ('...'),
+            f'static void INTERRUPT_EXTIx_{gpio.name}(__VA_ARGS__)'
         )
 
 
@@ -253,7 +255,7 @@ def init(
 # e.g:
 # >
 # >    extern void
-# >    INTERRUPT_I2C1_EB   <- Typo!
+# >    INTERRUPT_I2C1_EB(void)   <- Typo!
 # >    {
 # >        ...
 # >    }
@@ -267,7 +269,7 @@ def init(
 #
 # e.g:
 # >
-# >    INTERRUPT_I2C1_EB   <- Compile error!
+# >    INTERRUPT_I2C1_EB(void)   <- Compile error!
 # >    {
 # >        ...
 # >    }
