@@ -217,10 +217,6 @@ def init(
 
 
 
-    Meta.line('#undef STPY_IMPLEMENTATION')
-
-
-
     # Clock-tree frequencies.
 
     for macro, expansion in pxd.justify(
