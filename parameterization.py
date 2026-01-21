@@ -227,7 +227,7 @@ class Parameterization:
 
 
 
-                    # The initial voltage level must be specified
+                    # The initial logic level must be specified
                     # so the user remembers to take it into consideration.
 
                     gpio.initlvl = properties.pop('initlvl')
@@ -581,7 +581,7 @@ class Parameterization:
 
             for suffix, value in (
                 ('OPEN_DRAIN'        , gpio.open_drain),
-                ('OUTPUT'            , gpio.initlvl   ),
+                ('OUTPUT'            , gpio.initlvl if gpio.active else not gpio.initlvl),
                 ('SPEED'             , gpio.speed     ),
                 ('PULL'              , gpio.pull      ),
                 ('ALTERNATE_FUNCTION', gpio.afsel     ),
