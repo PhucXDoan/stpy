@@ -622,7 +622,7 @@ class Parameterization:
             # @/pg 252/tbl 45/`H533rm`.
             # @/pg 438/sec 10.11.4/`H533rm`.
 
-            case 'STM32H533RET6':
+            case 'STM32H533RET6' | 'STM32H533VET6':
                 self['FLASH_LATENCY'           ] = 5
                 self['FLASH_PROGRAMMING_DELAY' ] = '0b10'
                 self['INTERNAL_VOLTAGE_SCALING'] = 'VOS0'
@@ -652,7 +652,7 @@ class Parameterization:
             # @/pg 407/fig 42/`H533rm`.
             # Note that the SMPS is not available. @/pg 402/sec 10.2/`H533rm`.
 
-            case 'STM32H533RET6':
+            case 'STM32H533RET6' | 'STM32H533VET6':
                 self['LDO_ENABLE'             ] = True
                 self['POWER_MANAGEMENT_BYPASS'] = False
 
@@ -828,7 +828,7 @@ class Parameterization:
 
                 # Each PLL unit have their own clock source.
 
-                case 'STM32H533RET6':
+                case 'STM32H533RET6' | 'STM32H533VET6':
 
                     return all(
                         any(
@@ -882,7 +882,7 @@ class Parameterization:
 
                     # The CPU and AXI/AHB bus are directly connected.
 
-                    case 'STM32H533RET6':
+                    case 'STM32H533RET6' | 'STM32H533VET6':
 
                         self['AXI_AHB_CK'] = self('CPU_CK')
 
@@ -963,7 +963,7 @@ class Parameterization:
 
                         # @/pg 456/fig 52/`H533rm`.
 
-                        case 'STM32H533RET6':
+                        case 'STM32H533RET6' | 'STM32H533VET6':
 
                             kernel_frequencies = [
                                 # TODO.
@@ -1148,7 +1148,7 @@ class Parameterization:
 
 
 
-                case 'STM32H533RET6':
+                case 'STM32H533RET6' | 'STM32H533VET6':
 
                     apb              = self('APB_PERIPHERALS')[f'TIM{unit}']
                     apb_divider      = self(f'APB{apb}_DIVIDER')

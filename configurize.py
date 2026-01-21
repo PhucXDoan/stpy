@@ -376,7 +376,7 @@ def configurize(Meta, parameterization):
 
         match parameterization.mcu:
 
-            case 'STM32H533RET6':
+            case 'STM32H533RET6' | 'STM32H533VET6':
                 CMSIS_SET(
                     tuplize('LDO_ENABLE'             , tbd_ok = True),
                     tuplize('POWER_MANAGEMENT_BYPASS', tbd_ok = True),
@@ -494,7 +494,7 @@ def configurize(Meta, parameterization):
             # Set the clock source for the specific PLL unit.
 
             match parameterization.mcu:
-                case 'STM32H533RET6':
+                case 'STM32H533RET6' | 'STM32H533VET6':
                     sets += [tuplize(f'PLL{unit}_KERNEL_SOURCE')]
 
 
@@ -560,7 +560,7 @@ def configurize(Meta, parameterization):
 
         match parameterization.mcu:
 
-            case 'STM32H533RET6':
+            case 'STM32H533RET6' | 'STM32H533VET6':
 
                 CMSIS_SET(
                     tuplize('CPU_DIVIDER'),
