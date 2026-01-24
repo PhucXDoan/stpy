@@ -797,6 +797,11 @@ SCHEMA = {
     'UART5_RESET'   : { 'location' : ('RCC', 'APB1LRSTR', 'UART5RST' ) },
     'USART6_RESET'  : { 'location' : ('RCC', 'APB1LRSTR', 'USART6RST') },
 
+    'TIM1_RESET'    : { 'location' : ('RCC', 'APB2RSTR', 'TIM1RST' ) },
+    'TIM8_RESET'    : { 'location' : ('RCC', 'APB2RSTR', 'TIM8RST' ) },
+    'TIM15_RESET'   : { 'location' : ('RCC', 'APB2RSTR', 'TIM15RST') },
+    'TIM16_RESET'   : { 'location' : ('RCC', 'APB2RSTR', 'TIM16RST') },
+
     **{
         f'UXART_{instances}_KERNEL_SOURCE' : {
             'location'   : ('RCC', 'CCIPR1', field),
