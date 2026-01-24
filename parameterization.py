@@ -581,7 +581,7 @@ class Parameterization:
 
             for suffix, value in (
                 ('OPEN_DRAIN'        , gpio.open_drain),
-                ('OUTPUT'            , gpio.initlvl if gpio.active else not gpio.initlvl),
+                ('OUTPUT'            , not gpio.initlvl if gpio.active is not None and not gpio.active else gpio.initlvl),
                 ('SPEED'             , gpio.speed     ),
                 ('PULL'              , gpio.pull      ),
                 ('ALTERNATE_FUNCTION', gpio.afsel     ),
