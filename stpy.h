@@ -49,15 +49,15 @@
 #define _MAP_()                                      _MAP__
 #define _MAP(FUNCTION, PERIPHERAL_REGISTER, ...)     __VA_OPT__(_EXPAND_0(_MAP__(FUNCTION, PERIPHERAL_REGISTER, __VA_ARGS__)))
 
-#define _GET_POS(PERIPHERAL_REGISTER, FIELD)         CONCAT(CONCAT(PERIPHERAL_REGISTER##_, FIELD##_), Pos)
-#define _GET_MSK(PERIPHERAL_REGISTER, FIELD)         CONCAT(CONCAT(PERIPHERAL_REGISTER##_, FIELD##_), Msk)
+#define _GET_POS(PERIPHERAL_REGISTER, FIELD)         ((uint32_t) CONCAT(CONCAT(PERIPHERAL_REGISTER##_, FIELD##_), Pos))
+#define _GET_MSK(PERIPHERAL_REGISTER, FIELD)         ((uint32_t) CONCAT(CONCAT(PERIPHERAL_REGISTER##_, FIELD##_), Msk))
 
 #define _CLEAR_BITS(PERIPHERAL_REGISTER, FIELD, VALUE) \
     & ~_GET_MSK(PERIPHERAL_REGISTER, FIELD)
 
-#define _SET_BITS(PERIPHERAL_REGISTER, FIELD, VALUE)     \
-    | (((VALUE) << _GET_POS(PERIPHERAL_REGISTER, FIELD)) \
-                 & _GET_MSK(PERIPHERAL_REGISTER, FIELD))
+#define _SET_BITS(PERIPHERAL_REGISTER, FIELD, VALUE)                  \
+    | ((((uint32_t) (VALUE)) << _GET_POS(PERIPHERAL_REGISTER, FIELD)) \
+                              & _GET_MSK(PERIPHERAL_REGISTER, FIELD))
 
 #define CMSIS_READ(PERIPHERAL_REGISTER, VARIABLE, FIELD)              \
     ((uint32_t) (((VARIABLE) & _GET_MSK(PERIPHERAL_REGISTER, FIELD))  \
@@ -93,8 +93,9 @@ struct CMSISTuple
 
 
 
+#define CMSIS_PUT(TUPLE, VALUE) CMSIS_PUT_((TUPLE), (uint32_t) (VALUE))
 static mustinline void
-CMSIS_PUT(struct CMSISTuple tuple, uint32_t value)
+CMSIS_PUT_(struct CMSISTuple tuple, uint32_t value)
 {
 
     // Read.
