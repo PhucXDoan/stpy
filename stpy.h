@@ -121,18 +121,25 @@ CMSIS_PUT_(struct CMSISTuple tuple, uint32_t value)
 
 #if TARGET_MCU_IS_STM32H533RET6 || TARGET_MCU_IS_STM32H533VET6
 
-    #define USART_BRR_BRR_Pos 0                             // For the full contiguous field.
-    #define USART_BRR_BRR_Msk (0xFFFF << USART_BRR_BRR_Pos) // "
-
-#endif
-
-#if TARGET_MCU_IS_STM32H533RET6 || TARGET_MCU_IS_STM32H533VET6
+    #define USART_BRR_BRR_Pos    0                             // For the full contiguous field.
+    #define USART_BRR_BRR_Msk    (0xFFFF << USART_BRR_BRR_Pos) // "
 
     #define RCC_CCIPR5_CKPERSEL_ RCC_CCIPR5_CKERPSEL_         // Typo.
     #define USART_TDR_TDR_Pos    0                            // Position and mask not given.
     #define USART_TDR_TDR_Msk    (0x1FF << USART_TDR_TDR_Pos) // "
     #define USART_RDR_TDR_Pos    0                            // "
     #define USART_RDR_TDR_Msk    (0x1FF << USART_RDR_TDR_Pos) // "
+
+    #define USART_RQR_ABRRQ_Pos  0                             // Missing position and masks.
+    #define USART_RQR_ABRRQ_Msk  (0b1 << USART_RQR_ABRRQ_Pos)  // "
+    #define USART_RQR_SBKRQ_Pos  1                             // "
+    #define USART_RQR_SBKRQ_Msk  (0b1 << USART_RQR_SBKRQ_Pos)  // "
+    #define USART_RQR_MMRQ_Pos   2                             // "
+    #define USART_RQR_MMRQ_Msk   (0b1 << USART_RQR_MMRQ_Pos)   // "
+    #define USART_RQR_RXFRQ_Pos  3                             // "
+    #define USART_RQR_RXFRQ_Msk  (0b1 << USART_RQR_RXFRQ_Pos)  // "
+    #define USART_RQR_TXFRQ_Pos  4                             // "
+    #define USART_RQR_TXFRQ_Msk  (0b1 << USART_RQR_TXFRQ_Pos)  // "
 
 #endif
 
