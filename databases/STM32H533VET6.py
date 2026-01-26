@@ -1363,6 +1363,16 @@ SCHEMA = {
         'constraint' : Choices(False, True),
     },
 
+    'ADC_1_CALIBRATION' : {
+        'location'   : ('ADC1', 'CR', 'ADCAL'),
+        'constraint' : Choices(False, True),
+    },
+
+    'ADC_2_CALIBRATION' : {
+        'location'   : ('ADC2', 'CR', 'ADCAL'),
+        'constraint' : Choices(False, True),
+    },
+
     'ANALOG_PREDIVIDER_KERNEL_CK' : {
         'clocktree'  : True,
         'value'      : TBD,

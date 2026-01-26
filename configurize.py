@@ -741,7 +741,7 @@ def configurize(Meta, parameterization):
 
             ADC_UNIT = 1 # TMP
 
-            CMSIS_SET(
+            CMSIS_SET( # TODO There should technically be a delay after enabling the voltage regulator...
                 tuplize(f'ADC_{ADC_UNIT}_DEEP_POWER_DOWN'  , False), # Bring ADC out of deep-power-down mode.
                 tuplize(f'ADC_{ADC_UNIT}_VOLTAGE_REGULATOR', True ), # Power on the ADC unit's regulator.
                 tuplize(f'ADC_{ADC_UNIT}_ENABLE'           , True ), # Activate the ADC unit.
@@ -752,6 +752,13 @@ def configurize(Meta, parameterization):
             # Make sure ADC is done initializing.
 
             CMSIS_SPINLOCK(tuplize(f'ADC_{ADC_UNIT}_READY', True))
+
+
+
+            # Calibrate the ADC unit.
+
+            CMSIS_SET(tuplize(f'ADC_{ADC_UNIT}_CALIBRATION', True))
+            CMSIS_SPINLOCK(tuplize(f'ADC_{ADC_UNIT}_CALIBRATION', True))
 
 
 
