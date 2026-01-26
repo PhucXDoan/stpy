@@ -271,7 +271,7 @@ class Parameterization:
 
                 case 'ANALOG':
 
-                    raise NotImplementedError
+                    pass # TODO.
 
 
 
@@ -543,7 +543,7 @@ class Parameterization:
 
         def checkout(key, value):
 
-            ok = MCUS[self.mcu][key].constraint.check(value)
+            ok = value is not TBD and MCUS[self.mcu][key].constraint.check(value)
 
             if ok:
                 self[key] = value
@@ -862,6 +862,9 @@ class Parameterization:
 
                 if kernel_frequency is TBD:
                     continue
+
+                self['SYS_CK'] = kernel_frequency
+
 
 
                 # CPU.
@@ -1388,6 +1391,34 @@ class Parameterization:
                 for unit in self('SDMMCS', when_undefined = ())
                 if self(f'SDMMC{unit}_INITIAL_BAUD') is not TBD
             )
+
+
+
+        ################################################################################
+        #
+        # Analog.
+        #
+
+
+
+        @bruteforce
+        def parameterize_analog():
+
+            analog_postdivider_kernel_ck = self('ANALOG_POSTDIVIDER_KERNEL_CK', when_undefined = TBD) # TODO.
+
+            if analog_postdivider_kernel_ck is TBD:
+                return True
+
+            for analog_kernel_source in each('ANALOG_KERNEL_SOURCE'):
+
+                analog_kernel_ck = self(analog_kernel_source)
+
+                if checkout('ANALOG_PREDIVIDER_KERNEL_CK', analog_kernel_ck):
+
+                    for adc_kernel_divider in each('ADC_KERNEL_DIVIDER'):
+
+                        if self('ANALOG_POSTDIVIDER_KERNEL_CK') ==  analog_kernel_ck / adc_kernel_divider:
+                            return True
 
 
 

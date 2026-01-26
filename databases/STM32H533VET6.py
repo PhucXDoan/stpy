@@ -720,6 +720,10 @@ SCHEMA = {
         for unit in APBS
     },
 
+    'SYS_CK' : {
+        'clocktree' : True,
+        'value'     : TBD,
+    },
 
     'EFFECTIVE_SCGU_KERNEL_SOURCE' : {
         'location' : ('RCC', 'CFGR1', 'SWS'),
@@ -1303,6 +1307,104 @@ SCHEMA = {
         }
         for edge in ('RISING', 'FALLING')
         for n in range(GPIO_MAX_PIN_NUMBER)
+    },
+
+
+
+    ################################################################################
+    #
+    # Analog.
+    #
+
+
+
+    'ADC_PERIPHERAL_ENABLE' : {
+        'location'   : ('RCC', 'AHB2ENR', 'ADCEN'),
+        'constraint' : Choices(False, True),
+    },
+
+    'ADC_1_READY' : {
+        'location'   : ('ADC1', 'ISR', 'ADRDY'),
+        'constraint' : Choices(False, True),
+    },
+
+    'ADC_2_READY' : {
+        'location'   : ('ADC2', 'ISR', 'ADRDY'),
+        'constraint' : Choices(False, True),
+    },
+
+    'ADC_1_DEEP_POWER_DOWN' : {
+        'location'   : ('ADC1', 'CR', 'DEEPPWD'),
+        'constraint' : Choices(False, True),
+    },
+
+    'ADC_2_DEEP_POWER_DOWN' : {
+        'location'   : ('ADC2', 'CR', 'DEEPPWD'),
+        'constraint' : Choices(False, True),
+    },
+
+    'ADC_1_VOLTAGE_REGULATOR' : {
+        'location'   : ('ADC1', 'CR', 'ADVREGEN'),
+        'constraint' : Choices(False, True),
+    },
+
+    'ADC_2_VOLTAGE_REGULATOR' : {
+        'location'   : ('ADC2', 'CR', 'ADVREGEN'),
+        'constraint' : Choices(False, True),
+    },
+
+    'ADC_1_ENABLE' : {
+        'location'   : ('ADC1', 'CR', 'ADEN'),
+        'constraint' : Choices(False, True),
+    },
+
+    'ADC_2_ENABLE' : {
+        'location'   : ('ADC2', 'CR', 'ADEN'),
+        'constraint' : Choices(False, True),
+    },
+
+    'ANALOG_PREDIVIDER_KERNEL_CK' : {
+        'clocktree'  : True,
+        'value'      : TBD,
+        'constraint' : RealMinMax(0, 100_000_000), # TODO For simplicitly.
+    },
+
+    'ANALOG_POSTDIVIDER_KERNEL_CK' : {
+        'clocktree'  : True,
+        'value'      : TBD,
+        'constraint' : RealMinMax(0, 50_000_000), # TODO For simplicitly.
+    },
+
+    'ANALOG_KERNEL_SOURCE' : {
+        'location'   : ('RCC', 'CCIPR5', 'ADCDACSEL'),
+        'constraint' : Mapping({
+            'CPU_CK'   : '0b000',
+            'SYS_CK'   : '0b001',
+            'PLL2R_CK' : '0b010',
+            'HSE_CK'   : '0b011',
+            'HSI_CK'   : '0b100',
+            'CSI_CK'   : '0b101',
+        }),
+        'value' : TBD,
+    },
+
+    'ADC_KERNEL_DIVIDER' : {
+        'location'   : ('ADC12_COMMON', 'CCR', 'PRESC'),
+        'constraint' : Mapping({
+            1   : '0b0000',
+            2   : '0b0001',
+            4   : '0b0010',
+            6   : '0b0011',
+            8   : '0b0100',
+            10  : '0b0101',
+            12  : '0b0110',
+            16  : '0b0111',
+            32  : '0b1000',
+            64  : '0b1001',
+            128 : '0b1010',
+            256 : '0b1011',
+        }),
+        'value' : TBD,
     },
 
 

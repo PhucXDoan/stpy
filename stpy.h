@@ -550,3 +550,9 @@ CMSIS_PUT_(struct CMSISTuple tuple, uint32_t value)
 #define GPIOX_                     GPIO_
 #define GPIOY_                     GPIO_
 #define GPIOZ_                     GPIO_
+#define ADC0_                      ADC_
+#define ADC1_                      ADC_
+#define ADC2_                      ADC_
+#define ADC3_                      ADC_
+#define ADC4_                      ADC_
+#define ADC12_COMMON_              ADC_

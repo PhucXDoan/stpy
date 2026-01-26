@@ -709,5 +709,52 @@ def configurize(Meta, parameterization):
 
 
     ################################################################################
+    #
+    # Analog.
+    #
+
+
+
+    with Meta.section(title_of(f'Analog')):
+
+        if parameterization('ANALOG_KERNEL_SOURCE') is not TBD:
+
+
+
+            # Clock kernel source common to all analog peripherals.
+
+            CMSIS_SET(tuplize('ANALOG_KERNEL_SOURCE'))
+
+
+
+            # Enable all ADCs.
+
+            CMSIS_SET(tuplize('ADC_PERIPHERAL_ENABLE', True))
+
+
+
+            # Divider to get the actual ADC kernel frequency.
+
+            CMSIS_SET(tuplize('ADC_KERNEL_DIVIDER'))
+
+
+
+            ADC_UNIT = 1 # TMP
+
+            CMSIS_SET(
+                tuplize(f'ADC_{ADC_UNIT}_DEEP_POWER_DOWN'  , False), # Bring ADC out of deep-power-down mode.
+                tuplize(f'ADC_{ADC_UNIT}_VOLTAGE_REGULATOR', True ), # Power on the ADC unit's regulator.
+                tuplize(f'ADC_{ADC_UNIT}_ENABLE'           , True ), # Activate the ADC unit.
+            )
+
+
+
+            # Make sure ADC is done initializing.
+
+            CMSIS_SPINLOCK(tuplize(f'ADC_{ADC_UNIT}_READY', True))
+
+
+
+    ################################################################################
 
     Meta.line()
