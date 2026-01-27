@@ -721,7 +721,10 @@ def configurize(Meta, parameterization):
 
     with Meta.section(title_of(f'Analog')):
 
-        if parameterization('ANALOG_KERNEL_SOURCE') is not TBD:
+        if any(
+            parameterization(f'ADC_{unit}_ENABLE')
+            for unit in parameterization('ADC_UNITS')
+        ):
 
 
 
