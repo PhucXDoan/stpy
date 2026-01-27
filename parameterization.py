@@ -138,6 +138,182 @@ class Parameterization:
 
         ################################################################################
         #
+        # Set stuff up for proper parameterization.
+        #
+
+
+
+        # If no schema was given, then we were only here
+        # just for verifying the target's other parameters
+        # like GPIOs.
+
+        if self.schema is None:
+            return
+
+
+
+        # We copy over keys in the database that can be
+        # associated with a value; for any that are already
+        # predefined, we can pin it so we avoid accidentally
+        # overwriting it.
+
+        for key, entry in MCUS[self.mcu].database.items():
+
+            if not hasattr(entry, 'value'):
+                continue
+
+            self.determined[key] = entry.value
+
+            if entry.value is not TBD:
+                self.pinned |= { key }
+
+
+
+        # The target specifies part of the parameterization
+        # that we then figure out the rest automatically.
+        # Since these are the things that the user want in
+        # the final parameterization, the values will be pinned.
+
+        for key, value in self.schema.items():
+
+            self[key]    = value
+            self.pinned |= { key }
+
+
+
+        # Decorater to indicate the entry-point
+        # to when we are starting to brute-force.
+
+        def bruteforce(function):
+
+            success = function()
+
+            if not success:
+
+                raise RuntimeError(
+                    f'Failed to brute-force {repr(function.__name__)} '
+                    f'for target {repr(self.target)}.'
+                )
+
+
+
+        # Shorthand to update the value of a database entry
+        # by iterating over all the possible valid values
+        # it can be.
+
+        def each(key):
+
+            for self[key] in MCUS[self.mcu][key].constraint.iterate():
+
+                yield self(key)
+
+
+
+        # Shorthand to update the value of a database
+        # entry if it satisfies the constraint.
+        # As of now, the constraint is something
+        # simple that we can check the membership of;
+        # things like tuples, dictionaries, or ranges.
+
+        def checkout(key, value):
+
+            ok = value is not TBD and MCUS[self.mcu][key].constraint.check(value)
+
+            if ok:
+                self[key] = value
+
+            return ok
+
+
+
+        ################################################################################
+        #
+        # Process interrupts.
+        #
+
+
+
+        def process_single_interrupt(entry):
+
+            name, niceness, *properties = entry
+
+            if properties:
+                properties, = properties
+            else:
+                properties = {}
+
+            interrupt = types.SimpleNamespace(
+                name     = name,
+                niceness = niceness,
+                symbol   = properties.pop('symbol', f'INTERRUPT_{name}'),
+            )
+
+
+
+            # Check to make sure the interrupts
+            # to be used by the target exists.
+
+            if interrupt.name not in MCUS[self.mcu]['INTERRUPTS'].value:
+
+                raise ValueError(
+                    f'For target {repr(self.target)}, '
+                    f'no such interrupt {repr(interrupt.name)} '
+                    f'exists on {repr(self.mcu)}; '
+                    f'did you mean any of the following? : '
+                    f'{difflib.get_close_matches(
+                        str(interrupt.name),
+                        map(str, MCUS[self.mcu]['INTERRUPTS'].value),
+                        n      = 5,
+                        cutoff = 0
+                    )}'
+                )
+
+            interrupt.number = MCUS[self.mcu]['INTERRUPTS'].value.index(interrupt.name) - 15
+
+
+
+            # Done processing the interrupt entry!
+
+            if properties:
+
+                raise ValueError(
+                    f'For target {repr(self.target)}, '
+                    f'interrupt {repr(name)} has leftover '
+                    f'properties: {repr(properties)}.'
+                )
+
+            return interrupt
+
+
+
+        self.interrupts = tuple(
+            process_single_interrupt(interrupt)
+            for interrupt in interrupts
+        )
+
+
+
+        # Ensure no duplicate interrupts.
+
+        if duplicate_names := [
+            name
+            for name, count in collections.Counter(
+                interrupt.name for interrupt in self.interrupts
+            ).items()
+            if count >= 2
+        ]:
+
+            duplicate_name, *_ = duplicate_names
+
+            raise ValueError(
+                f'For target {repr(self.target)}, '
+                f'interrupt {repr(duplicate_name)} is listed more than once.'
+            )
+
+
+
+        ################################################################################
+        #
         # Process GPIOs.
         #
 
@@ -157,19 +333,21 @@ class Parameterization:
             # The layout of a GPIO instance.
 
             gpio = types.SimpleNamespace(
-                name       = name,
-                pin        = pin,
-                mode       = mode,
-                port       = None,
-                number     = None,
-                speed      = None,
-                pull       = None,
-                active     = None,
-                open_drain = None,
-                initlvl    = None,
-                altfunc    = None,
-                afsel      = None,
-                interrupt  = None,
+                name                  = name,
+                pin                   = pin,
+                mode                  = mode,
+                port                  = None,
+                number                = None,
+                speed                 = None,
+                pull                  = None,
+                active                = None,
+                open_drain            = None,
+                initlvl               = None,
+                altfunc               = None,
+                afsel                 = None,
+                interrupt             = None,
+                adc_unit              = None,
+                analog_channel_number = None,
             )
 
 
@@ -265,13 +443,23 @@ class Parameterization:
 
 
 
-                # An analog GPIO would have its Schmit trigger function
-                # disabled; this obviously allows for ADC/DAC usage,
-                # but it can also serve as a power-saving measure.
+                # An analog GPIO allows for analog measurements, but not
+                # all GPIOs will be able to have this functionality.
 
                 case 'ANALOG':
 
-                    pass # TODO.
+                    for pin, adc_units, analog_channel_number in self('ADC_CONNECTIVITY'):
+
+                        if pin == gpio.pin:
+                            gpio.adc_unit              = adc_units[0] # TODO For now, always using the first ADC if possible.
+                            gpio.analog_channel_number = analog_channel_number
+                            break
+
+                    else:
+                        raise ValueError(
+                            f'For target {repr(self.target)} ({repr(self.mcu)}), '
+                            f'GPIO pin {repr(gpio.pin)} has no support for analog.'
+                        )
 
 
 
@@ -373,182 +561,6 @@ class Parameterization:
                 f'GPIO pin {repr(duplicate_pin)} used more than once '
                 f'for target {repr(self.target)}.'
             )
-
-
-
-        ################################################################################
-        #
-        # Process interrupts.
-        #
-
-
-
-        def process_single_interrupt(entry):
-
-            name, niceness, *properties = entry
-
-            if properties:
-                properties, = properties
-            else:
-                properties = {}
-
-            interrupt = types.SimpleNamespace(
-                name     = name,
-                niceness = niceness,
-                symbol   = properties.pop('symbol', f'INTERRUPT_{name}'),
-            )
-
-
-
-            # Check to make sure the interrupts
-            # to be used by the target exists.
-
-            if interrupt.name not in MCUS[self.mcu]['INTERRUPTS'].value:
-
-                raise ValueError(
-                    f'For target {repr(self.target)}, '
-                    f'no such interrupt {repr(interrupt.name)} '
-                    f'exists on {repr(self.mcu)}; '
-                    f'did you mean any of the following? : '
-                    f'{difflib.get_close_matches(
-                        str(interrupt.name),
-                        map(str, MCUS[self.mcu]['INTERRUPTS'].value),
-                        n      = 5,
-                        cutoff = 0
-                    )}'
-                )
-
-            interrupt.number = MCUS[self.mcu]['INTERRUPTS'].value.index(interrupt.name) - 15
-
-
-
-            # Done processing the interrupt entry!
-
-            if properties:
-
-                raise ValueError(
-                    f'For target {repr(self.target)}, '
-                    f'interrupt {repr(name)} has leftover '
-                    f'properties: {repr(properties)}.'
-                )
-
-            return interrupt
-
-
-
-        self.interrupts = tuple(
-            process_single_interrupt(interrupt)
-            for interrupt in interrupts
-        )
-
-
-
-        # Ensure no duplicate interrupts.
-
-        if duplicate_names := [
-            name
-            for name, count in collections.Counter(
-                interrupt.name for interrupt in self.interrupts
-            ).items()
-            if count >= 2
-        ]:
-
-            duplicate_name, *_ = duplicate_names
-
-            raise ValueError(
-                f'For target {repr(self.target)}, '
-                f'interrupt {repr(duplicate_name)} is listed more than once.'
-            )
-
-
-
-        ################################################################################
-        #
-        # Set stuff up for proper parameterization.
-        #
-
-
-
-        # If no schema was given, then we were only here
-        # just for verifying the target's other parameters
-        # like GPIOs.
-
-        if self.schema is None:
-            return
-
-
-
-        # We copy over keys in the database that can be
-        # associated with a value; for any that are already
-        # predefined, we can pin it so we avoid accidentally
-        # overwriting it.
-
-        for key, entry in MCUS[self.mcu].database.items():
-
-            if not hasattr(entry, 'value'):
-                continue
-
-            self.determined[key] = entry.value
-
-            if entry.value is not TBD:
-                self.pinned |= { key }
-
-
-
-        # The target specifies part of the parameterization
-        # that we then figure out the rest automatically.
-        # Since these are the things that the user want in
-        # the final parameterization, the values will be pinned.
-
-        for key, value in self.schema.items():
-
-            self[key]    = value
-            self.pinned |= { key }
-
-
-
-        # Decorater to indicate the entry-point
-        # to when we are starting to brute-force.
-
-        def bruteforce(function):
-
-            success = function()
-
-            if not success:
-
-                raise RuntimeError(
-                    f'Failed to brute-force {repr(function.__name__)} '
-                    f'for target {repr(self.target)}.'
-                )
-
-
-
-        # Shorthand to update the value of a database entry
-        # by iterating over all the possible valid values
-        # it can be.
-
-        def each(key):
-
-            for self[key] in MCUS[self.mcu][key].constraint.iterate():
-
-                yield self(key)
-
-
-
-        # Shorthand to update the value of a database
-        # entry if it satisfies the constraint.
-        # As of now, the constraint is something
-        # simple that we can check the membership of;
-        # things like tuples, dictionaries, or ranges.
-
-        def checkout(key, value):
-
-            ok = value is not TBD and MCUS[self.mcu][key].constraint.check(value)
-
-            if ok:
-                self[key] = value
-
-            return ok
 
 
 
@@ -1404,7 +1416,7 @@ class Parameterization:
         @bruteforce
         def parameterize_analog():
 
-            analog_postdivider_kernel_ck = self('ANALOG_POSTDIVIDER_KERNEL_CK', when_undefined = TBD) # TODO.
+            analog_postdivider_kernel_ck = self('ANALOG_POSTDIVIDER_KERNEL_CK', when_undefined = TBD)
 
             if analog_postdivider_kernel_ck is TBD:
                 return True
@@ -1417,8 +1429,16 @@ class Parameterization:
 
                     for adc_kernel_divider in each('ADC_KERNEL_DIVIDER'):
 
-                        if self('ANALOG_POSTDIVIDER_KERNEL_CK') ==  analog_kernel_ck / adc_kernel_divider:
+                        if self('ANALOG_POSTDIVIDER_KERNEL_CK') == analog_kernel_ck / adc_kernel_divider:
                             return True
+
+
+
+        for gpio in self.gpios:
+
+            if gpio.adc_unit is not None:
+
+                self[f'ADC_{gpio.adc_unit}_ENABLE'] = True
 
 
 

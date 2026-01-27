@@ -134,6 +134,10 @@ def configurize(Meta, parameterization):
                 Meta.define('_PORT_FOR_GPIO_WRITE'       , ('NAME'), gpio.port  , NAME = gpio.name)
                 Meta.define('_NUMBER_FOR_GPIO_WRITE'     , ('NAME'), gpio.number, NAME = gpio.name)
 
+            if gpio.mode == 'ANALOG':
+                Meta.define('_ADC_FOR_GPIO_ANALOG'           , ('NAME'), f'ADC{gpio.adc_unit}'     , NAME = gpio.name)
+                Meta.define('_CHANNEL_NUMBER_FOR_GPIO_ANALOG', ('NAME'), gpio.analog_channel_number, NAME = gpio.name)
+
 
 
         # Enable GPIO ports that have defined pins.
@@ -739,26 +743,35 @@ def configurize(Meta, parameterization):
 
 
 
-            ADC_UNIT = 1 # TMP
+            # Initialize the ADCs that are used.
 
-            CMSIS_SET( # TODO There should technically be a delay after enabling the voltage regulator...
-                tuplize(f'ADC_{ADC_UNIT}_DEEP_POWER_DOWN'  , False), # Bring ADC out of deep-power-down mode.
-                tuplize(f'ADC_{ADC_UNIT}_VOLTAGE_REGULATOR', True ), # Power on the ADC unit's regulator.
-                tuplize(f'ADC_{ADC_UNIT}_ENABLE'           , True ), # Activate the ADC unit.
-            )
+            for unit in parameterization('ADC_UNITS'):
 
 
 
-            # Make sure ADC is done initializing.
-
-            CMSIS_SPINLOCK(tuplize(f'ADC_{ADC_UNIT}_READY', True))
-
+                if not parameterization(f'ADC_{unit}_ENABLE'):
+                    continue
 
 
-            # Calibrate the ADC unit.
 
-            CMSIS_SET(tuplize(f'ADC_{ADC_UNIT}_CALIBRATION', True))
-            CMSIS_SPINLOCK(tuplize(f'ADC_{ADC_UNIT}_CALIBRATION', True))
+                CMSIS_SET( # TODO There should technically be a delay after enabling the voltage regulator...
+                    tuplize(f'ADC_{unit}_DEEP_POWER_DOWN'  , False), # Bring ADC out of deep-power-down mode.
+                    tuplize(f'ADC_{unit}_VOLTAGE_REGULATOR', True ), # Power on the ADC unit's regulator.
+                    tuplize(f'ADC_{unit}_ENABLE'                  ), # Activate the ADC unit.
+                )
+
+
+
+                # Make sure ADC is done initializing.
+
+                CMSIS_SPINLOCK(tuplize(f'ADC_{unit}_READY', True))
+
+
+
+                # Calibrate the ADC unit.
+
+                CMSIS_SET(tuplize(f'ADC_{unit}_CALIBRATION', True))
+                CMSIS_SPINLOCK(tuplize(f'ADC_{unit}_CALIBRATION', True))
 
 
 

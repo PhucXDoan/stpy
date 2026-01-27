@@ -328,6 +328,37 @@ UXART_KERNEL_SOURCE_TABLE = (
 
 
 
+global ADC_UNITS
+ADC_UNITS = (1, 2)
+
+
+
+global ADC_CONNECTIVITY
+ADC_CONNECTIVITY = (
+    ('F11', (1,  ), 2 ),
+    ('F12', (1,  ), 6 ),
+    ('F13', (2,  ), 2 ),
+    ('F14', (2,  ), 6 ),
+    ('A0' , (1, 2), 0 ),
+    ('A1' , (1, 2), 1 ),
+    ('A6' , (1, 2), 3 ),
+    ('C4' , (1, 2), 4 ),
+    ('B1' , (1, 2), 5 ),
+    ('A7' , (1, 2), 7 ),
+    ('C5' , (1, 2), 8 ),
+    ('B0' , (1, 2), 9 ),
+    ('C0' , (1, 2), 10),
+    ('C1' , (1, 2), 11),
+    ('C2' , (1, 2), 12),
+    ('C3' , (1, 2), 13),
+    ('A2' , (1, 2), 14),
+    ('A3' , (1, 2), 15),
+    ('A4' , (1, 2), 18),
+    ('A5' , (1, 2), 19),
+)
+
+
+
 global SCHEMA
 SCHEMA = {
 
@@ -1356,11 +1387,13 @@ SCHEMA = {
     'ADC_1_ENABLE' : {
         'location'   : ('ADC1', 'CR', 'ADEN'),
         'constraint' : Choices(False, True),
+        'value'      : TBD,
     },
 
     'ADC_2_ENABLE' : {
         'location'   : ('ADC2', 'CR', 'ADEN'),
         'constraint' : Choices(False, True),
+        'value'      : TBD,
     },
 
     'ADC_1_CALIBRATION' : {

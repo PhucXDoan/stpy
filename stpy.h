@@ -21,21 +21,6 @@
 
 ////////////////////////////////////////////////////////////////////////////////
 //
-// Macros to control GPIOs.
-//
-
-
-
-#define GPIO_ACTIVE(NAME)     ((void) (CONCAT(GPIO, _PORT_FOR_GPIO_WRITE(NAME))->BSRR  = CONCAT(_LOCATION_FOR_GPIO_ACTIVE  (NAME), _NUMBER_FOR_GPIO_WRITE(NAME))))
-#define GPIO_INACTIVE(NAME)   ((void) (CONCAT(GPIO, _PORT_FOR_GPIO_WRITE(NAME))->BSRR  = CONCAT(_LOCATION_FOR_GPIO_INACTIVE(NAME), _NUMBER_FOR_GPIO_WRITE(NAME))))
-#define GPIO_TOGGLE(NAME)     ((void) (CONCAT(GPIO, _PORT_FOR_GPIO_WRITE(NAME))->ODR  ^= CONCAT(GPIO_ODR_OD , _NUMBER_FOR_GPIO_WRITE(NAME))))
-#define GPIO_SET(NAME, VALUE) ((void) ((VALUE) ? GPIO_ACTIVE(NAME) : GPIO_INACTIVE(NAME)))
-#define GPIO_READ(NAME)       (_ACTIVE_FOR_GPIO_READ(NAME) (!!(CONCAT(GPIO, _PORT_FOR_GPIO_READ(NAME))->IDR & CONCAT(GPIO_IDR_ID, _NUMBER_FOR_GPIO_READ(NAME)))))
-
-
-
-////////////////////////////////////////////////////////////////////////////////
-//
 // @/url:`https://github.com/PhucXDoan/phucxdoan.github.io/wiki/Macros-for-Reading-and-Writing-to-Memory%E2%80%90Mapped-Registers`.
 //
 
@@ -556,3 +541,66 @@ CMSIS_PUT_(struct CMSISTuple tuple, uint32_t value)
 #define ADC3_                      ADC_
 #define ADC4_                      ADC_
 #define ADC12_COMMON_              ADC_
+
+
+
+////////////////////////////////////////////////////////////////////////////////
+//
+// Stuff to control GPIOs.
+//
+
+
+
+#define GPIO_ACTIVE(NAME)               ((void) (CONCAT(GPIO, _PORT_FOR_GPIO_WRITE(NAME))->BSRR  = CONCAT(_LOCATION_FOR_GPIO_ACTIVE  (NAME), _NUMBER_FOR_GPIO_WRITE(NAME))))
+#define GPIO_INACTIVE(NAME)             ((void) (CONCAT(GPIO, _PORT_FOR_GPIO_WRITE(NAME))->BSRR  = CONCAT(_LOCATION_FOR_GPIO_INACTIVE(NAME), _NUMBER_FOR_GPIO_WRITE(NAME))))
+#define GPIO_TOGGLE(NAME)               ((void) (CONCAT(GPIO, _PORT_FOR_GPIO_WRITE(NAME))->ODR  ^= CONCAT(GPIO_ODR_OD , _NUMBER_FOR_GPIO_WRITE(NAME))))
+#define GPIO_SET(NAME, VALUE)           ((void) ((VALUE) ? GPIO_ACTIVE(NAME) : GPIO_INACTIVE(NAME)))
+#define GPIO_READ(NAME)                 (_ACTIVE_FOR_GPIO_READ(NAME) (!!(CONCAT(GPIO, _PORT_FOR_GPIO_READ(NAME))->IDR & CONCAT(GPIO_IDR_ID, _NUMBER_FOR_GPIO_READ(NAME)))))
+#define GPIO_SPINLOCK_ANALOG_READ(NAME) GPIO_SPINLOCK_ANALOG_READ_(_ADC_FOR_GPIO_ANALOG(NAME), _CHANNEL_NUMBER_FOR_GPIO_ANALOG(NAME))
+
+static useret u16
+GPIO_SPINLOCK_ANALOG_READ_(ADC_TypeDef* ADCx, i32 channel_number)
+{
+
+    if (!CMSIS_READ(ADC_CR, ADCx->CR, ADEN))
+        panic;
+
+    if (CMSIS_READ(ADC_CR, ADCx->CR, ADSTART))
+        panic;
+
+    if (CMSIS_READ(ADC_CR, ADCx->CR, ADDIS))
+        panic;
+
+
+
+    // Set which GPIO to perform a conversion on.
+
+    CMSIS_WRITE(ADC_SQR1, ADCx->SQR1, SQ1, channel_number);
+
+
+
+    // Clear the end-of-conversion flag.
+
+    CMSIS_WRITE(ADC_ISR, ADCx->ISR, EOC, true);
+
+
+
+    // Begin converting.
+
+    CMSIS_WRITE(ADC_CR, ADCx->CR, ADSTART, true);
+
+
+
+    // Wait until the conversion is done.
+
+    while (!CMSIS_READ(ADC_ISR, ADCx->ISR, EOC));
+
+
+
+    // Read the resulting digital conversion.
+
+    u16 result = CMSIS_READ(ADC_DR, ADCx->DR, RDATA);
+
+    return result;
+
+}
