@@ -239,6 +239,7 @@ class Parameterization:
 
             if properties:
                 properties, = properties
+                properties  = properties.copy()
             else:
                 properties = {}
 
@@ -325,6 +326,7 @@ class Parameterization:
 
             if properties:
                 properties, = properties
+                properties  = properties.copy()
             else:
                 properties = {}
 
