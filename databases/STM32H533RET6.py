@@ -900,20 +900,34 @@ SCHEMA = {
         for unit in units
     },
 
-    **{
-        f'I2C{unit}_RESET' : {
-            'location' : ('RCC', 'APB1LRSTR', f'I2C{unit}RST'),
-        }
-        for unit in I2CS
+    'I2C1_RESET' : {
+        'location' : ('RCC', 'APB1LRSTR', f'I2C1RST'),
     },
 
-    **{
-        f'I2C{unit}_ENABLE' : {
-            'location'   : ('RCC', 'APB1LENR', f'I2C{unit}EN'),
-            'constraint' : Choices(False, True),
-            'value'      : TBD,
-        }
-        for unit in I2CS
+    'I2C2_RESET' : {
+        'location' : ('RCC', 'APB1LRSTR', f'I2C2RST'),
+    },
+
+    'I2C3_RESET' : {
+        'location' : ('RCC', 'APB3RSTR', f'I2C3RST'),
+    },
+
+    'I2C1_ENABLE' : {
+        'location'   : ('RCC', 'APB1LENR', 'I2C1EN'),
+        'constraint' : Choices(False, True),
+        'value'      : TBD,
+    },
+
+    'I2C2_ENABLE' : {
+        'location'   : ('RCC', 'APB1LENR', 'I2C2EN'),
+        'constraint' : Choices(False, True),
+        'value'      : TBD,
+    },
+
+    'I2C3_ENABLE' : {
+        'location'   : ('RCC', 'APB3ENR', 'I2C3EN'),
+        'constraint' : Choices(False, True),
+        'value'      : TBD,
     },
 
     **{
