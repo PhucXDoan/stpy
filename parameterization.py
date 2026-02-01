@@ -143,15 +143,6 @@ class Parameterization:
 
 
 
-        # If no schema was given, then we were only here
-        # just for verifying the target's other parameters
-        # like GPIOs.
-
-        if self.schema is None:
-            return
-
-
-
         # We copy over keys in the database that can be
         # associated with a value; for any that are already
         # predefined, we can pin it so we avoid accidentally
@@ -174,10 +165,12 @@ class Parameterization:
         # Since these are the things that the user want in
         # the final parameterization, the values will be pinned.
 
-        for key, value in self.schema.items():
+        if self.schema is not None:
 
-            self[key]    = value
-            self.pinned |= { key }
+            for key, value in self.schema.items():
+
+                self[key]    = value
+                self.pinned |= { key }
 
 
 
@@ -563,6 +556,19 @@ class Parameterization:
                 f'GPIO pin {repr(duplicate_pin)} used more than once '
                 f'for target {repr(self.target)}.'
             )
+
+
+
+        ################################################################################
+
+
+
+        # If no schema was given, then we were only here
+        # just for verifying the target's other parameters
+        # like GPIOs.
+
+        if self.schema is None:
+            return
 
 
 
