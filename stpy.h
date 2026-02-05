@@ -551,12 +551,56 @@ CMSIS_PUT_(struct CMSISTuple tuple, uint32_t value)
 
 
 
-#define GPIO_ACTIVE(NAME)               ((void) (CONCAT(GPIO, _PORT_FOR_GPIO_SET(NAME))->BSRR  = CONCAT(_LOCATION_FOR_GPIO_ACTIVE  (NAME), _NUMBER_FOR_GPIO_SET(NAME))))
-#define GPIO_INACTIVE(NAME)             ((void) (CONCAT(GPIO, _PORT_FOR_GPIO_SET(NAME))->BSRR  = CONCAT(_LOCATION_FOR_GPIO_INACTIVE(NAME), _NUMBER_FOR_GPIO_SET(NAME))))
-#define GPIO_TOGGLE(NAME)               ((void) (CONCAT(GPIO, _PORT_FOR_GPIO_SET(NAME))->ODR  ^= CONCAT(GPIO_ODR_OD , _NUMBER_FOR_GPIO_SET(NAME))))
-#define GPIO_SET(NAME, VALUE)           ((void) ((VALUE) ? GPIO_ACTIVE(NAME) : GPIO_INACTIVE(NAME)))
-#define GPIO_READ(NAME)                 (_ACTIVE_FOR_GPIO_READ(NAME) (!!(CONCAT(GPIO, _PORT_FOR_GPIO_READ(NAME))->IDR & CONCAT(GPIO_IDR_ID, _NUMBER_FOR_GPIO_READ(NAME)))))
-#define GPIO_SPINLOCK_ANALOG_READ(NAME) GPIO_SPINLOCK_ANALOG_READ_(_ADC_FOR_GPIO_ANALOG(NAME), _CHANNEL_NUMBER_FOR_GPIO_ANALOG(NAME))
+#define GPIO_ACTIVE(NAME)                                                             \
+    (                                                                                 \
+        (void)                                                                        \
+        (                                                                             \
+            CONCAT(GPIO, _PORT_FOR_GPIO_SET(NAME))->BSRR =                            \
+                CONCAT(_LOCATION_FOR_GPIO_ACTIVE  (NAME), _NUMBER_FOR_GPIO_SET(NAME)) \
+        )                                                                             \
+    )
+
+#define GPIO_INACTIVE(NAME)                                                           \
+    (                                                                                 \
+        (void)                                                                        \
+        (                                                                             \
+            CONCAT(GPIO, _PORT_FOR_GPIO_SET(NAME))->BSRR =                            \
+                CONCAT(_LOCATION_FOR_GPIO_INACTIVE(NAME), _NUMBER_FOR_GPIO_SET(NAME)) \
+        )                                                                             \
+    )
+
+#define GPIO_SET(NAME, VALUE)         \
+    (                                 \
+        (void)                        \
+        (                             \
+            (VALUE)                   \
+                ? GPIO_ACTIVE(NAME)   \
+                : GPIO_INACTIVE(NAME) \
+        )                             \
+    )
+
+#define GPIO_TOGGLE(NAME)                                                                                       \
+    (                                                                                                           \
+        (void)                                                                                                  \
+        (                                                                                                       \
+            CONCAT(GPIO, _PORT_FOR_GPIO_SET(NAME))->BSRR =                                                      \
+                (CONCAT(GPIO, _PORT_FOR_GPIO_SET(NAME))->ODR & CONCAT(GPIO_ODR_OD, _NUMBER_FOR_GPIO_SET(NAME))) \
+                    ? CONCAT(GPIO_BSRR_BR, _NUMBER_FOR_GPIO_SET(NAME))                                          \
+                    : CONCAT(GPIO_BSRR_BS, _NUMBER_FOR_GPIO_SET(NAME))                                          \
+        )                                                                                                       \
+    )
+
+#define GPIO_READ(NAME)                                            \
+    (                                                              \
+        !!_ACTIVE_FOR_GPIO_READ(NAME)                              \
+        (                                                          \
+            CONCAT(GPIO, _PORT_FOR_GPIO_READ(NAME))->IDR           \
+                & CONCAT(GPIO_IDR_ID, _NUMBER_FOR_GPIO_READ(NAME)) \
+        )                                                          \
+    )
+
+#define GPIO_SPINLOCK_ANALOG_READ(NAME) \
+    GPIO_SPINLOCK_ANALOG_READ_(_ADC_FOR_GPIO_ANALOG(NAME), _CHANNEL_NUMBER_FOR_GPIO_ANALOG(NAME))
 
 static useret u16
 GPIO_SPINLOCK_ANALOG_READ_(ADC_TypeDef* ADCx, i32 channel_number)
