@@ -131,8 +131,8 @@ def configurize(Meta, parameterization):
             if gpio.mode == 'OUTPUT':
                 Meta.define('_LOCATION_FOR_GPIO_ACTIVE'  , ('NAME'), ('GPIO_BSRR_BS' if gpio.active else 'GPIO_BSRR_BR'), NAME = gpio.name)
                 Meta.define('_LOCATION_FOR_GPIO_INACTIVE', ('NAME'), ('GPIO_BSRR_BR' if gpio.active else 'GPIO_BSRR_BS'), NAME = gpio.name)
-                Meta.define('_PORT_FOR_GPIO_WRITE'       , ('NAME'), gpio.port  , NAME = gpio.name)
-                Meta.define('_NUMBER_FOR_GPIO_WRITE'     , ('NAME'), gpio.number, NAME = gpio.name)
+                Meta.define('_PORT_FOR_GPIO_SET'         , ('NAME'), gpio.port  , NAME = gpio.name)
+                Meta.define('_NUMBER_FOR_GPIO_SET'       , ('NAME'), gpio.number, NAME = gpio.name)
 
             if gpio.mode == 'ANALOG':
                 Meta.define('_ADC_FOR_GPIO_ANALOG'           , ('NAME'), f'ADC{gpio.adc_unit}'     , NAME = gpio.name)
