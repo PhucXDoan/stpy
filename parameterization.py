@@ -1092,7 +1092,7 @@ class Parameterization:
 
                 best = None
 
-                def keep_best(*, kernel_source, presc, scl, baud):
+                def keep_best(*, kernel_source, presc, scl, baud, timeouta):
 
                     nonlocal best
 
@@ -1105,6 +1105,7 @@ class Parameterization:
                             presc         = presc,
                             scl           = scl,
                             baud          = baud,
+                            timeouta      = timeouta,
                         )
 
 
@@ -1116,6 +1117,11 @@ class Parameterization:
                     kernel_frequency = self(kernel_source)
 
                     if kernel_frequency is TBD:
+                        continue
+
+                    timeouta = round(self(f'I2C{unit}_TIMEOUT') * kernel_frequency / 2048 - 1)
+
+                    if not MCUS[self.mcu][f'I2C{unit}_TIMEOUTR_TIMEOUTA'].constraint.check(timeouta):
                         continue
 
                     for presc in each(f'I2C{unit}_PRESC'):
@@ -1133,6 +1139,7 @@ class Parameterization:
                             presc         = presc,
                             scl           = scl,
                             baud          = kernel_frequency / (scl * 2 * (presc + 1) + 1),
+                            timeouta      = timeouta,
                         )
 
 
@@ -1142,10 +1149,11 @@ class Parameterization:
                 success = best is not None and abs(1 - best.baud / needed_baud) < 0.01 # TODO Ad-hoc tolerance.
 
                 if success:
-                    self[f'I2C{unit}_KERNEL_SOURCE'] = best.kernel_source
-                    self[f'I2C{unit}_PRESC'        ] = best.presc
-                    self[f'I2C{unit}_SCLH'         ] = best.scl
-                    self[f'I2C{unit}_SCLL'         ] = best.scl
+                    self[f'I2C{unit}_KERNEL_SOURCE'    ] = best.kernel_source
+                    self[f'I2C{unit}_PRESC'            ] = best.presc
+                    self[f'I2C{unit}_SCLH'             ] = best.scl
+                    self[f'I2C{unit}_SCLL'             ] = best.scl
+                    self[f'I2C{unit}_TIMEOUTR_TIMEOUTA'] = best.timeouta
 
                 return success
 

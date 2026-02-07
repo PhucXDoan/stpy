@@ -650,10 +650,11 @@ def configurize(Meta, parameterization):
 
         with Meta.section(title_of(f'I2C{unit}')):
 
-            define_if_determined(f'I2C{unit}_KERNEL_SOURCE')
-            define_if_determined(f'I2C{unit}_PRESC'        )
-            define_if_determined(f'I2C{unit}_SCLH'         )
-            define_if_determined(f'I2C{unit}_SCLL'         )
+            define_if_determined(f'I2C{unit}_KERNEL_SOURCE'    )
+            define_if_determined(f'I2C{unit}_PRESC'            )
+            define_if_determined(f'I2C{unit}_SCLH'             )
+            define_if_determined(f'I2C{unit}_SCLL'             )
+            define_if_determined(f'I2C{unit}_TIMEOUTR_TIMEOUTA')
 
 
 

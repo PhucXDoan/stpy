@@ -957,6 +957,22 @@ SCHEMA = {
         for unit in I2CS
     },
 
+    **{
+        f'I2C{unit}_TIMEOUT' : {
+            'value' : TBD,
+        }
+        for unit in I2CS
+    },
+
+    **{
+        f'I2C{unit}_TIMEOUTR_TIMEOUTA' : {
+            'location'   : ('I2C', 'TIMEOUTR', 'TIMEOUTA'),
+            'constraint' : IntMinMax(0, (1 << 12) - 1),
+            'value'      : TBD,
+        }
+        for unit in I2CS
+    },
+
 
 
     ################################################################################
