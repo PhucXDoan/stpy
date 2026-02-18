@@ -27,8 +27,8 @@
 
 
 #define _PARENTHESES                                 ()
-#define _EXPAND_0(...)                               _EXPAND_1(_EXPAND_1(_EXPAND_1(_EXPAND_1(__VA_ARGS__))))
-#define _EXPAND_1(...)                               _EXPAND_2(_EXPAND_2(_EXPAND_2(_EXPAND_2(__VA_ARGS__))))
+#define _EXPAND_0(...)                               _EXPAND_1(_EXPAND_1(_EXPAND_1(_EXPAND_1(_EXPAND_1(__VA_ARGS__)))))
+#define _EXPAND_1(...)                               _EXPAND_2(_EXPAND_2(_EXPAND_2(_EXPAND_2(_EXPAND_2(__VA_ARGS__)))))
 #define _EXPAND_2(...)                               __VA_ARGS__
 #define _MAP__(FUNCTION, SHARED, FIRST, SECOND, ...) FUNCTION(SHARED, FIRST, SECOND) __VA_OPT__(_MAP_ _PARENTHESES (FUNCTION, SHARED, __VA_ARGS__))
 #define _MAP_()                                      _MAP__
