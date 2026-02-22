@@ -613,14 +613,13 @@ static useret u16
 GPIO_SPINLOCK_ANALOG_READ_(ADC_TypeDef* ADCx, i32 channel_number)
 {
 
-    if (!CMSIS_READ(ADC_CR, ADCx->CR, ADEN))
-        panic;
-
-    if (CMSIS_READ(ADC_CR, ADCx->CR, ADSTART))
-        panic;
-
-    if (CMSIS_READ(ADC_CR, ADCx->CR, ADDIS))
-        panic;
+    if
+    (
+        !CMSIS_READ(ADC_CR, ADCx->CR, ADEN)   ||
+        CMSIS_READ(ADC_CR, ADCx->CR, ADSTART) ||
+        CMSIS_READ(ADC_CR, ADCx->CR, ADDIS)
+    )
+        return 0; // Not much we can do...
 
 
 
