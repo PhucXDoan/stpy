@@ -1483,5 +1483,48 @@ SCHEMA = {
 
 
     ################################################################################
+    #
+    # Independent Watchdog.
+    #
+
+
+
+    'WATCHDOG_DURATION' : {
+        'value' : TBD,
+    },
+
+    'WATCHDOG_KEY' : {
+        'location' : ('IWDG', 'KR', 'KEY'),
+    },
+
+    'WATCHDOG_DIVIDER' : {
+        'location'   : ('IWDG', 'PR', 'PR'),
+        'constraint' : Mapping({
+            4    : '0b0000',
+            8    : '0b0001',
+            16   : '0b0010',
+            32   : '0b0011',
+            64   : '0b0100',
+            128  : '0b0101',
+            256  : '0b0110',
+            512  : '0b0111',
+            1024 : '0b1000',
+        }),
+        'value' : TBD,
+    },
+
+    'WATCHDOG_COUNTER_RELOADING_VALUE' : {
+        'location'   : ('IWDG', 'RLR', 'RL'),
+        'constraint' : IntMinMax(2, (1 << 11) - 1),
+        'value'      : TBD,
+    },
+
+    'WATCHDOG_DIVIDER_UPDATED'                 : { 'location' : ('IWDG'  , 'SR'      , 'PVU'          ), },
+    'WATCHDOG_COUNTER_RELOADING_VALUE_UPDATED' : { 'location' : ('IWDG'  , 'SR'      , 'RVU'          ), },
+    'WATCHDOG_STOP_IN_DEBUG'                   : { 'location' : ('DBGMCU', 'APB1FZR1', 'DBG_IWDG_STOP'), },
+
+
+
+    ################################################################################
 
 }

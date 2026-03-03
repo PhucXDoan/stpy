@@ -258,6 +258,51 @@ def configurize(Meta, parameterization):
 
     ################################################################################
     #
+    # Independent Watchdog.
+    #
+
+
+
+    if parameterization(f'WATCHDOG_DURATION') is not TBD:
+
+        with Meta.section(title_of(f'Independent Watchdog')):
+
+
+
+            # Begin writing to the registers.
+
+            CMSIS_SET(tuplize('WATCHDOG_KEY', '0x5555'))
+            CMSIS_SET(tuplize('WATCHDOG_DIVIDER'))
+            CMSIS_SET(tuplize('WATCHDOG_COUNTER_RELOADING_VALUE'))
+
+
+            # Enable the watchdog.
+
+            CMSIS_SET(tuplize('WATCHDOG_KEY', '0xCCCC'))
+
+
+
+            # Wait for the register values to be updated.
+
+            CMSIS_SPINLOCK(tuplize(f'WATCHDOG_COUNTER_RELOADING_VALUE_UPDATED', False))
+            CMSIS_SPINLOCK(tuplize(f'WATCHDOG_DIVIDER_UPDATED'                , False))
+
+
+
+            # Initialize the counter.
+
+            CMSIS_SET(tuplize('WATCHDOG_KEY', '0xAAAA'))
+
+
+
+            # Prevent watchdog resets when debugging.
+
+            CMSIS_SET(tuplize('WATCHDOG_STOP_IN_DEBUG', True))
+
+
+
+    ################################################################################
+    #
     # Interrupts.
     #
 

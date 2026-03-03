@@ -654,3 +654,37 @@ GPIO_SPINLOCK_ANALOG_READ_(ADC_TypeDef* ADCx, i32 channel_number)
     return result;
 
 }
+
+
+
+////////////////////////////////////////////////////////////////////////////////
+//
+// Reset related stuff.
+//
+
+
+
+static void
+WATCHDOG_kick(void)
+{
+    CMSIS_SET(IWDG, KR, KEY, 0xAAAA);
+}
+
+
+
+static noret void
+WARM_RESET(void)
+{
+
+    __disable_irq();
+
+    CMSIS_SET
+    (
+        SCB        , AIRCR ,
+        VECTKEY    , 0x05FA,
+        SYSRESETREQ, true  ,
+    );
+
+    for (;;);
+
+}

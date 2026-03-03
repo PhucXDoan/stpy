@@ -1459,6 +1459,29 @@ class Parameterization:
 
 
         ################################################################################
+        #
+        # Independent Watchdog.
+        #
+
+
+
+        @bruteforce
+        def parameterize_independent_watchdog():
+
+            if self('WATCHDOG_DURATION') is TBD:
+                return True
+
+            for divider in each('WATCHDOG_DIVIDER'):
+
+                counter_frequency = 32_000 / divider # IWDG uses LSI which runs at 32KHz.
+                counter_value     = round(counter_frequency * self('WATCHDOG_DURATION'))
+
+                if checkout('WATCHDOG_COUNTER_RELOADING_VALUE', counter_value):
+                    return True
+
+
+
+        ################################################################################
 
 
 
