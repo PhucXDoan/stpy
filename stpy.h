@@ -659,7 +659,7 @@ GPIO_SPINLOCK_ANALOG_READ_(ADC_TypeDef* ADCx, i32 channel_number)
 
 ////////////////////////////////////////////////////////////////////////////////
 //
-// Reset related stuff.
+// Misc.
 //
 
 
@@ -687,4 +687,12 @@ WARM_RESET(void)
 
     for (;;);
 
+}
+
+
+
+static useret u32
+CPU_CYCLE_COUNTER(void)
+{
+    return DWT->CYCCNT;
 }

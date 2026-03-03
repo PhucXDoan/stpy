@@ -825,5 +825,18 @@ def configurize(Meta, parameterization):
 
 
     ################################################################################
+    #
+    # Misc.
+    #
+
+
+
+    with Meta.section(title_of(f'Misc.')):
+
+        CMSIS_SET(tuplize('DEBUG_CYCLE_COUNT_ENABLE', True))
+
+
+
+    ################################################################################
 
     Meta.line()
