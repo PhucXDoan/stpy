@@ -665,7 +665,7 @@ GPIO_SPINLOCK_ANALOG_READ_(ADC_TypeDef* ADCx, i32 channel_number)
 
 
 static void
-WATCHDOG_kick(void)
+WATCHDOG_KICK(void)
 {
     CMSIS_SET(IWDG, KR, KEY, 0xAAAA);
 }
