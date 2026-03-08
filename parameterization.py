@@ -1046,13 +1046,26 @@ class Parameterization:
                     if self(kernel_source) is TBD:
                         continue
 
-                    every_instance_satisfied = all(
-                        checkout(
-                            f'{peripheral}{unit}_BAUD_DIVIDER',
-                            self(kernel_source) / self(f'{peripheral}{unit}_BAUD')
-                        )
-                        for peripheral, unit in used_instances
-                    )
+
+
+                    every_instance_satisfied = True
+
+                    for peripheral, unit in used_instances:
+
+                        baud_divider = round(self(kernel_source) / self(f'{peripheral}{unit}_BAUD'))
+
+                        if not checkout(f'{peripheral}{unit}_BAUD_DIVIDER', baud_divider):
+                            every_instance_satisfied = False
+                            break
+
+                        actual_baud  = self(kernel_source) / baud_divider
+                        actual_error = abs(1 - actual_baud / self(f'{peripheral}{unit}_BAUD'))
+
+                        if actual_error > 0.005: # TODO Arbitrary error threshold.
+                            every_instance_satisfied = False
+                            break
+
+
 
                     if every_instance_satisfied:
                         return True
