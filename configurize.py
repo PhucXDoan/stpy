@@ -807,6 +807,7 @@ def configurize(Meta, parameterization):
                     tuplize(f'ADC_{unit}_DEEP_POWER_DOWN'  , False), # Bring ADC out of deep-power-down mode.
                     tuplize(f'ADC_{unit}_VOLTAGE_REGULATOR', True ), # Power on the ADC unit's regulator.
                     tuplize(f'ADC_{unit}_ENABLE'                  ), # Activate the ADC unit.
+                    tuplize(f'ADC_{unit}_OPTION_BIT', unit == 1   ), # TODO Not sure what this really entails?
                 )
 
 

@@ -1436,6 +1436,16 @@ SCHEMA = {
         'constraint' : Choices(False, True),
     },
 
+    'ADC_1_OPTION_BIT' : {
+        'location'   : ('ADC1', 'OR', 'OP0'),
+        'constraint' : Choices(False, True),
+    },
+
+    'ADC_2_OPTION_BIT' : {
+        'location'   : ('ADC1', 'OR', 'OP0'),
+        'constraint' : Choices(False, True),
+    },
+
     'ANALOG_PREDIVIDER_KERNEL_CK' : {
         'clocktree'  : True,
         'value'      : TBD,
